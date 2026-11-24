@@ -19,6 +19,7 @@ Next.js 15 App Router, TypeScript strict, Tailwind v4 (токены дизайн
 - `components/` — оболочка, карточки, компоненты мока, тур демо
 - `app/(admin)/admin` + `app/api/admin/*` + `components/admin/*` — админка; контент = код + правки (`lib/server/contentStore.ts`), сайт читает итог через `/api/content` и `useContent()`
 - `components/landing/LandingV4.tsx` + `lib/i18n/landing.ts` — лендинг на 3 языках; тема — `data-theme` на <html>, токены v4 в `app/globals.css`
+- `app/p/[slug]` + `app/api/portfolio` + `lib/portfolio.ts` + `components/portfolio/` — публикация сайта-портфолио: в базу уходит только публичный снимок, «по ссылке» = noindex + ключ `k`, до 18 лет — согласие родителя
 - `app/(site)/demo` + `lib/demo.ts` + `lib/demoData.ts` + `app/api/demo` — демо для инвесторов (вымышленный ученик, история моков считается настоящим движком)
 
 ## Правила

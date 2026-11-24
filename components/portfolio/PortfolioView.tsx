@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { PortfolioSnapshot } from "@/lib/portfolio";
 
 // Отрисовка сайта-портфолио по публичному снимку. Без хуков — работает и на сервере (/p/[slug]), и в превью.
@@ -68,7 +69,7 @@ export default function PortfolioView({ s, preview = false }: { s: PortfolioSnap
       </div>
       {!s.hideBadge && (
         <footer className="px-6 pb-8 text-center text-xs sm:px-12" style={{ color: th.muted }}>
-          Сделано в <a href="/" style={{ color: s.accent, fontWeight: 800 }}>UniHelper</a>
+          Сделано в <Link href="/" style={{ color: s.accent, fontWeight: 800 }}>UniHelper</Link>
         </footer>
       )}
     </article>
