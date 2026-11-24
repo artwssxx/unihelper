@@ -11,7 +11,7 @@ import * as I from "./icons";
 
 const MAIN = [
   { href: "/dashboard", label: "Главная", icon: I.Home },
-  { href: "/programs", label: "Мои программы", icon: I.ListIcon },
+  { href: "/programs", label: "Подбор вузов", icon: I.ListIcon },
   { href: "/roadmap", label: "Дорожная карта", icon: I.MapIcon },
   { href: "/mocks", label: "Моки SAT / IELTS", icon: I.Timer },
   { href: "/events", label: "Ивенты", icon: I.Calendar },

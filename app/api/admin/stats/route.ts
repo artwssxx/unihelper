@@ -28,6 +28,12 @@ export async function GET() {
     database: Boolean(db),
     content: { programs: count(programs), events: count(events), lessons: count(lessons) },
     unverifiedPrograms: programs.filter((p) => p.data && !(p.data as { verifiedAt?: string | null }).verifiedAt).length,
+    // Проверено больше полугода назад — пора обновить.
+    stalePrograms: programs.filter((p) => {
+      const v = (p.data as { verifiedAt?: string | null } | null)?.verifiedAt;
+      return v && Date.now() - new Date(v).getTime() > 180 * 86400_000;
+    }).length,
+    pendingSuggestions: db ? (await db.from("uni_suggestions").select("id", { count: "exact", head: true }).eq("status", "pending")).count ?? 0 : null,
     bank,
     leads,
     mockAttempts,

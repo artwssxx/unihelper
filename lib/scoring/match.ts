@@ -1,4 +1,4 @@
-import type { FitResult, Profile, Program } from "../types";
+import type { CountryCode, FitResult, Profile, Program } from "../types";
 import { evaluateProgram } from "./fit";
 
 export interface MatchItem {
@@ -14,7 +14,7 @@ export function filterPrograms(profile: Profile, programs: Program[]): Program[]
   return programs.filter((p) => {
     // Узбекские вузы показываем всегда: в каждом списке нужен запасной вариант.
     const countryOk =
-      p.isLocal || profile.targetCountries.length === 0 || profile.targetCountries.includes(p.country);
+      p.isLocal || p.isCustom || profile.targetCountries.length === 0 || profile.targetCountries.includes(p.country as CountryCode);
     const majorOk = p.majors === "any" || p.majors.includes(profile.major);
     return countryOk && majorOk;
   });

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { COUNTRIES, MAJORS } from "@/lib/profileSchema";
+import { MAJORS } from "@/lib/profileSchema";
 
 // Схемы контента, который редактируется в админке. Совпадают с типами в коде.
 
@@ -9,10 +9,12 @@ export const programSchema = z.object({
   id: z.string().regex(/^[a-z0-9-]{2,40}$/, "id: латиница, цифры, дефис"),
   name: z.string().min(1).max(200),
   university: z.string().min(1).max(200),
-  country: z.enum(COUNTRIES),
+  country: z.string().regex(/^[A-Z]{2}$/, "код страны ISO2"),
   city: z.string().max(80),
   isLocal: z.boolean(),
   isPartner: z.boolean(),
+  isCustom: z.boolean().optional(),
+  aiDraft: z.boolean().optional(),
   majors: z.union([z.literal("any"), z.array(z.enum(MAJORS))]),
   url: z.string().url().nullable(),
   qsRank: nn,

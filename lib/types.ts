@@ -56,10 +56,15 @@ export interface Program {
   id: string;
   name: string; // программа или грант
   university: string;
-  country: CountryCode;
+  /** ISO 3166-1 alpha-2. Каталог — 9 стран, свои вузы — любая страна. */
+  country: CountryCode | (string & {});
   city: string;
   isLocal: boolean;
   isPartner: boolean;
+  /** Свой вуз ученика (не из каталога): данные ученика или черновик ИИ, не проверены. */
+  isCustom?: boolean;
+  /** Требования заполнены ИИ (черновик). */
+  aiDraft?: boolean;
   majors: Major[] | "any";
   url: string | null;
   qsRank: number | null;

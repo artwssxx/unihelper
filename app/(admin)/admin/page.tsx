@@ -7,6 +7,8 @@ type Stats = {
   storage: "supabase" | "file" | "readonly"; ai: string | null; database: boolean;
   content: Record<"programs" | "events" | "lessons", { total: number; edited: number }>;
   unverifiedPrograms: number;
+  stalePrograms: number;
+  pendingSuggestions: number | null;
   bank: Record<"math" | "rw" | "reading", { total: number; d1: number; d2: number; d3: number }>;
   leads: unknown[] | null; mockAttempts: number | null;
 };
@@ -40,6 +42,14 @@ export default function AdminHome() {
           </Link>
         ))}
       </div>
+      {(s.pendingSuggestions ?? 0) > 0 && (
+        <Link href="/admin/suggestions" className="block rounded-2xl bg-primary-soft px-5 py-3 text-sm font-semibold text-primary-ink">
+          Ждут проверки предложенные учениками вузы: {s.pendingSuggestions} →
+        </Link>
+      )}
+      {s.stalePrograms > 0 && (
+        <p className="rounded-2xl bg-orange-soft px-5 py-3 text-sm font-semibold text-orange-ink-2">Данные устарели (проверены более 6 месяцев назад): {s.stalePrograms} программ — обновите.</p>
+      )}
       {s.unverifiedPrograms > 0 && (
         <p className="rounded-2xl bg-orange-soft px-5 py-3 text-sm font-semibold text-orange-ink-2">
           Не проверено экспертом: {s.unverifiedPrograms} программ. Сверьте данные с официальными сайтами и заполните поле «Проверено экспертом» — плашка «ориентировочно» исчезнет.

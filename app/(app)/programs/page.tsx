@@ -3,101 +3,344 @@
 import { useMemo, useState } from "react";
 import FitPills from "@/components/FitPills";
 import NeedProfile from "@/components/NeedProfile";
+import ProLock from "@/components/ProLock";
+import AddUniversity from "@/components/programs/AddUniversity";
+import { apiFetch, usePlan } from "@/lib/auth";
 import { update } from "@/lib/clientStore";
+import { countryName } from "@/lib/countries";
 import { t } from "@/lib/i18n/ru";
 import type { ContactInfo } from "@/lib/profileSchema";
-import { totalCost } from "@/lib/scoring/fit";
+import { MAJORS } from "@/lib/profileSchema";
+import { FIT_LABEL_NAMES, FUNDING_LABEL_NAMES, totalCost } from "@/lib/scoring/fit";
 import { matchPrograms, type MatchItem } from "@/lib/scoring/match";
-import type { Profile } from "@/lib/types";
+import type { FitLabel, Major, Profile, Program } from "@/lib/types";
 import { useContent } from "@/lib/useContent";
 import { useProfile } from "@/lib/useProfile";
 
-type Tab = "mine" | "abroad" | "local";
+type Tab = "match" | "mine" | "custom";
+type Sort = "fit" | "cost" | "funding";
+const ADM_ORDER: Record<FitLabel, number> = { high: 0, realistic: 1, ambitious: 2, not_eligible: 3 };
+const FUND_ORDER = { self_funded: 0, high: 1, medium: 2, low: 3, none: 4 } as const;
 
 export default function ProgramsPage() {
   const { profile, store } = useProfile();
-  const [tab, setTab] = useState<Tab | null>(null);
-  const [leadFor, setLeadFor] = useState<MatchItem | null>(null);
   const { programs } = useContent();
-  const match = useMemo(() => (profile ? matchPrograms(profile, programs) : null), [profile, programs]);
+  const { limits, isPro } = usePlan();
+  const [tab, setTab] = useState<Tab>("match");
+  const [q, setQ] = useState("");
+  const [countries, setCountries] = useState<string[]>([]);
+  const [major, setMajor] = useState<Major | null>(null);
+  const [maxCost, setMaxCost] = useState<number | "">("");
+  const [funding, setFunding] = useState<"any" | "full" | "some">("any");
+  const [label, setLabel] = useState<FitLabel | "all" | "eligible">("eligible");
+  const [backupOnly, setBackupOnly] = useState(false);
+  const [sort, setSort] = useState<Sort>("fit");
+  const [detailId, setDetailId] = useState<string | null>(null);
+  const [adding, setAdding] = useState<Program | true | null>(null);
+  const [leadFor, setLeadFor] = useState<MatchItem | null>(null);
+  const [note, setNote] = useState<string | null>(null);
+
+  const custom = useMemo(() => (store?.customUnis ?? []).filter((p) => Number.isFinite(p.tuitionUsd)), [store?.customUnis]);
+  const effProfile = useMemo<Profile | null>(() => (profile ? { ...profile, major: major ?? profile.major } : null), [profile, major]);
+  const all = useMemo(() => {
+    if (!effProfile) return [];
+    const m = matchPrograms(effProfile, [...programs, ...custom]);
+    return [...m.abroad, ...m.local];
+  }, [effProfile, programs, custom]);
 
   if (profile === undefined) return null;
-  if (profile === null || !match) return <NeedProfile text="Подборка программ считается по твоему профилю." />;
+  if (profile === null || !effProfile) return <NeedProfile text="Подбор вузов считается по твоему профилю." />;
 
   const mine = store?.myPrograms ?? [];
-  const all = [...match.abroad, ...match.local];
-  const activeTab: Tab = tab ?? (mine.length ? "mine" : "abroad");
-  const list = activeTab === "mine" ? all.filter((i) => mine.includes(i.program.id)) : activeTab === "abroad" ? match.abroad : match.local;
-  const toggleMine = (id: string) => update((s) => ({ myPrograms: (s.myPrograms ?? []).includes(id) ? (s.myPrograms ?? []).filter((x) => x !== id) : [...(s.myPrograms ?? []), id] }));
+  const presentCountries = [...new Set(all.map((i) => i.program.country))].sort((a, b) => countryName(a).localeCompare(countryName(b), "ru"));
+  const detail = detailId ? all.find((i) => i.program.id === detailId) ?? null : null;
+
+  const filtered = all
+    .filter((i) => {
+      const p = i.program;
+      if (tab === "mine" && !mine.includes(p.id)) return false;
+      if (tab === "custom" && !p.isCustom) return false;
+      if (q && !`${p.university} ${p.name} ${p.city}`.toLowerCase().includes(q.toLowerCase())) return false;
+      if (countries.length && !countries.includes(p.country)) return false;
+      if (maxCost !== "" && totalCost(p) > maxCost) return false;
+      if (funding === "full" && p.funding.type !== "full") return false;
+      if (funding === "some" && p.funding.type === "none") return false;
+      if (tab === "match" && label === "eligible" && i.fit.admission.label === "not_eligible") return false;
+      if (label !== "all" && label !== "eligible" && i.fit.admission.label !== label) return false;
+      if (backupOnly && !i.fit.isBackup) return false;
+      return true;
+    })
+    .sort((a, b) =>
+      sort === "cost"
+        ? totalCost(a.program) - totalCost(b.program)
+        : sort === "funding"
+          ? FUND_ORDER[a.fit.funding.label] - FUND_ORDER[b.fit.funding.label] || ADM_ORDER[a.fit.admission.label] - ADM_ORDER[b.fit.admission.label]
+          : ADM_ORDER[a.fit.admission.label] - ADM_ORDER[b.fit.admission.label] || FUND_ORDER[a.fit.funding.label] - FUND_ORDER[b.fit.funding.label],
+    );
+
+  const hasBackup = all.some((i) => i.fit.isBackup);
+  const toggleMine = (id: string) => {
+    if (!mine.includes(id) && mine.length >= limits.myPrograms) {
+      setNote(`В Free можно держать в списке до ${limits.myPrograms} программ. В Pro — без лимита.`);
+      return;
+    }
+    setNote(null);
+    update((s) => ({ myPrograms: (s.myPrograms ?? []).includes(id) ? (s.myPrograms ?? []).filter((x) => x !== id) : [...(s.myPrograms ?? []), id] }));
+  };
+  const saveCustom = (p: Program) => {
+    const exists = (store?.customUnis ?? []).some((x) => x.id === p.id);
+    if (!exists && custom.length >= limits.customUniversities) {
+      setNote(`В Free можно добавить до ${limits.customUniversities} своих вузов. В Pro — до 50 и с ИИ-заполнением.`);
+      setAdding(null);
+      return;
+    }
+    update((s) => ({ customUnis: [...(s.customUnis ?? []).filter((x) => x.id !== p.id), p] }));
+    setAdding(null);
+    setTab("custom");
+    setNote(exists ? "Вуз обновлён, оценка пересчитана." : "Вуз добавлен и оценён по твоему профилю.");
+  };
+  const removeCustom = (id: string) => {
+    update((s) => ({ customUnis: (s.customUnis ?? []).filter((x) => x.id !== id), myPrograms: (s.myPrograms ?? []).filter((x) => x !== id) }));
+    setDetailId(null);
+  };
+  const resetFilters = () => {
+    setQ(""); setCountries([]); setMajor(null); setMaxCost(""); setFunding("any"); setLabel("eligible"); setBackupOnly(false);
+  };
 
   return (
     <div className="space-y-6">
-      <section>
-        <div className="eyebrow">ПРОГРАММЫ И ГРАНТЫ</div>
-        <h1 className="mt-3 text-[34px] font-extrabold tracking-tight sm:text-[42px]">Мои программы</h1>
-        <p className="mt-2 max-w-[700px] text-body">
-          Две отдельные оценки: поступление (Admission Fit) и финансирование (Funding Fit). Процентов «шансов» нет намеренно. Партнёрство вуза на метки и порядок не влияет.
-        </p>
+      <section className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <div className="eyebrow">ПОДБОР ВУЗОВ</div>
+          <h1 className="mt-3 text-[34px] font-extrabold tracking-tight sm:text-[42px]">Программы и <span className="serif-accent text-primary">гранты</span></h1>
+          <p className="mt-2 max-w-[700px] text-body">
+            Две отдельные оценки — поступление и финансирование — по каждой программе, без процентов. Каталог обновляет эксперт; свои вузы ты можешь добавить сам.
+          </p>
+        </div>
+        <button className="btn-primary" onClick={() => setAdding(true)}>+ Добавить свой вуз</button>
       </section>
 
-      {!match.hasBackup && (
+      {!hasBackup && (
         <p className="rounded-2xl bg-orange-soft px-5 py-3 text-sm font-semibold text-orange-ink-2">
-          В подборке нет запасного варианта — программы, куда ты проходишь и которую семья может оплатить без гранта. Посмотри вкладку «В Узбекистане» или пересмотри бюджет в профиле.
+          В подборке нет запасного варианта — программы, куда ты проходишь и которую семья может оплатить без гранта. Посмотри вузы Узбекистана или пересмотри бюджет в профиле.
         </p>
       )}
+      {note && <p className="rounded-2xl bg-primary-soft px-5 py-3 text-sm font-semibold text-primary-ink">{note}</p>}
 
       <div className="flex flex-wrap gap-2" role="tablist">
-        {([["mine", `Мой список (${mine.length})`], ["abroad", `За рубежом (${match.abroad.length})`], ["local", `В Узбекистане (${match.local.length})`]] as const).map(([k, label]) => (
-          <button key={k} role="tab" aria-selected={activeTab === k} className="chip px-4 py-2.5 text-sm" data-on={activeTab === k} onClick={() => setTab(k)}>{label}</button>
+        {(
+          [
+            ["match", `Подбор (${all.filter((i) => i.fit.admission.label !== "not_eligible").length})`],
+            ["mine", `Мой список (${mine.length}${isPro ? "" : `/${limits.myPrograms}`})`],
+            ["custom", `Свои вузы (${custom.length})`],
+          ] as const
+        ).map(([k, l]) => (
+          <button key={k} role="tab" aria-selected={tab === k} className="chip px-4 py-2.5 text-sm" data-on={tab === k} onClick={() => setTab(k)}>{l}</button>
         ))}
       </div>
 
-      {list.length === 0 && (
-        <div className="card text-sm text-muted">{activeTab === "mine" ? "Добавь программы из подборки — они появятся здесь, на главной и в дорожной карте." : "Нет программ под выбранные страны и специальность."}</div>
+      <section className="card space-y-4 p-5" aria-label="Фильтры">
+        <div className="grid gap-3 md:grid-cols-[1.4fr_1fr_1fr_1fr]">
+          <input className="input" placeholder="Поиск по названию или городу" aria-label="Поиск" value={q} onChange={(e) => setQ(e.target.value)} />
+          <select className="input" aria-label="Специальность" value={major ?? profile.major} onChange={(e) => setMajor(e.target.value as Major)}>
+            {MAJORS.map((m) => <option key={m} value={m}>{t.majors[m]}</option>)}
+          </select>
+          <input className="input" type="number" min={0} step={1000} placeholder="Макс. стоимость, $/год" aria-label="Максимальная стоимость в год" value={maxCost} onChange={(e) => setMaxCost(e.target.value === "" ? "" : Number(e.target.value))} />
+          <select className="input" aria-label="Сортировка" value={sort} onChange={(e) => setSort(e.target.value as Sort)}>
+            <option value="fit">Сначала лучшее соответствие</option>
+            <option value="funding">Сначала с финансированием</option>
+            <option value="cost">Сначала дешевле</option>
+          </select>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          {presentCountries.map((c) => (
+            <button key={c} className="chip px-3 py-1.5 text-sm" data-on={countries.includes(c)} aria-pressed={countries.includes(c)} onClick={() => setCountries(countries.includes(c) ? countries.filter((x) => x !== c) : [...countries, c])}>
+              {countryName(c)}
+            </button>
+          ))}
+        </div>
+        <div className="flex flex-wrap items-center gap-2 text-sm">
+          <select className="input w-auto py-2" aria-label="Финансирование" value={funding} onChange={(e) => setFunding(e.target.value as typeof funding)}>
+            <option value="any">Любое финансирование</option>
+            <option value="some">Есть финансирование</option>
+            <option value="full">Только полный грант</option>
+          </select>
+          <select className="input w-auto py-2" aria-label="Метка поступления" value={label} onChange={(e) => setLabel(e.target.value as typeof label)}>
+            <option value="eligible">Все, кроме «не соответствует»</option>
+            <option value="all">Все программы</option>
+            <option value="high">{FIT_LABEL_NAMES.high}</option>
+            <option value="realistic">{FIT_LABEL_NAMES.realistic}</option>
+            <option value="ambitious">{FIT_LABEL_NAMES.ambitious}</option>
+            <option value="not_eligible">{FIT_LABEL_NAMES.not_eligible}</option>
+          </select>
+          <label className="flex items-center gap-2 font-semibold">
+            <input type="checkbox" className="h-4 w-4" checked={backupOnly} onChange={(e) => setBackupOnly(e.target.checked)} />
+            Только запасные варианты
+          </label>
+          <button className="ml-auto font-bold text-primary" onClick={resetFilters}>Сбросить</button>
+        </div>
+      </section>
+
+      <p className="text-sm text-muted">Найдено: {filtered.length}</p>
+      {filtered.length === 0 && (
+        <div className="card text-sm text-muted">
+          {tab === "mine"
+            ? "Добавь программы из подбора — они появятся здесь, на главной и в дорожной карте."
+            : tab === "custom"
+              ? "Своих вузов пока нет. Нажми «Добавить свой вуз» — найдём его в справочнике из 10 000+ вузов."
+              : "Нет программ под фильтры. Попробуй сбросить фильтры."}
+        </div>
       )}
 
       <div className="grid gap-4 xl:grid-cols-2">
-        {list.map((item) => (
-          <ProgramCard key={item.program.id} item={item} inList={mine.includes(item.program.id)} onToggle={() => toggleMine(item.program.id)} onLead={() => setLeadFor(item)} />
+        {filtered.map((item) => (
+          <ProgramCard key={item.program.id} item={item} inList={mine.includes(item.program.id)} onToggle={() => toggleMine(item.program.id)} onOpen={() => setDetailId(item.program.id)} />
         ))}
       </div>
 
-      {leadFor && <LeadModal item={leadFor} profile={profile} profileId={store?.profileId ?? null} contact={store?.contact ?? null} demo={Boolean(store?.demo?.active)} onClose={() => setLeadFor(null)} />}
+      {detail && (
+        <Detail
+          item={detail}
+          canSeeReasons={limits.fitReasons}
+          inList={mine.includes(detail.program.id)}
+          onToggle={() => toggleMine(detail.program.id)}
+          onClose={() => setDetailId(null)}
+          onLead={() => setLeadFor(detail)}
+          onEdit={() => {
+            setAdding(detail.program);
+            setDetailId(null);
+          }}
+          onRemove={() => removeCustom(detail.program.id)}
+        />
+      )}
+      {adding && (
+        <AddUniversity
+          major={major ?? profile.major}
+          initial={adding === true ? undefined : adding}
+          onSave={saveCustom}
+          onClose={() => setAdding(null)}
+          onOpenCatalog={(id) => {
+            setAdding(null);
+            if (all.some((i) => i.program.id === id)) setDetailId(id);
+            else setNote("Этот вуз уже есть в каталоге, но не подходит под выбранную специальность или страны — поменяйте фильтры.");
+          }}
+        />
+      )}
+      {leadFor && (
+        <LeadModal item={leadFor} profile={profile} profileId={store?.profileId ?? null} contact={store?.contact ?? null} demo={Boolean(store?.demo?.active)} onClose={() => setLeadFor(null)} />
+      )}
     </div>
   );
 }
 
-function ProgramCard({ item, inList, onToggle, onLead }: { item: MatchItem; inList: boolean; onToggle: () => void; onLead: () => void }) {
+function ProgramCard({ item, inList, onToggle, onOpen }: { item: MatchItem; inList: boolean; onToggle: () => void; onOpen: () => void }) {
   const { program: p, fit } = item;
-  const [open, setOpen] = useState(false);
   return (
     <article className="card flex flex-col gap-3">
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
-          <h2 className="text-lg font-extrabold">{p.university}</h2>
-          <p className="text-[13px] text-muted">{p.name} · {t.countries[p.country]}, {p.city}</p>
+        <button className="min-w-0 text-left" onClick={onOpen}>
+          <h2 className="text-lg font-extrabold hover:text-primary">{p.university}</h2>
+          <p className="text-[13px] text-muted">{p.name} · {countryName(p.country)}{p.city ? `, ${p.city}` : ""}</p>
+        </button>
+        <div className="flex flex-wrap gap-1.5">
+          {p.isCustom && <span className="pill bg-line-3 text-muted">{p.aiDraft ? "свой · черновик ИИ" : "свой вуз"}</span>}
+          {p.isPartner && <span className="pill border border-line text-muted">партнёр</span>}
+          {p.verifiedAt && <span className="pill bg-green-soft text-green">проверено</span>}
         </div>
-        {p.isPartner && <span className="pill border border-line text-muted">партнёр</span>}
       </div>
       <FitPills fit={fit} />
       <p className="text-sm text-body">
-        Стоимость без гранта ≈ ${totalCost(p).toLocaleString("ru-RU")}/год · уверенность: {t.confidence[fit.admission.confidence]}
+        ≈ ${totalCost(p).toLocaleString("ru-RU")}/год без гранта · уверенность: {t.confidence[fit.admission.confidence]}
         {fit.admission.unknown.length > 0 && <> · не оценено: {fit.admission.unknown.join(", ")}</>}
       </p>
-      {open && (
-        <div className="space-y-2 rounded-2xl bg-bg p-4 text-sm">
-          <ul className="list-disc space-y-1 pl-5">{[...fit.admission.reasons, ...fit.funding.reasons].map((r, i) => <li key={i}>{r}</li>)}</ul>
-          <p className="text-muted">Сроки: {p.deadlineNote}</p>
-          {!p.verifiedAt && <p className="text-muted">Данные ориентировочные и ещё не проверены экспертом — сверяйте даты и суммы на официальном сайте.</p>}
-        </div>
-      )}
       <div className="mt-auto flex flex-wrap gap-2 pt-1">
         <button className={inList ? "btn-secondary py-2.5 text-sm" : "btn-primary py-2.5 text-sm"} onClick={onToggle}>{inList ? "Убрать из списка" : "В мой список"}</button>
-        <button className="btn-secondary py-2.5 text-sm" onClick={() => setOpen(!open)}>{open ? "Скрыть причины" : "Почему такая оценка?"}</button>
-        {p.url && <a className="btn-secondary py-2.5 text-sm" href={p.url} target="_blank" rel="noopener noreferrer">Сайт ↗</a>}
-        {p.isLocal && <button className="btn-secondary py-2.5 text-sm" onClick={onLead}>Хочу консультацию</button>}
+        <button className="btn-secondary py-2.5 text-sm" onClick={onOpen}>Подробнее</button>
       </div>
     </article>
+  );
+}
+
+function Detail(props: {
+  item: MatchItem; canSeeReasons: boolean; inList: boolean;
+  onToggle: () => void; onClose: () => void; onLead: () => void; onEdit: () => void; onRemove: () => void;
+}) {
+  const { program: p, fit } = props.item;
+  const [sent, setSent] = useState<string | null>(null);
+  async function suggest() {
+    const r = await apiFetch("/api/universities/suggest", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ program: p }) }).catch(() => null);
+    setSent(r?.ok ? "Отправлено эксперту. После проверки вуз появится в общем каталоге для всех." : "Не удалось отправить. Проверьте, что заполнены сайт (https://…) и страна.");
+  }
+  const row = (k: string, v: React.ReactNode) => (
+    <div className="flex justify-between gap-4 border-t border-line-3 py-2 text-sm"><span className="text-muted">{k}</span><span className="text-right font-semibold">{v}</span></div>
+  );
+  const nd = "нет данных";
+  return (
+    <div className="fixed inset-0 z-50 flex justify-end bg-[rgba(10,14,28,.5)]" onClick={props.onClose}>
+      <div role="dialog" aria-modal aria-labelledby="detT" className="h-full w-full max-w-[640px] overflow-y-auto bg-surface-solid p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h2 id="detT" className="text-2xl font-extrabold">{p.university}</h2>
+            <p className="text-sm text-muted">{p.name} · {countryName(p.country)}{p.city ? `, ${p.city}` : ""}</p>
+          </div>
+          <button className="rounded-lg px-2 py-1 text-xl text-muted" aria-label="Закрыть" onClick={props.onClose}>×</button>
+        </div>
+        <div className="mt-4"><FitPills fit={fit} /></div>
+
+        <div className="mt-5 grid gap-3 sm:grid-cols-2">
+          <div className="rounded-2xl bg-primary-soft p-4">
+            <div className="text-xs font-bold text-primary-ink">ПОСТУПЛЕНИЕ</div>
+            <div className="mt-1 text-lg font-extrabold text-primary-ink">{FIT_LABEL_NAMES[fit.admission.label]}</div>
+            <div className="text-xs text-body">уверенность: {t.confidence[fit.admission.confidence]}</div>
+          </div>
+          <div className="rounded-2xl bg-orange-soft p-4">
+            <div className="text-xs font-bold text-orange-ink-2">ФИНАНСИРОВАНИЕ</div>
+            <div className="mt-1 text-lg font-extrabold text-orange-ink-2">{FUNDING_LABEL_NAMES[fit.funding.label]}</div>
+            <div className="text-xs text-body">{p.funding.note || "—"}</div>
+          </div>
+        </div>
+
+        <h3 className="mt-6 font-extrabold">Почему такая оценка и что усилить</h3>
+        {props.canSeeReasons ? (
+          <ul className="mt-2 list-disc space-y-1 pl-5 text-[15px] leading-relaxed">
+            {[...fit.admission.reasons, ...fit.funding.reasons].map((r, i) => <li key={i}>{r}</li>)}
+          </ul>
+        ) : (
+          <div className="mt-2"><ProLock title="Причины оценок" text="Видно, что именно мешает поступлению и финансированию и что усилить в первую очередь." /></div>
+        )}
+        {fit.admission.unknown.length > 0 && <p className="mt-2 text-sm text-muted">Не оценено: {fit.admission.unknown.join(", ")}</p>}
+
+        <h3 className="mt-6 font-extrabold">Требования и стоимость</h3>
+        <div className="mt-2">
+          {row("Минимальный IELTS", p.requirements.minIelts ?? nd)}
+          {row("SAT", p.requirements.satRequired ? "обязателен" : "не обязателен / нет данных")}
+          {row("Типичный профиль поступивших", [p.typical.gpa100 ? `GPA ${p.typical.gpa100}` : null, p.typical.ielts ? `IELTS ${p.typical.ielts}` : null, p.typical.sat ? `SAT ${p.typical.sat}` : null].filter(Boolean).join(" · ") || nd)}
+          {row("Acceptance rate", p.acceptanceRate != null ? `≈ ${Math.round(p.acceptanceRate * 100)}%` : nd)}
+          {row("Обучение", `$${p.tuitionUsd.toLocaleString("ru-RU")}/год`)}
+          {row("Проживание", `≈ $${p.livingUsd.toLocaleString("ru-RU")}/год`)}
+          {row("Сроки", p.deadlineNote || nd)}
+          {row("Данные", p.verifiedAt ? `проверены ${p.verifiedAt.slice(0, 10)}` : p.isCustom ? (p.aiDraft ? "черновик ИИ — сверить" : "введены вами") : "ориентировочно — сверить")}
+        </div>
+
+        <div className="mt-6 flex flex-wrap gap-2">
+          <button className={props.inList ? "btn-secondary" : "btn-primary"} onClick={props.onToggle}>{props.inList ? "Убрать из списка" : "В мой список"}</button>
+          {p.url && <a className="btn-secondary" href={p.url} target="_blank" rel="noopener noreferrer">Официальный сайт ↗</a>}
+          {p.isLocal && !p.isCustom && <button className="btn-secondary" onClick={props.onLead}>Хочу консультацию</button>}
+        </div>
+        {p.isCustom && (
+          <div className="mt-6 rounded-2xl border border-line p-4">
+            <h3 className="font-extrabold">Свой вуз</h3>
+            <p className="mt-1 text-sm text-body">Данные вводите вы (или ИИ-черновик). Чтобы вуз появился у всех с проверенными цифрами — отправьте его эксперту.</p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <button className="btn-secondary py-2.5 text-sm" onClick={props.onEdit}>Изменить / обновить с ИИ</button>
+              <button className="btn-secondary py-2.5 text-sm" onClick={suggest}>Предложить в каталог</button>
+              <button className="btn-secondary py-2.5 text-sm text-red" onClick={props.onRemove}>Удалить</button>
+            </div>
+            {sent && <p className="mt-2 text-sm font-semibold text-primary-ink">{sent}</p>}
+          </div>
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -107,7 +350,6 @@ function LeadModal(props: { item: MatchItem; profile: Profile; profileId: string
   const p = props.item.program;
   async function send() {
     if (!props.contact) return setState("error");
-    // В демо заявка никуда не отправляется.
     if (props.demo) return setState("done");
     setState("sending");
     const res = await fetch("/api/leads", {
@@ -118,14 +360,12 @@ function LeadModal(props: { item: MatchItem; profile: Profile; profileId: string
     setState(res?.ok ? "done" : "error");
   }
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-[rgba(10,14,28,.5)] p-4 sm:items-center" onClick={props.onClose}>
-      <div className="card w-full max-w-md space-y-4" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal aria-labelledby="leadT">
+    <div className="fixed inset-0 z-[60] flex items-end justify-center bg-[rgba(10,14,28,.5)] p-4 sm:items-center" onClick={props.onClose}>
+      <div className="w-full max-w-md space-y-4 rounded-[24px] bg-surface-solid p-6" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal aria-labelledby="leadT">
         {state === "done" ? (
           <>
             <h2 id="leadT" className="text-lg font-extrabold">Заявка отправлена</h2>
-            <p className="text-sm text-body">
-              {props.demo ? "В демо заявка не отправляется. В реальном продукте вуз получит контакт и профиль, а команда — уведомление в Telegram." : `Приёмная комиссия ${p.university} свяжется с тобой по телефону.`}
-            </p>
+            <p className="text-sm text-body">{props.demo ? "В демо заявка не отправляется." : `Приёмная комиссия ${p.university} свяжется с тобой по телефону.`}</p>
             <button className="btn-primary w-full" onClick={props.onClose}>Готово</button>
           </>
         ) : (

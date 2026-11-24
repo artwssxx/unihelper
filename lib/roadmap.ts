@@ -64,7 +64,7 @@ export function buildRoadmap(profile: Profile, myPrograms: string[] = [], now = 
   const countries = new Set<CountryCode>([...profile.targetCountries, "UZ"]);
   for (const pid of myPrograms) {
     const p = programs.find((x) => x.id === pid);
-    if (p) countries.add(p.country);
+    if (p) countries.add(p.country as CountryCode);
   }
   const deadlines = [...countries]
     .map((c) => ({ c, d: DEADLINE_OFFSET[c] }))

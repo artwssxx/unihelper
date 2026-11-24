@@ -8,7 +8,7 @@ import NeedProfile from "@/components/NeedProfile";
 import StrengthCard from "@/components/StrengthCard";
 import { update } from "@/lib/clientStore";
 import { buildRoadmap, effectiveStatus } from "@/lib/roadmap";
-import { t } from "@/lib/i18n/ru";
+import { countryName } from "@/lib/countries";
 import { matchPrograms } from "@/lib/scoring/match";
 import { scoreProfile } from "@/lib/scoring/strength";
 import { lessonsForDomainsIn, useContent } from "@/lib/useContent";
@@ -80,7 +80,7 @@ export default function Dashboard() {
               <div key={i.program.id} className="flex flex-wrap items-center justify-between gap-3 border-t border-line-3 py-3.5">
                 <div className="min-w-0">
                   <div className="font-extrabold">{i.program.university}</div>
-                  <div className="mt-0.5 text-[13px] text-muted">{t.countries[i.program.country]} · {i.program.name}</div>
+                  <div className="mt-0.5 text-[13px] text-muted">{countryName(i.program.country)} · {i.program.name}</div>
                 </div>
                 <FitPills fit={i.fit} />
               </div>
