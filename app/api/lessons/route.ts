@@ -20,7 +20,8 @@ export async function POST(req: Request) {
   if (!parsed.success) return NextResponse.json({ error: "invalid" }, { status: 400 });
   const l = ((await getContent("lessons")) as Lesson[]).find((x) => x.id === parsed.data.id);
   if (!l) return NextResponse.json({ error: "not_found" }, { status: 404 });
-  const results = l.quiz.map((qid) => {
+  if (l.isPro && !limitsFor(req).proLessons) return NextResponse.json({ error: "pro_required" }, { status: 402 });
+  const results = l.quiz.filter((qid) => getQuestion(qid)).map((qid) => {
     const q = getQuestion(qid)!;
     return { id: qid, correct: isCorrect(q, parsed.data.answers[qid]), answer: q.answer, explanation: q.explanation };
   });

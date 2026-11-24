@@ -20,6 +20,8 @@ const LABELS: Record<string, string> = {
   registrationMode: "Регистрация", externalUrl: "Ссылка на регистрацию", capacity: "Мест", registered: "Записалось", questions: "Вопросы анкеты (по строке)",
   isPromoted: "Реклама (продвижение)", description: "Описание", courseId: "Курс", minutes: "Минут", domains: "Темы мока (по строке)",
   summary: "Конспект (пункт на строку)", quiz: "ID вопросов мини-теста (по строке)", isPro: "Только Pro", videoId: "ID видео",
+  excerpt: "Анонс (1–2 предложения)", category: "Тема", body: "Текст: абзацы через пустую строку, «## » — подзаголовок, «- » — пункт списка",
+  readMinutes: "Минут чтения", publishedAt: "Дата публикации (ГГГГ-ММ-ДД)", author: "Автор", published: "Опубликовано",
 };
 
 const ENUMS: Record<string, { v: string; l: string }[]> = {
@@ -31,6 +33,7 @@ const ENUMS: Record<string, { v: string; l: string }[]> = {
     { v: "hackathon", l: "Хакатон" }, { v: "webinar", l: "Вебинар" }, { v: "club", l: "Клуб / кейс" },
   ],
   registrationMode: [{ v: "unihelper", l: "через Unihelper" }, { v: "external", l: "на сайте организатора" }],
+  category: ["Гранты", "Тесты", "Эссе", "Стратегия", "Новости UniHelper"].map((x) => ({ v: x, l: x })),
   courseId: [{ v: "sat-math", l: "SAT Math" }, { v: "sat-rw", l: "SAT Reading & Writing" }, { v: "ielts-reading", l: "IELTS Reading" }, { v: "essays", l: "Эссе и гранты" }],
 };
 
@@ -38,7 +41,7 @@ const ENUMS: Record<string, { v: string; l: string }[]> = {
 const NULLABLE_NUM = new Set(["qsRank", "acceptanceRate", "gpa100", "ielts", "sat", "minIelts", "minGpa100"]);
 const NULLABLE_STR = new Set(["url", "verifiedAt", "videoId"]);
 const NULLABLE_BOOL = new Set(["needBlindIntl"]);
-const LONG = new Set(["description", "note", "deadlineNote"]);
+const LONG = new Set(["description", "note", "deadlineNote", "excerpt", "body"]);
 
 export default function AutoForm({ value, onChange, lockId }: { value: Obj; onChange: (v: Obj) => void; lockId?: boolean }) {
   return <Fields obj={value} path="" onChange={onChange} lockId={lockId} />;
@@ -121,7 +124,7 @@ function Fields({ obj, path, onChange, lockId }: { obj: Obj; path: string; onCha
           <label key={k} className={`block text-sm font-semibold ${LONG.has(k) ? "sm:col-span-2" : ""}`}>
             {label}
             {LONG.has(k) ? (
-              <textarea className="input mt-1.5 min-h-20 font-normal" value={str} onChange={(e) => set(k, e.target.value)} />
+              <textarea className={`input mt-1.5 font-normal ${k === "body" ? "min-h-[420px]" : "min-h-20"}`} value={str} onChange={(e) => set(k, e.target.value)} />
             ) : (
               <input
                 className="input mt-1.5 font-normal"

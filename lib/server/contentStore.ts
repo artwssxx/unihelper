@@ -4,6 +4,7 @@ import path from "node:path";
 import { PROGRAMS } from "@/data/programs";
 import { EVENTS } from "@/lib/content/events";
 import { LESSONS } from "@/lib/content/lessons";
+import { POSTS } from "@/lib/content/posts";
 import { CONTENT_KINDS, type ContentKind } from "@/lib/content/schemas";
 import { supabaseAdmin } from "./supabase";
 
@@ -18,10 +19,11 @@ const DEFAULTS: Record<ContentKind, { id: string }[]> = {
   programs: PROGRAMS,
   events: EVENTS,
   lessons: LESSONS,
+  posts: POSTS,
 };
 
 const FILE = path.join(process.cwd(), ".data", "content.json");
-const empty = (): Overrides => ({ programs: {}, events: {}, lessons: {} });
+const empty = (): Overrides => ({ programs: {}, events: {}, lessons: {}, posts: {} });
 
 export function storageMode(): "supabase" | "file" | "readonly" {
   if (supabaseAdmin()) return "supabase";

@@ -90,7 +90,8 @@ function Nav({ t, lang, chooseLang }: { t: T; lang: Lang; chooseLang: (l: Lang) 
           <a href="#path">{t.nav.path}</a>
           <a href="#features">{t.nav.features}</a>
           <a href="#pricing">{t.nav.pricing}</a>
-          <a href="#faq">{t.nav.faq}</a>
+          <Link href="/courses">{t.nav.courses}</Link>
+          <Link href="/blog">{t.nav.blog}</Link>
           <Link href="/demo">{t.nav.demo}</Link>
         </div>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
@@ -589,6 +590,8 @@ function Footer({ t }: { t: T }) {
             <a href="#features">{t.nav.features}</a>
             <a href="#pricing">{t.nav.pricing}</a>
             <a href="#faq">{t.nav.faq}</a>
+            <Link href="/courses">{t.nav.courses}</Link>
+            <Link href="/blog">{t.nav.blog}</Link>
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             <b style={{ color: "var(--text)" }}>{t.footer.partners}</b>

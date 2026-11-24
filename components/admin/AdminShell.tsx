@@ -11,6 +11,7 @@ const NAV = [
   { href: "/admin/suggestions", label: "Предложения вузов", icon: I.Globe },
   { href: "/admin/events", label: "Ивенты", icon: I.Calendar },
   { href: "/admin/lessons", label: "Уроки", icon: I.Play },
+  { href: "/admin/blog", label: "Блог", icon: I.Pen },
   { href: "/admin/questions", label: "Банк вопросов", icon: I.Timer },
   { href: "/admin/leads", label: "Лиды вузов", icon: I.User },
   { href: "/admin/community", label: "Комьюнити", icon: I.Users },

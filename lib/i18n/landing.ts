@@ -10,7 +10,7 @@ export const LANGS: { id: Lang; label: string }[] = [
 type Item = { title: string; text: string };
 
 export interface LandingDict {
-  nav: { play: string; path: string; features: string; pricing: string; faq: string; demo: string; login: string; start: string; theme: string };
+  nav: { play: string; path: string; features: string; pricing: string; faq: string; demo: string; login: string; start: string; theme: string; blog: string; courses: string };
   hero: {
     badgeNew: string; badge: string;
     pre: string; rot: string[]; post: string; l2pre: string; accent: string; l2post: string;
@@ -47,7 +47,7 @@ export interface LandingDict {
 }
 
 const ru: LandingDict = {
-  nav: { play: "Попробовать", path: "Путь", features: "Возможности", pricing: "Цены", faq: "FAQ", demo: "Демо", login: "Войти", start: "Начать", theme: "Переключить тему" },
+  nav: { play: "Попробовать", path: "Путь", features: "Возможности", pricing: "Цены", faq: "FAQ", demo: "Демо", login: "Войти", start: "Начать", theme: "Переключить тему", blog: "Блог", courses: "Курсы" },
   hero: {
     badgeNew: "новое", badge: "Моки SAT и IELTS с хард-режимом",
     pre: "Поступай ", rot: ["в Корею", "в Венгрию", "в США", "в Германию", "в Турцию", "в Ташкенте"], post: "", l2pre: "по ", accent: "плану", l2post: ", а не наугад.",
@@ -126,7 +126,7 @@ const ru: LandingDict = {
 };
 
 const uz: LandingDict = {
-  nav: { play: "Sinab ko‘rish", path: "Yo‘l", features: "Imkoniyatlar", pricing: "Narxlar", faq: "FAQ", demo: "Demo", login: "Kirish", start: "Boshlash", theme: "Mavzuni almashtirish" },
+  nav: { play: "Sinab ko‘rish", path: "Yo‘l", features: "Imkoniyatlar", pricing: "Narxlar", faq: "FAQ", demo: "Demo", login: "Kirish", start: "Boshlash", theme: "Mavzuni almashtirish", blog: "Blog", courses: "Kurslar" },
   hero: {
     badgeNew: "yangi", badge: "Qattiq rejimli SAT va IELTS sinov testlari",
     pre: "", rot: ["Koreyaga", "Vengriyaga", "AQShga", "Germaniyaga", "Turkiyaga", "Toshkentga"], post: " o‘qishga kir —", l2pre: "", accent: "reja", l2post: " bilan, tavakkal emas.",
@@ -205,7 +205,7 @@ const uz: LandingDict = {
 };
 
 const en: LandingDict = {
-  nav: { play: "Try it", path: "Path", features: "Features", pricing: "Pricing", faq: "FAQ", demo: "Demo", login: "Log in", start: "Start", theme: "Toggle theme" },
+  nav: { play: "Try it", path: "Path", features: "Features", pricing: "Pricing", faq: "FAQ", demo: "Demo", login: "Log in", start: "Start", theme: "Toggle theme", blog: "Blog", courses: "Courses" },
   hero: {
     badgeNew: "new", badge: "SAT and IELTS mocks with hard mode",
     pre: "Study ", rot: ["in Korea", "in Hungary", "in the US", "in Germany", "in Türkiye", "in Tashkent"], post: "", l2pre: "with a ", accent: "plan", l2post: ", not by chance.",

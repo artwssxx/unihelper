@@ -19,6 +19,7 @@ Next.js 15 App Router, TypeScript strict, Tailwind v4 (токены дизайн
 - `components/` — оболочка, карточки, компоненты мока, тур демо
 - `app/(admin)/admin` + `app/api/admin/*` + `components/admin/*` — админка; контент = код + правки (`lib/server/contentStore.ts`), сайт читает итог через `/api/content` и `useContent()`
 - `components/landing/LandingV4.tsx` + `lib/i18n/landing.ts` — лендинг на 3 языках; тема — `data-theme` на <html>, токены v4 в `app/globals.css`
+- `app/(site)/blog`, `app/(site)/courses` + `lib/content/posts.ts` + `components/site/*` — публичный блог (контент-тип `posts`, правится в `/admin/blog`) и бесплатные уроки без регистрации; текст статей — простой формат без HTML (`components/site/Prose.tsx`)
 - `app/(app)/community` + `app/api/community/*` + `lib/community.ts` + `lib/server/community.ts` — комьюнити: карточки участников, проекты «ищу команду», организации с общим чатом, личные чаты (опрос раз в 4 с), жалобы → `/admin/community`, блокировки. Только для вошедших; таблицы `community_*` закрыты RLS, доступ через service role
 - `app/p/[slug]` + `app/api/portfolio` + `lib/portfolio.ts` + `components/portfolio/` — публикация сайта-портфолио: в базу уходит только публичный снимок, «по ссылке» = noindex + ключ `k`, до 18 лет — согласие родителя
 - `app/(site)/demo` + `lib/demo.ts` + `lib/demoData.ts` + `app/api/demo` — демо для инвесторов (вымышленный ученик, история моков считается настоящим движком)

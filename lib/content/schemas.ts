@@ -66,5 +66,17 @@ export const lessonSchema = z.object({
   videoId: z.string().max(80).nullable(),
 });
 
-export const CONTENT_KINDS = { programs: programSchema, events: eventSchema, lessons: lessonSchema } as const;
+export const postSchema = z.object({
+  id: z.string().regex(/^[a-z0-9-]{3,60}$/),
+  title: z.string().min(3).max(160),
+  excerpt: z.string().min(10).max(400),
+  category: z.enum(["Гранты", "Тесты", "Эссе", "Стратегия", "Новости UniHelper"]),
+  body: z.string().min(20).max(30000),
+  readMinutes: z.number().int().min(1).max(60),
+  publishedAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  author: z.string().min(2).max(80),
+  published: z.boolean(),
+});
+
+export const CONTENT_KINDS = { programs: programSchema, events: eventSchema, lessons: lessonSchema, posts: postSchema } as const;
 export type ContentKind = keyof typeof CONTENT_KINDS;
