@@ -51,7 +51,7 @@ export function cycleStartYear(grade: number, now: Date): number {
   return gradYear - 1;
 }
 
-export function buildRoadmap(profile: Profile, myPrograms: string[] = [], now = new Date()): RoadmapItem[] {
+export function buildRoadmap(profile: Profile, myPrograms: string[] = [], now = new Date(), programs = PROGRAMS): RoadmapItem[] {
   const y = cycleStartYear(profile.grade, now);
   const at = (offset: number) => monthDate(y, 8 + offset); // 8 = сентябрь
   const items: RoadmapItem[] = [];
@@ -63,7 +63,7 @@ export function buildRoadmap(profile: Profile, myPrograms: string[] = [], now = 
 
   const countries = new Set<CountryCode>([...profile.targetCountries, "UZ"]);
   for (const pid of myPrograms) {
-    const p = PROGRAMS.find((x) => x.id === pid);
+    const p = programs.find((x) => x.id === pid);
     if (p) countries.add(p.country);
   }
   const deadlines = [...countries]

@@ -4,14 +4,16 @@ import Link from "next/link";
 import { useState } from "react";
 import * as I from "@/components/icons";
 import { useStore } from "@/lib/clientStore";
-import { COURSES, LESSONS, lessonsForDomains } from "@/lib/content/lessons";
+import { COURSES } from "@/lib/content/lessons";
+import { lessonsForDomainsIn, useContent } from "@/lib/useContent";
 
 export default function LessonsPage() {
   const store = useStore();
+  const { lessons: LESSONS } = useContent();
   const [topic, setTopic] = useState<string>("all");
   const progress = store?.lessons ?? {};
   const lastWeak = [...(store?.mocks ?? [])].filter((m) => m.status === "completed" && m.weakDomains?.length).sort((a, b) => b.finishedAt.localeCompare(a.finishedAt))[0];
-  const recommended = lastWeak ? lessonsForDomains(lastWeak.weakDomains ?? []) : [];
+  const recommended = lastWeak ? lessonsForDomainsIn(LESSONS, lastWeak.weakDomains ?? []) : [];
   const courses = COURSES.filter((c) => topic === "all" || c.topic === topic);
 
   return (
@@ -25,12 +27,12 @@ export default function LessonsPage() {
       </section>
 
       {recommended.length > 0 && (
-        <section className="rounded-[26px] bg-ink p-6 text-white">
+        <section className="rounded-[26px] bg-inv p-6 text-white">
           <h2 className="text-xl font-extrabold">Тебе нужны эти уроки</h2>
           <p className="mt-1 text-sm text-navy-text">По темам с низкой точностью в последнем моке.</p>
           <div className="mt-4 grid gap-3 md:grid-cols-3">
             {recommended.map((l) => (
-              <Link key={l.id} href={`/lessons/${l.id}`} className="rounded-2xl bg-navy-2 p-4 hover:bg-[#22345f]">
+              <Link key={l.id} href={`/lessons/${l.id}`} className="rounded-2xl bg-navy-2 p-4 hover:bg-navy-line">
                 <div className="font-extrabold">{l.title}</div>
                 <div className="mt-1 text-sm text-navy-text">{l.minutes} мин{l.isPro ? " · Pro" : ""}</div>
               </Link>

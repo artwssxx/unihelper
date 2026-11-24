@@ -10,9 +10,9 @@ const ADVERB = ["начально", "развивается", "сильно", "�
 export default function StrengthCard({ s, cta = true, className = "" }: { s: StrengthResult; cta?: boolean; className?: string }) {
   const unknown = s.axes.filter((a) => a.level == null).map((a) => t.axes[a.axis].toLowerCase());
   return (
-    <div className={`relative overflow-hidden rounded-[26px] bg-primary p-7 text-white ${className}`}>
+    <div className={`relative overflow-hidden rounded-[26px] grad-card p-7 text-white ${className}`}>
       <div className="absolute -right-12 -top-12 h-[200px] w-[200px] rounded-full bg-white/[.08]" aria-hidden />
-      <span className="inline-block rounded-[10px] bg-white px-3 py-1.5 text-[13px] font-extrabold text-ink">Profile Strength</span>
+      <span className="inline-block rounded-[10px] bg-white px-3 py-1.5 text-[13px] font-extrabold text-[#111834]">Profile Strength</span>
       <div className="relative mt-5 flex flex-wrap items-center gap-7">
         <div className="flex h-[132px] w-[132px] flex-none flex-col items-center justify-center rounded-full border-[12px] border-peach text-center">
           <span className={`px-2 font-extrabold leading-tight first-letter:uppercase ${LEVEL_NAMES[s.overall].length > 9 ? "text-[14px]" : "text-[22px]"}`}>{LEVEL_NAMES[s.overall]}</span>

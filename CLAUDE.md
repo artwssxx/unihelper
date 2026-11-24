@@ -17,6 +17,8 @@ Next.js 15 App Router, TypeScript strict, Tailwind v4 (токены дизайн
 - `lib/roadmap.ts` — дорожная карта по шаблонам; `lib/content/` — уроки и ивенты
 - `data/programs.ts` — программы и гранты (источник для `supabase/seed.sql`)
 - `components/` — оболочка, карточки, компоненты мока, тур демо
+- `app/(admin)/admin` + `app/api/admin/*` + `components/admin/*` — админка; контент = код + правки (`lib/server/contentStore.ts`), сайт читает итог через `/api/content` и `useContent()`
+- `components/landing/LandingV4.tsx` + `lib/i18n/landing.ts` — лендинг на 3 языках; тема — `data-theme` на <html>, токены v4 в `app/globals.css`
 - `app/(site)/demo` + `lib/demo.ts` + `lib/demoData.ts` + `app/api/demo` — демо для инвесторов (вымышленный ученик, история моков считается настоящим движком)
 
 ## Правила
@@ -31,6 +33,8 @@ Next.js 15 App Router, TypeScript strict, Tailwind v4 (токены дизайн
 - Демо: данные явно помечены как вымышленные; в демо лиды и профиль никуда не отправляются.
 - Данные с `verifiedAt = null` и ивенты-примеры явно помечены.
 - Ключи только в `.env.local` и настройках Vercel. Service role — только в `lib/server`.
+- Новые страницы берут программы/ивенты/уроки только через `useContent()` (клиент) или `getContent()` (сервер), не из констант напрямую.
+- Цвета — только токены из `globals.css` (работают в обеих темах); тёмные карточки — `bg-inv`/`inv-card`, не `bg-ink`.
 - Мобайл-first (375px). Без эмодзи в интерфейсе, иконки — штриховые SVG из `components/icons.tsx`.
 
 ## Команды

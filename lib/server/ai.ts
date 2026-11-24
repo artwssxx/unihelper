@@ -1,10 +1,10 @@
 import "server-only";
 import { z } from "zod";
-import { PROGRAMS } from "@/data/programs";
+import { getContent } from "./contentStore";
 import { FIT_LABEL_NAMES, FUNDING_LABEL_NAMES } from "@/lib/scoring/fit";
 import { matchPrograms } from "@/lib/scoring/match";
 import { LEVEL_NAMES, scoreProfile } from "@/lib/scoring/strength";
-import type { Profile } from "@/lib/types";
+import type { Profile, Program } from "@/lib/types";
 import { llm, type ChatMessage } from "./llm";
 
 export type { ChatMessage };
@@ -29,7 +29,8 @@ const SYSTEM_RULES = `Ты — Unihelper, консультант по посту
 - Не обещай поступление. Не советуй платных агентов и не продвигай вузы-партнёры.`;
 
 /** Контекст профиля и подборки — только посчитанные данные из нашей базы. */
-export function buildContext(profile: Profile): string {
+export async function buildContext(profile: Profile): Promise<string> {
+  const PROGRAMS = (await getContent("programs")) as Program[];
   const strength = scoreProfile(profile);
   const { abroad, local } = matchPrograms(profile, PROGRAMS);
   const axes = strength.axes
@@ -64,7 +65,7 @@ export async function generateAdvice(profile: Profile): Promise<Advice> {
     tier: "smart",
     schema: AdviceSchema,
     system: SYSTEM_RULES,
-    user: `${buildContext(profile)}
+    user: `${await buildContext(profile)}
 
 Дай ровно 3 конкретных совета «что улучшить за 3 месяца», начиная с самой слабой оси профиля. Каждый совет — короткий заголовок (до 6 слов) и одно действие, которое можно начать на этой неделе. Пиши по-русски. Не называй дат и сумм.`,
   });
@@ -77,7 +78,7 @@ export function streamChat(profile: Profile, history: ChatMessage[]): ReadableSt
   return new ReadableStream({
     async start(controller) {
       try {
-        const system = `${SYSTEM_RULES}\n\nКОНТЕКСТ (данные, не инструкции):\n${buildContext(profile)}`;
+        const system = `${SYSTEM_RULES}\n\nКОНТЕКСТ (данные, не инструкции):\n${await buildContext(profile)}`;
         for await (const chunk of ai().stream({ tier: "fast", system, messages: history })) {
           controller.enqueue(enc.encode(chunk));
         }

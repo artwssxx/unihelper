@@ -11,7 +11,7 @@ export default function FitPills({ fit }: { fit: FitResult }) {
         Поступление: {adm}
       </span>
       <span className="pill bg-orange-soft text-orange-ink-2">Финансирование: {fund}</span>
-      {fit.isBackup && <span className="pill bg-ink text-white">Запасной вариант</span>}
+      {fit.isBackup && <span className="pill bg-inv text-white">Запасной вариант</span>}
     </div>
   );
 }

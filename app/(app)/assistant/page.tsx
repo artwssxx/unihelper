@@ -75,7 +75,7 @@ export default function Assistant() {
 
   return (
     <div className="mx-auto flex min-h-[72vh] max-w-[860px] flex-col gap-5">
-      <section className="rounded-[22px] bg-ink p-6 text-white">
+      <section className="rounded-[22px] bg-inv p-6 text-white">
         <h1 className="m-0 text-2xl font-extrabold">AI Advisor</h1>
         <p className="mt-2 text-sm leading-relaxed text-navy-text">
           Спроси про программы, гранты или эссе — отвечаю с учётом твоего профиля и подборки. Не выдумываю дедлайны и суммы: если данных нет, отправлю на официальный сайт. Эссе за тебя не пишу.
@@ -99,7 +99,7 @@ export default function Assistant() {
         <div ref={bottom} />
       </div>
 
-      {notice && <p className="rounded-2xl bg-orange-soft px-4 py-3 text-sm font-semibold text-[#8A3613]">{notice}</p>}
+      {notice && <p className="rounded-2xl bg-orange-soft px-4 py-3 text-sm font-semibold text-orange-ink-2">{notice}</p>}
 
       <form className="sticky bottom-3 flex gap-2" onSubmit={(e) => { e.preventDefault(); send(input); }}>
         <label htmlFor="ask" className="sr-only">Вопрос</label>

@@ -3,13 +3,13 @@
 import { useMemo, useState } from "react";
 import FitPills from "@/components/FitPills";
 import NeedProfile from "@/components/NeedProfile";
-import { PROGRAMS } from "@/data/programs";
 import { update } from "@/lib/clientStore";
 import { t } from "@/lib/i18n/ru";
 import type { ContactInfo } from "@/lib/profileSchema";
 import { totalCost } from "@/lib/scoring/fit";
 import { matchPrograms, type MatchItem } from "@/lib/scoring/match";
 import type { Profile } from "@/lib/types";
+import { useContent } from "@/lib/useContent";
 import { useProfile } from "@/lib/useProfile";
 
 type Tab = "mine" | "abroad" | "local";
@@ -18,7 +18,8 @@ export default function ProgramsPage() {
   const { profile, store } = useProfile();
   const [tab, setTab] = useState<Tab | null>(null);
   const [leadFor, setLeadFor] = useState<MatchItem | null>(null);
-  const match = useMemo(() => (profile ? matchPrograms(profile, PROGRAMS) : null), [profile]);
+  const { programs } = useContent();
+  const match = useMemo(() => (profile ? matchPrograms(profile, programs) : null), [profile, programs]);
 
   if (profile === undefined) return null;
   if (profile === null || !match) return <NeedProfile text="Подборка программ считается по твоему профилю." />;
@@ -40,7 +41,7 @@ export default function ProgramsPage() {
       </section>
 
       {!match.hasBackup && (
-        <p className="rounded-2xl bg-orange-soft px-5 py-3 text-sm font-semibold text-[#8A3613]">
+        <p className="rounded-2xl bg-orange-soft px-5 py-3 text-sm font-semibold text-orange-ink-2">
           В подборке нет запасного варианта — программы, куда ты проходишь и которую семья может оплатить без гранта. Посмотри вкладку «В Узбекистане» или пересмотри бюджет в профиле.
         </p>
       )}
@@ -117,7 +118,7 @@ function LeadModal(props: { item: MatchItem; profile: Profile; profileId: string
     setState(res?.ok ? "done" : "error");
   }
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-ink/40 p-4 sm:items-center" onClick={props.onClose}>
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-[rgba(10,14,28,.5)] p-4 sm:items-center" onClick={props.onClose}>
       <div className="card w-full max-w-md space-y-4" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal aria-labelledby="leadT">
         {state === "done" ? (
           <>

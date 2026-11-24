@@ -6,18 +6,17 @@ import FitPills from "@/components/FitPills";
 import MockTrend from "@/components/MockTrend";
 import NeedProfile from "@/components/NeedProfile";
 import StrengthCard from "@/components/StrengthCard";
-import { PROGRAMS } from "@/data/programs";
 import { update } from "@/lib/clientStore";
-import { EVENTS } from "@/lib/content/events";
-import { lessonsForDomains } from "@/lib/content/lessons";
 import { buildRoadmap, effectiveStatus } from "@/lib/roadmap";
 import { t } from "@/lib/i18n/ru";
 import { matchPrograms } from "@/lib/scoring/match";
 import { scoreProfile } from "@/lib/scoring/strength";
+import { lessonsForDomainsIn, useContent } from "@/lib/useContent";
 import { useProfile } from "@/lib/useProfile";
 
 export default function Dashboard() {
   const { profile, store } = useProfile();
+  const { programs: PROGRAMS, events: EVENTS, lessons: LESSONS } = useContent();
   const data = useMemo(() => {
     if (!profile || !store) return null;
     const strength = scoreProfile(profile);
@@ -28,7 +27,7 @@ export default function Dashboard() {
     const picks = mine.length
       ? mine.slice(0, 3)
       : [match.abroad.find((i) => i.fit.admission.label === "realistic"), match.abroad.find((i) => i.fit.admission.label === "ambitious"), all.find((i) => i.fit.isBackup)].filter(Boolean) as typeof all;
-    const roadmap = buildRoadmap(profile, store.myPrograms ?? []);
+    const roadmap = buildRoadmap(profile, store.myPrograms ?? [], new Date(), PROGRAMS);
     const steps = roadmap
       .map((i) => ({ i, st: effectiveStatus(i, store.roadmap?.[i.id]) }))
       .filter((x) => x.st !== "done")
@@ -39,8 +38,8 @@ export default function Dashboard() {
     const upcoming = (myEvents.length ? myEvents : EVENTS.filter((e) => e.registrationMode === "unihelper")).slice(0, 2);
     const lastMock = [...(store.mocks ?? [])].filter((m) => m.status === "completed").sort((a, b) => b.finishedAt.localeCompare(a.finishedAt))[0];
     const weak = lastMock?.weakDomains?.[0];
-    return { strength, picks, steps, weekCount, upcoming, myEventIds: new Set(myEvents.map((e) => e!.id)), weak, lessons: weak ? lessonsForDomains([weak], 1) : [] };
-  }, [profile, store]);
+    return { strength, picks, steps, weekCount, upcoming, myEventIds: new Set(myEvents.map((e) => e!.id)), weak, lessons: weak ? lessonsForDomainsIn(LESSONS, [weak], 1) : [] };
+  }, [profile, store, PROGRAMS, EVENTS, LESSONS]);
 
   if (profile === undefined) return null;
   if (profile === null || !data) return <NeedProfile />;
@@ -96,7 +95,7 @@ export default function Dashboard() {
               <label key={i.id} className="flex items-start gap-3">
                 <input
                   type="checkbox"
-                  className="mt-0.5 h-5 w-5 flex-none accent-[#2E6BE6]"
+                  className="mt-0.5 h-5 w-5 flex-none accent-[var(--pri)]"
                   checked={false}
                   onChange={() => update((s) => ({ roadmap: { ...(s.roadmap ?? {}), [i.id]: "done" } }))}
                 />
@@ -155,7 +154,7 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <div className="rounded-[22px] border border-ink bg-ink p-6 text-white">
+        <div className="rounded-[22px] border border-inv bg-inv p-6 text-white">
           <h2 className="m-0 text-xl font-extrabold">AI Advisor</h2>
           <p className="mb-4 mt-2.5 text-sm leading-relaxed text-navy-text">Спроси про программы, гранты или эссе — отвечаю с учётом твоего профиля.</p>
           <div className="flex flex-wrap gap-2">

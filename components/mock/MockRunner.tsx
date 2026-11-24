@@ -334,7 +334,7 @@ export default function MockRunner({ exam, section, mode }: { exam: Exam; sectio
 
   return (
     <div className={mode === "hard" ? "no-select min-h-screen bg-bg" : "min-h-screen bg-bg"}>
-      <header className="flex flex-wrap items-center justify-between gap-4 bg-ink px-4 py-3.5 text-white sm:px-7">
+      <header className="flex flex-wrap items-center justify-between gap-4 bg-inv px-4 py-3.5 text-white sm:px-7">
         <div className="flex flex-wrap items-center gap-3.5">
           <span className="font-extrabold">{SECTION_TITLE[section]}</span>
           {exam === "sat" && <span className="text-sm text-navy-text">Модуль {a.att.module} из {a.att.totalModules}</span>}
@@ -372,7 +372,7 @@ export default function MockRunner({ exam, section, mode }: { exam: Exam; sectio
       </header>
 
       {mode === "hard" && (
-        <div className="flex flex-wrap items-center gap-2.5 bg-orange-soft px-4 py-2.5 text-sm font-semibold text-[#8A3613] sm:px-7">
+        <div className="flex flex-wrap items-center gap-2.5 bg-orange-soft px-4 py-2.5 text-sm font-semibold text-orange-ink-2 sm:px-7">
           <I.Warn />
           Выход из полноэкранного режима, переход в другую вкладку или закрытие страницы сразу завершит попытку без балла.
         </div>
@@ -470,7 +470,7 @@ function Rules(props: { exam: Exam; section: Section; mode: Mode; canHard: boole
                 Честно: хард-режим не видит телефон в руках, второе устройство и скриншоты. Это тренировка самодисциплины, а не прокторинг.
               </p>
               {!props.canHard && (
-                <p className="rounded-xl bg-orange-soft px-4 py-3 text-sm font-semibold text-[#8A3613]">
+                <p className="rounded-xl bg-orange-soft px-4 py-3 text-sm font-semibold text-orange-ink-2">
                   Хард-режим доступен только в браузере на компьютере. На телефоне и в Telegram пройдите мок в лёгком режиме.
                 </p>
               )}

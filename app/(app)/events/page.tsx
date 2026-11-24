@@ -3,7 +3,8 @@
 import QRCode from "qrcode";
 import { useEffect, useMemo, useState } from "react";
 import { update, useStore, type EventRegistration } from "@/lib/clientStore";
-import { EVENTS, TYPE_LABEL, rankEvents, type EventItem } from "@/lib/content/events";
+import { TYPE_LABEL, rankEvents, type EventItem } from "@/lib/content/events";
+import { useContent } from "@/lib/useContent";
 
 const FIELDS = [
   { id: "name", label: "Имя" },
@@ -14,6 +15,7 @@ const FIELDS = [
 
 export default function EventsPage() {
   const store = useStore();
+  const { events: EVENTS } = useContent();
   const [type, setType] = useState<"all" | EventItem["type"]>("all");
   const [place, setPlace] = useState<"all" | "online" | "offline">("all");
   const [open, setOpen] = useState<EventItem | null>(null);
@@ -23,7 +25,7 @@ export default function EventsPage() {
     if (!store) return [];
     const ranked = rankEvents(EVENTS, store.profile?.major, store.profile?.city);
     return ranked.filter((e) => (type === "all" || e.type === type) && (place === "all" || (place === "online") === e.online));
-  }, [store, type, place]);
+  }, [store, type, place, EVENTS]);
 
   if (!store) return null;
   const regs = store.events ?? {};
@@ -38,7 +40,7 @@ export default function EventsPage() {
         </p>
       </section>
 
-      <p className="rounded-2xl border border-dashed border-[#C7D4EE] bg-surface px-5 py-3 text-sm text-body">
+      <p className="rounded-2xl border border-dashed border-line-2 bg-surface px-5 py-3 text-sm text-body">
         Сейчас в ленте <b>демонстрационные примеры</b> (помечены «[Пример]»). Реальные ивенты добавят организаторы через «Разместить ивент» после модерации.
       </p>
 
@@ -142,7 +144,7 @@ function RegisterModal({ e, store, onClose, onDone }: { e: EventItem; store: Non
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-ink/40 p-4 sm:items-center" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-[rgba(10,14,28,.5)] p-4 sm:items-center" onClick={onClose}>
       <div role="dialog" aria-modal aria-labelledby="regT" className="card w-full max-w-md space-y-4" onClick={(ev) => ev.stopPropagation()}>
         <h2 id="regT" className="text-xl font-extrabold">{full ? "Лист ожидания" : "Запись"}: {e.title}</h2>
         {full && <p className="text-sm text-body">Мест нет. Если кто-то отменит запись, вы автоматически перейдёте в список участников.</p>}
@@ -189,7 +191,7 @@ function Ticket({ e, reg, onClose }: { e: EventItem; reg: EventRegistration; onC
     QRCode.toString(`unihelper:ticket:${e.id}:${reg.ticket}`, { type: "svg", margin: 1, color: { dark: "#0E1A3A", light: "#FFFFFF" } }).then(setSvg);
   }, [e.id, reg.ticket]);
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 p-4" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(10,14,28,.5)] p-4" onClick={onClose}>
       <div role="dialog" aria-modal aria-labelledby="tT" className="card w-full max-w-sm space-y-4 text-center" onClick={(ev) => ev.stopPropagation()}>
         <h2 id="tT" className="text-xl font-extrabold">{reg.status === "waitlist" ? "Вы в листе ожидания" : "Ваш билет"}</h2>
         <p className="text-sm text-body">{e.title} · {new Date(e.startsAt).toLocaleString("ru-RU", { day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" })}</p>

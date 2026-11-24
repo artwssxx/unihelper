@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { useStore } from "@/lib/clientStore";
 import DemoTour from "./DemoTour";
+import ThemeToggle from "./ThemeToggle";
 import * as I from "./icons";
 
 const MAIN = [
@@ -54,16 +55,16 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex min-h-screen">
-      <aside className="sticky top-0 hidden h-screen w-[250px] flex-none overflow-y-auto border-r border-line bg-surface px-4 py-[22px] lg:block">
+      <aside className="glass sticky top-0 hidden h-screen w-[250px] flex-none overflow-y-auto rounded-none border-y-0 border-l-0 px-4 py-[22px] shadow-none lg:block">
         <Brand />
         {nav}
         <PlanCard />
       </aside>
 
       {open && (
-        <div className="fixed inset-0 z-40 bg-ink/40 lg:hidden" onClick={() => setOpen(false)}>
+        <div className="fixed inset-0 z-40 bg-[rgba(10,14,28,.5)] lg:hidden" onClick={() => setOpen(false)}>
           <aside
-            className="h-full w-[280px] overflow-y-auto bg-surface px-4 py-[22px]"
+            className="h-full w-[280px] overflow-y-auto bg-surface-solid px-4 py-[22px]"
             onClick={(e) => e.stopPropagation()}
           >
             <Brand />
@@ -89,6 +90,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             </div>
           </div>
           <div className="flex items-center gap-2.5">
+            <ThemeToggle />
             <Link
               href="/roadmap"
               aria-label="Уведомления и ближайшие шаги"
@@ -99,14 +101,15 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             <Link
               href="/profile"
               aria-label="Профиль"
-              className="flex h-11 w-11 items-center justify-center rounded-full bg-primary font-extrabold text-white"
+              className="flex h-11 w-11 items-center justify-center rounded-full font-extrabold text-white"
+              style={{ background: "var(--grad)" }}
             >
               {initials(store?.contact?.fullName)}
             </Link>
           </div>
         </header>
         {store?.demo?.active && (
-          <p className="mt-4 rounded-xl bg-orange-soft px-4 py-2 text-[13px] font-semibold text-[#8A3613]">
+          <p className="mt-4 rounded-xl bg-orange-soft px-4 py-2 text-[13px] font-semibold text-orange-ink-2">
             Демо-режим: ученик и его история вымышленные, мок-баллы посчитаны движком на смоделированных ответах. ИИ отвечает вживую.
           </p>
         )}
@@ -137,7 +140,7 @@ function NavLink(props: { href: string; label: string; icon: (p: { size?: number
       onClick={props.onClick}
       aria-current={props.on ? "page" : undefined}
       className={`flex items-center gap-3 rounded-xl px-[14px] py-[11px] text-[15px] font-semibold ${
-        props.on ? "bg-primary-soft text-primary-ink" : "text-ink-2 hover:bg-[#EEF3FC]"
+        props.on ? "bg-primary-soft text-primary-ink" : "text-ink-2 hover:bg-primary-soft"
       }`}
     >
       <Icon size={18} />

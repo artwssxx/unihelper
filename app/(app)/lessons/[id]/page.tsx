@@ -4,7 +4,8 @@ import Link from "next/link";
 import { use, useEffect, useState } from "react";
 import * as I from "@/components/icons";
 import { update, useStore } from "@/lib/clientStore";
-import { COURSES, LESSONS } from "@/lib/content/lessons";
+import { COURSES } from "@/lib/content/lessons";
+import { useContent } from "@/lib/useContent";
 import type { PublicQuestion } from "@/lib/mocks/types";
 
 const L = "ABCDEFGH";
@@ -12,6 +13,7 @@ type Res = { id: string; correct: boolean; answer: string; explanation: string }
 
 export default function LessonPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
+  const { lessons: LESSONS } = useContent();
   const lesson = LESSONS.find((l) => l.id === id);
   const store = useStore();
   const [qs, setQs] = useState<PublicQuestion[]>([]);
@@ -21,7 +23,8 @@ export default function LessonPage({ params }: { params: Promise<{ id: string }>
   useEffect(() => {
     if (!lesson?.quiz.length) return;
     fetch(`/api/lessons?id=${lesson.id}`).then((r) => r.json()).then((j) => setQs(j.questions ?? []));
-  }, [lesson]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lesson?.id]);
 
   if (!lesson) {
     return <div className="card">Урок не найден. <Link href="/lessons" className="font-bold text-primary">К урокам</Link></div>;
@@ -51,7 +54,7 @@ export default function LessonPage({ params }: { params: Promise<{ id: string }>
         <h1 className="mt-2 text-[32px] font-extrabold tracking-tight">{lesson.title}</h1>
       </div>
 
-      <div className="flex aspect-video flex-col items-center justify-center gap-3 rounded-[26px] bg-ink p-6 text-center text-white">
+      <div className="flex aspect-video flex-col items-center justify-center gap-3 rounded-[26px] bg-inv p-6 text-center text-white">
         <I.Play size={40} color="#F6B48E" />
         <p className="font-bold">Видео ментора скоро появится</p>
         <p className="max-w-sm text-sm text-navy-text">Пока — конспект урока ниже. {lesson.isPro ? "Полный курс будет доступен в Pro." : "Вводные уроки бесплатны."}</p>
@@ -68,7 +71,7 @@ export default function LessonPage({ params }: { params: Promise<{ id: string }>
           ))}
         </ul>
         <label className="mt-5 flex items-center gap-3 text-sm font-semibold">
-          <input type="checkbox" className="h-5 w-5 accent-[#2E6BE6]" checked={Boolean(progress?.watched)} onChange={(e) => setProgress({ watched: e.target.checked })} />
+          <input type="checkbox" className="h-5 w-5 accent-[var(--pri)]" checked={Boolean(progress?.watched)} onChange={(e) => setProgress({ watched: e.target.checked })} />
           Конспект прочитан
         </label>
       </section>

@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 import NeedProfile from "@/components/NeedProfile";
 import { update } from "@/lib/clientStore";
 import { TRACKS, buildRoadmap, effectiveStatus, monthLabel, type RoadmapItem, type StepStatus, type Track } from "@/lib/roadmap";
+import { useContent } from "@/lib/useContent";
 import { useProfile } from "@/lib/useProfile";
 
 const STATUS: Record<StepStatus, { label: string; cls: string }> = {
@@ -17,16 +18,17 @@ const NEXT: Record<StepStatus, "todo" | "doing" | "done"> = { todo: "doing", doi
 
 export default function RoadmapPage() {
   const { profile, store } = useProfile();
+  const { programs } = useContent();
   const [title, setTitle] = useState("");
   const [track, setTrack] = useState<Track>("activities");
   const [month, setMonth] = useState("");
 
   const items: RoadmapItem[] = useMemo(() => {
     if (!profile) return [];
-    const auto = buildRoadmap(profile, store?.myPrograms ?? []);
+    const auto = buildRoadmap(profile, store?.myPrograms ?? [], new Date(), programs);
     const manual = (store?.customSteps ?? []).map((c) => ({ id: c.id, title: c.title, track: c.track as Track, due: c.month, estimated: false, source: "manual" as const }));
     return [...auto, ...manual].sort((a, b) => a.due.localeCompare(b.due));
-  }, [profile, store]);
+  }, [profile, store, programs]);
 
   if (profile === undefined) return null;
   if (profile === null) return <NeedProfile text="Дорожная карта строится из класса, целей и силы профиля." />;

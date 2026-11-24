@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { use, useEffect, useState } from "react";
-import { lessonsForDomains } from "@/lib/content/lessons";
+import { lessonsForDomainsIn, useContent } from "@/lib/useContent";
 import { DOMAIN_LABEL } from "@/lib/mocks/labels";
 import { SECTION_TITLE, fmtTime, loadResult, type StoredResult, type WritingResult } from "@/lib/mocks/client";
 import type { ReviewItem } from "@/lib/mocks/types";
@@ -12,6 +12,7 @@ const L = "ABCDEFGH";
 export default function ResultPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const [r, setR] = useState<StoredResult | null | undefined>(undefined);
+  const { lessons: LESSONS } = useContent();
   useEffect(() => setR(loadResult(id)), [id]);
 
   if (r === undefined) return null;
@@ -39,7 +40,7 @@ export default function ResultPage({ params }: { params: Promise<{ id: string }>
   }
 
   const res = r.result;
-  const lessons = lessonsForDomains(res.weakDomains);
+  const lessons = lessonsForDomainsIn(LESSONS, res.weakDomains);
   return (
     <div className="space-y-6">
       <section className="flex flex-wrap gap-6">
@@ -58,7 +59,7 @@ export default function ResultPage({ params }: { params: Promise<{ id: string }>
         </div>
         <div className="relative min-w-0 flex-[1.4_1_420px] overflow-hidden rounded-[26px] bg-primary p-7 text-white">
           <div className="absolute -right-12 -top-12 h-[200px] w-[200px] rounded-full bg-white/10" aria-hidden />
-          <span className="inline-block rounded-[10px] bg-white px-3 py-1.5 text-[13px] font-extrabold text-ink">
+          <span className="inline-block rounded-[10px] bg-white px-3 py-1.5 text-[13px] font-extrabold text-[#111834]">
             {res.exam === "sat" ? "Примерный балл секции" : "Примерный band"}
           </span>
           <div className="relative mt-4 text-[48px] font-extrabold tracking-tight">
@@ -195,7 +196,7 @@ function WritingResultView({ r, mode }: { r: WritingResult; mode: "light" | "har
         <p className="mt-2 text-body">Примерная оценка ИИ по 4 официальным критериям, диапазоном. Не официальный балл.</p>
       </div>
       {!r.ai && (
-        <p className="rounded-2xl bg-orange-soft px-5 py-4 text-sm font-semibold text-[#8A3613]">
+        <p className="rounded-2xl bg-orange-soft px-5 py-4 text-sm font-semibold text-orange-ink-2">
           {r.limit
             ? "Лимит ИИ-проверок Writing на сегодня исчерпан. Тексты сохранены — проверьте завтра."
             : "ИИ-оценка сейчас недоступна (не подключён ключ Claude API). Тексты сохранены, ниже — подсчёт слов."}

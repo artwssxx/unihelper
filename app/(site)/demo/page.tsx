@@ -40,7 +40,7 @@ export default function DemoPage() {
       </header>
 
       <section className="mx-auto max-w-[1240px] px-6 pb-16 pt-10">
-        <div className="relative overflow-hidden rounded-[32px] bg-ink px-8 py-14 text-white md:px-14">
+        <div className="relative overflow-hidden rounded-[32px] bg-inv px-8 py-14 text-white md:px-14">
           <div className="absolute -right-20 -top-20 h-80 w-80 rounded-full border-[40px] border-primary/40" aria-hidden />
           <div className="eyebrow relative text-peach">ЖИВОЕ ДЕМО</div>
           <h1 className="relative mt-4 max-w-[820px] text-[38px] font-extrabold leading-[1.05] tracking-[-0.03em] md:text-[60px]">

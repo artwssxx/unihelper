@@ -1,63 +1,118 @@
 @import "tailwindcss";
 
-/* Дизайн-система UniHelper — из макетов (landing, dashboard, mock-hard). */
+/* Дизайн-система UniHelper v4: Cobalt + Indigo · Apricot · холодные нейтральные, стекло, светлая и тёмная темы.
+   Тема — атрибут data-theme на <html> (ставится до отрисовки в app/layout.tsx). */
 :root {
-  --bg: #f4f7fc;
-  --surface: #ffffff;
-  --ink: #0e1a3a;
-  --ink-2: #3f4b6b;
-  --body: #4a5675;
-  --muted: #5b6785;
-  --line: #e3e9f4;
-  --line-2: #d9e2f2;
-  --line-3: #eef2f9;
-  --primary: #2e6be6;
-  --primary-ink: #1f4fcb;
-  --primary-soft: #eaf1fe;
-  --primary-soft-2: #d3e1fb;
-  --primary-mid: #9dbbf5;
-  --orange: #e8652b;
-  --orange-ink: #c2501a;
-  --orange-ink-2: #b2461a;
-  --orange-soft: #fdeee6;
-  --peach: #f6b48e;
-  --navy-2: #1a2a52;
-  --navy-line: #33467a;
-  --navy-text: #c9d3ea;
+  --bg: #f5f6fa;
+  --bg2: #eceff7;
+  --surface: rgba(255, 255, 255, 0.66);
+  --surface-solid: #ffffff;
+  --surface-border: rgba(255, 255, 255, 0.95);
+  --line: rgba(17, 24, 52, 0.09);
+  --line-2: rgba(17, 24, 52, 0.15);
+  --line-3: rgba(17, 24, 52, 0.06);
+  --text: #111834;
+  --ink: var(--text);
+  --ink-2: #333d5a;
+  --body: #4b5571;
+  --muted: #566079;
+  --soft: #78829a;
+  --pri: #2f62e8;
+  --pri2: #4b4ddb;
+  --pri-tint: #e8edfd;
+  --pri-text: #2446b5;
+  --acc: #ee7f4f;
+  --acc-tint: #fdebe2;
+  --acc-text: #b0461a;
+  --acc-soft: #f6b496;
+  --glow1: rgba(47, 98, 232, 0.2);
+  --glow2: rgba(238, 127, 79, 0.18);
+  --shadow: 0 14px 44px rgba(17, 24, 52, 0.08);
+  --inv: #111834;
+  --inv-text: #eef1f8;
+  --inv-muted: #a8b2cb;
+  --inv-surface: rgba(255, 255, 255, 0.07);
+  --inv-line: rgba(255, 255, 255, 0.12);
+  --grad: linear-gradient(135deg, var(--pri), var(--pri2));
+  --primary-mid: #9db4f5;
+  --primary-soft-2: #d2dcfb;
   --green: #1f7a3d;
-  --green-soft: #e3f4e9;
+  --green-soft: #e1f3e7;
   --red: #b42318;
   --red-soft: #fdecea;
+  color-scheme: light;
+}
+[data-theme="dark"] {
+  --bg: #0a0e1c;
+  --bg2: #0e1427;
+  --surface: rgba(255, 255, 255, 0.045);
+  --surface-solid: #111930;
+  --surface-border: rgba(255, 255, 255, 0.09);
+  --line: rgba(255, 255, 255, 0.08);
+  --line-2: rgba(255, 255, 255, 0.14);
+  --line-3: rgba(255, 255, 255, 0.05);
+  --text: #eaeef8;
+  --ink-2: #ccd3e6;
+  --body: #b4bdd3;
+  --muted: #a3adc6;
+  --soft: #808ba7;
+  --pri: #5a80ff;
+  --pri2: #6a62f5;
+  --pri-tint: rgba(90, 128, 255, 0.15);
+  --pri-text: #a3b8ff;
+  --acc: #f2966c;
+  --acc-tint: rgba(242, 150, 108, 0.14);
+  --acc-text: #f6b596;
+  --acc-soft: #f2966c;
+  --glow1: rgba(90, 128, 255, 0.22);
+  --glow2: rgba(242, 150, 108, 0.13);
+  --shadow: 0 14px 44px rgba(0, 0, 0, 0.4);
+  --inv: #131b34;
+  --inv-muted: #a3adc6;
+  --inv-surface: rgba(255, 255, 255, 0.06);
+  --inv-line: rgba(255, 255, 255, 0.1);
+  --primary-mid: #4d66b8;
+  --primary-soft-2: rgba(90, 128, 255, 0.28);
+  --green: #6fd394;
+  --green-soft: rgba(111, 211, 148, 0.13);
+  --red: #ff8a7d;
+  --red-soft: rgba(255, 138, 125, 0.13);
+  color-scheme: dark;
 }
 
 @theme inline {
   --color-bg: var(--bg);
   --color-surface: var(--surface);
-  --color-ink: var(--ink);
+  --color-surface-solid: var(--surface-solid);
+  --color-ink: var(--text);
   --color-ink-2: var(--ink-2);
   --color-body: var(--body);
   --color-muted: var(--muted);
+  --color-soft: var(--soft);
   --color-line: var(--line);
   --color-line-2: var(--line-2);
   --color-line-3: var(--line-3);
-  --color-primary: var(--primary);
-  --color-primary-ink: var(--primary-ink);
-  --color-primary-soft: var(--primary-soft);
+  --color-primary: var(--pri);
+  --color-primary-2: var(--pri2);
+  --color-primary-ink: var(--pri-text);
+  --color-primary-soft: var(--pri-tint);
   --color-primary-soft-2: var(--primary-soft-2);
   --color-primary-mid: var(--primary-mid);
-  --color-orange: var(--orange);
-  --color-orange-ink: var(--orange-ink);
-  --color-orange-ink-2: var(--orange-ink-2);
-  --color-orange-soft: var(--orange-soft);
-  --color-peach: var(--peach);
-  --color-navy-2: var(--navy-2);
-  --color-navy-line: var(--navy-line);
-  --color-navy-text: var(--navy-text);
+  --color-orange: var(--acc);
+  --color-orange-ink: var(--acc-text);
+  --color-orange-ink-2: var(--acc-text);
+  --color-orange-soft: var(--acc-tint);
+  --color-peach: var(--acc-soft);
+  --color-inv: var(--inv);
+  --color-navy-2: var(--inv-surface);
+  --color-navy-line: var(--inv-line);
+  --color-navy-text: var(--inv-muted);
   --color-green: var(--green);
   --color-green-soft: var(--green-soft);
   --color-red: var(--red);
   --color-red-soft: var(--red-soft);
   --font-sans: var(--font-manrope), system-ui, sans-serif;
+  --font-serif: var(--font-instrument), Georgia, serif;
 }
 
 html {
@@ -66,8 +121,9 @@ html {
 body {
   margin: 0;
   background: var(--bg);
-  color: var(--ink);
+  color: var(--text);
   font-family: var(--font-sans);
+  transition: background 0.4s, color 0.4s;
 }
 button {
   font-family: inherit;
@@ -77,17 +133,72 @@ button:disabled {
   cursor: not-allowed;
 }
 
+/* Мягкий фоновый свет — как в макете v4 */
+.amb {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  overflow: hidden;
+}
+.amb i {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(110px);
+  animation: amb-float 24s ease-in-out infinite alternate;
+}
+.amb i:nth-child(1) { width: 560px; height: 560px; left: -160px; top: 20%; background: var(--glow1); }
+.amb i:nth-child(2) { width: 520px; height: 520px; right: -160px; top: -80px; background: var(--glow1); animation-delay: -8s; }
+.amb i:nth-child(3) { width: 500px; height: 500px; left: 40%; bottom: -200px; background: var(--glow2); animation-delay: -14s; }
+@keyframes amb-float { to { transform: translate(50px, -40px) scale(1.1); } }
+@media (prefers-reduced-motion: reduce) { .amb i { animation: none; } }
+
+.serif-accent {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+}
+
 @utility btn-primary {
-  @apply inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-[18px] py-[13px] text-[15px] font-bold text-white transition hover:bg-primary-ink disabled:opacity-50;
+  @apply inline-flex items-center justify-center gap-2 rounded-[14px] px-[18px] py-[13px] text-[15px] font-extrabold text-white transition hover:-translate-y-0.5 disabled:opacity-50 disabled:hover:translate-y-0;
+  background: var(--grad);
+  box-shadow: 0 10px 28px color-mix(in srgb, var(--pri) 35%, transparent), inset 0 1px 0 rgba(255, 255, 255, 0.25);
 }
 @utility btn-secondary {
-  @apply inline-flex items-center justify-center gap-2 rounded-xl border border-line-2 bg-surface px-[18px] py-[13px] text-[15px] font-bold text-ink transition hover:border-primary-mid disabled:opacity-50;
+  @apply inline-flex items-center justify-center gap-2 rounded-[14px] border border-line bg-surface px-[18px] py-[13px] text-[15px] font-bold text-ink transition hover:-translate-y-0.5 hover:border-primary-mid disabled:opacity-50 disabled:hover:translate-y-0;
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
 }
 @utility btn-dark {
-  @apply inline-flex items-center justify-center gap-2 rounded-[10px] bg-ink px-[14px] py-[10px] text-[13px] font-bold text-white disabled:opacity-50;
+  @apply inline-flex items-center justify-center gap-2 rounded-[10px] bg-inv px-[14px] py-[10px] text-[13px] font-bold text-white disabled:opacity-50;
 }
 @utility card {
-  @apply rounded-[22px] border border-line bg-surface p-6;
+  @apply rounded-[24px] p-6;
+  background: var(--surface);
+  -webkit-backdrop-filter: blur(22px) saturate(160%);
+  backdrop-filter: blur(22px) saturate(160%);
+  border: 1px solid var(--surface-border);
+  box-shadow: var(--shadow);
+}
+@utility glass {
+  background: var(--surface);
+  -webkit-backdrop-filter: blur(22px) saturate(160%);
+  backdrop-filter: blur(22px) saturate(160%);
+  border: 1px solid var(--surface-border);
+  box-shadow: var(--shadow);
+}
+@utility inv-card {
+  background: radial-gradient(70% 80% at 100% 0%, color-mix(in srgb, var(--pri2) 38%, transparent), transparent 62%),
+    radial-gradient(60% 70% at 0% 100%, color-mix(in srgb, var(--acc) 16%, transparent), transparent 60%), var(--inv);
+  color: var(--inv-text);
+  border: 1px solid var(--inv-line);
+  box-shadow: var(--shadow);
+}
+@utility grad-card {
+  background: var(--grad);
+  color: #fff;
+  box-shadow: 0 24px 50px color-mix(in srgb, var(--pri) 30%, transparent);
 }
 @utility lbl {
   @apply text-xs font-extrabold tracking-[0.1em] text-muted;
@@ -99,10 +210,10 @@ button:disabled {
   @apply inline-flex items-center rounded-full px-[10px] py-[5px] text-xs font-bold whitespace-nowrap;
 }
 @utility input {
-  @apply w-full rounded-xl border border-line-2 bg-surface px-4 py-3 text-[15px] text-ink outline-none focus:border-primary;
+  @apply w-full rounded-xl border border-line-2 bg-surface-solid px-4 py-3 text-[15px] text-ink outline-none focus:border-primary;
 }
 @utility chip {
-  @apply rounded-[14px] border-[1.5px] border-line bg-surface px-4 py-3 text-left text-[15px] font-semibold text-ink transition hover:border-primary-mid;
+  @apply rounded-[14px] border-[1.5px] border-line bg-surface-solid px-4 py-3 text-left text-[15px] font-semibold text-ink transition hover:border-primary-mid;
   &[data-on="true"] {
     @apply border-primary bg-primary-soft;
   }
@@ -117,9 +228,9 @@ button:disabled {
 
 /* Варианты ответа в моке — как в макете mock-hard */
 @utility opt {
-  @apply flex w-full items-center gap-4 rounded-2xl border-[1.5px] border-line bg-surface px-[18px] py-4 text-left text-[17px] font-semibold text-ink hover:border-primary-mid;
+  @apply flex w-full items-center gap-4 rounded-2xl border-[1.5px] border-line bg-surface-solid px-[18px] py-4 text-left text-[17px] font-semibold text-ink hover:border-primary-mid;
   & > b {
-    @apply flex h-[34px] w-[34px] flex-none items-center justify-center rounded-[10px] border-[1.5px] border-[#c7d4ee] font-extrabold;
+    @apply flex h-[34px] w-[34px] flex-none items-center justify-center rounded-[10px] border-[1.5px] border-line-2 font-extrabold;
   }
   &[data-on="true"] {
     @apply border-primary bg-primary-soft;
@@ -139,3 +250,6 @@ button:disabled {
   user-select: none;
   -webkit-user-select: none;
 }
+
+[data-theme="dark"] .theme-sun { display: none; }
+:root:not([data-theme="dark"]) .theme-moon { display: none; }

@@ -23,7 +23,7 @@ export default function StartDemoButton({ light = false }: { light?: boolean }) 
             setBusy(false);
           }
         }}
-        className={`rounded-[14px] px-6 py-4 text-base font-extrabold disabled:opacity-60 ${light ? "bg-white text-primary-ink" : "bg-primary text-white hover:bg-primary-ink"}`}
+        className={`rounded-[14px] px-6 py-4 text-base font-extrabold disabled:opacity-60 ${light ? "bg-white text-[#2446B5]" : "bg-primary text-white hover:bg-primary-ink"}`}
       >
         {busy ? "Готовим демо…" : "Запустить живое демо"}
       </button>

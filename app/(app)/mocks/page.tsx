@@ -33,7 +33,7 @@ export default function MocksHub() {
       </section>
 
       {!canHard && (
-        <p className="rounded-2xl bg-orange-soft px-5 py-3 text-sm font-semibold text-[#8A3613]">
+        <p className="rounded-2xl bg-orange-soft px-5 py-3 text-sm font-semibold text-orange-ink-2">
           Вы на телефоне или в Telegram — здесь доступен только лёгкий режим. Хард-режим откройте в браузере на компьютере.
         </p>
       )}
@@ -44,7 +44,7 @@ export default function MocksHub() {
           const mode = modes[key] ?? "light";
           const hardOff = !canHard;
           return (
-            <div key={key} className={`lift rounded-[28px] p-7 ${c.section === "math" ? "bg-ink text-white" : "border border-line bg-surface"}`}>
+            <div key={key} className={`lift rounded-[28px] p-7 ${c.section === "math" ? "bg-inv text-white" : "border border-line bg-surface"}`}>
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <h2 className="text-2xl font-extrabold">{c.title}</h2>
                 <span className={`pill whitespace-normal ${c.section === "math" ? "bg-navy-2 text-navy-text" : "bg-bg text-muted"}`}>{c.meta}</span>
@@ -69,7 +69,7 @@ export default function MocksHub() {
                 </div>
                 <Link
                   href={`/mocks/run?exam=${c.exam}&section=${c.section}&mode=${mode}`}
-                  className={c.section === "math" ? "inline-flex items-center justify-center rounded-xl bg-white px-[18px] py-[13px] text-[15px] font-extrabold text-primary-ink" : "btn-primary"}
+                  className={c.section === "math" ? "inline-flex items-center justify-center rounded-xl bg-white px-[18px] py-[13px] text-[15px] font-extrabold text-[#2446B5]" : "btn-primary"}
                 >
                   Начать мок
                 </Link>

@@ -147,7 +147,7 @@ export default function SatView(props: {
 
       <aside className="min-w-0 flex-[1_1_280px]">
         <QuestionGrid a={a} goTo={props.goTo} />
-        <p className="mt-4 rounded-[18px] border border-dashed border-[#C7D4EE] bg-bg p-4 text-[13px] leading-relaxed text-body">
+        <p className="mt-4 rounded-[18px] border border-dashed border-line-2 bg-bg p-4 text-[13px] leading-relaxed text-body">
           {a.exam === "sat" && a.att.module === 1
             ? "Чем лучше вы решите модуль 1, тем сложнее будет модуль 2 — и тем выше потолок балла."
             : "Не оставляйте вопросы пустыми: за неверный ответ баллы не снимаются."}

@@ -174,9 +174,9 @@ function Preview({ pf, name, profile, contact, attended }: {
   contact?: { phone: string; email?: string }; attended: string[];
 }) {
   const theme = {
-    minimal: { wrap: "bg-white text-ink", hero: "bg-white", accent: "text-primary", card: "border border-line" },
-    creative: { wrap: "bg-[#FFF8F3] text-ink", hero: "bg-orange text-white", accent: "text-orange-ink", card: "bg-white shadow-sm" },
-    academic: { wrap: "bg-white text-ink font-serif", hero: "bg-ink text-white", accent: "text-primary-ink", card: "border-l-0 border-t-4 border-primary bg-bg" },
+    minimal: { wrap: "bg-white text-[#111834]", hero: "bg-white", accent: "text-primary", card: "border border-line" },
+    creative: { wrap: "bg-[#FFF8F3] text-[#111834]", hero: "bg-orange text-white", accent: "text-orange-ink", card: "bg-white shadow-sm" },
+    academic: { wrap: "bg-white text-[#111834] font-serif", hero: "bg-inv text-white", accent: "text-primary-ink", card: "border-l-0 border-t-4 border-primary bg-bg" },
   }[pf.template];
   const s = pf.sections;
   const achievements = profile.achievementsText.split(/[,;\n]/).map((x) => x.trim()).filter((x) => x.length > 3);

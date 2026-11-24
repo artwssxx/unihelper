@@ -46,7 +46,12 @@ export default function Quiz() {
 
   useEffect(() => {
     const s = load();
-    if (s.draft) setP({ ...EMPTY, ...s.draft });
+    const country = new URLSearchParams(location.search).get("country") as CountryCode | null;
+    const base = { ...EMPTY, ...(s.draft ?? {}) };
+    if (country && (COUNTRIES as readonly string[]).includes(country) && !base.targetCountries.includes(country)) {
+      base.targetCountries = [...base.targetCountries, country];
+    }
+    if (s.draft || country) setP(base);
     if (typeof s.step === "number") setStep(Math.min(s.step, STEPS - 1));
     if (s.contact) setContact({ fullName: s.contact.fullName, phone: s.contact.phone, email: s.contact.email ?? "" });
   }, []);
@@ -224,7 +229,7 @@ export default function Quiz() {
               step={500}
               value={p.budgetUsd}
               onChange={(e) => set({ budgetUsd: Number(e.target.value) })}
-              className="w-full accent-[#2E6BE6]"
+              className="w-full accent-[var(--pri)]"
             />
             <div className="flex justify-between text-xs text-muted"><span>$0</span><span>$60 000+</span></div>
           </Q>
