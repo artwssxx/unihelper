@@ -1,8 +1,9 @@
-import { NextResponse } from "next/server";
+import { after as afterResponse, NextResponse } from "next/server";
 import { z } from "zod";
 import type { Message } from "@/lib/community";
 import { blockedSet, communityCtx, isChatMember, isResponse, profilesFor } from "@/lib/server/community";
 import { takeQuota } from "@/lib/server/rateLimit";
+import { notifyNewMessage } from "@/lib/server/tgBot";
 
 const uuid = z.string().uuid();
 
@@ -58,5 +59,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     c.db.from("community_chats").update({ last_message_at: now }).eq("id", id),
     c.db.from("community_chat_members").update({ last_read_at: now }).eq("chat_id", id).eq("user_id", c.user.id),
   ]);
+  // Уведомление в Telegram — после ответа, чтобы не задерживать отправку.
+  afterResponse(() => notifyNewMessage(c.db, id, c.user.id, parsed.data.body).catch((e) => console.error("[tg notify]", e)));
   return NextResponse.json({ ok: true, id: data.id });
 }

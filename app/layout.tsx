@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Instrument_Serif, Manrope } from "next/font/google";
 import "./globals.css";
+import TelegramBridge from "@/components/TelegramBridge";
 import { AuthProvider } from "@/lib/auth";
 
 const manrope = Manrope({ variable: "--font-manrope", subsets: ["latin", "cyrillic"], weight: ["400", "500", "600", "700", "800"] });
@@ -25,7 +26,10 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       </head>
       <body className={`${manrope.variable} ${instrument.variable} antialiased`}>
         <div className="amb" aria-hidden="true"><i /><i /><i /></div>
-        <AuthProvider>{children}</AuthProvider>
+        <AuthProvider>
+          {children}
+          <TelegramBridge />
+        </AuthProvider>
       </body>
     </html>
   );

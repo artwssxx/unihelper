@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import NeedProfile from "@/components/NeedProfile";
 import StrengthCard from "@/components/StrengthCard";
 import { reset, update } from "@/lib/clientStore";
@@ -10,7 +10,7 @@ import { scoreProfile } from "@/lib/scoring/strength";
 import type { CountryCode, Major, Profile } from "@/lib/types";
 import { useProfile } from "@/lib/useProfile";
 import Link from "next/link";
-import { useAuth, usePlan } from "@/lib/auth";
+import { apiFetch, useAuth, usePlan } from "@/lib/auth";
 
 const LEVELS = [
   { v: "none", label: "Пока нет" }, { v: "school", label: "Школа" }, { v: "city", label: "Город / область" },
@@ -22,7 +22,7 @@ export default function ProfilePage() {
   const [draft, setDraft] = useState<Profile | null>(null);
   const [saved, setSaved] = useState(false);
   if (profile === undefined) return null;
-  if (profile === null) return (<div className="space-y-5"><NeedProfile /><AccountCard /></div>);
+  if (profile === null) return (<div className="space-y-5"><NeedProfile /><AccountCard /><TelegramCard /></div>);
   const p = draft ?? store!.profile!;
   const s = scoreProfile(profile);
   const set = (patch: Partial<Profile>) => { setDraft({ ...p, ...patch }); setSaved(false); };
@@ -116,6 +116,7 @@ export default function ProfilePage() {
       </section>
 
       <AccountCard />
+      <TelegramCard />
 
       <section className="card flex flex-wrap items-center justify-between gap-3">
         <div>
@@ -158,6 +159,65 @@ function AccountCard() {
           <Link href="/login?next=/profile" className="btn-primary">Войти</Link>
         )}
       </div>
+    </section>
+  );
+}
+
+function TelegramCard() {
+  const { user } = useAuth();
+  const [st, setSt] = useState<{ available: boolean; bot: string | null; linked: boolean; username: string | null; notify: boolean } | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const load = useCallback(async () => {
+    const r = await apiFetch("/api/telegram/link").catch(() => null);
+    if (r?.ok) setSt(await r.json());
+  }, []);
+  useEffect(() => {
+    if (user) load();
+  }, [user, load]);
+  // Вернулись из Telegram после привязки — обновляем статус.
+  useEffect(() => {
+    const f = () => document.visibilityState === "visible" && user && load();
+    document.addEventListener("visibilitychange", f);
+    return () => document.removeEventListener("visibilitychange", f);
+  }, [user, load]);
+  if (!user || !st?.available) return null;
+
+  async function connect() {
+    setBusy(true);
+    setErr(null);
+    const r = await apiFetch("/api/telegram/link", { method: "POST" }).catch(() => null);
+    setBusy(false);
+    const j = r ? await r.json().catch(() => ({})) : {};
+    if (!r?.ok || !j.url) return setErr(j.message ?? "Не удалось получить ссылку.");
+    window.open(j.url, "_blank", "noopener,noreferrer");
+  }
+  async function toggle(notify: boolean) {
+    setSt((x) => (x ? { ...x, notify } : x));
+    await apiFetch("/api/telegram/link", { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ notify }) }).catch(() => null);
+  }
+
+  return (
+    <section className="card space-y-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 className="m-0 text-lg font-extrabold">Telegram</h2>
+          <p className="mt-1 text-sm text-body">
+            {st.linked
+              ? `Бот @${st.bot} подключён${st.username ? ` к @${st.username}` : ""}: план на неделю, новые сообщения из комьюнити и ответы AI Advisor прямо в Telegram.`
+              : `Подключи бота @${st.bot}: раз в неделю — план и ивенты, сразу — новые сообщения из комьюнити. UniHelper можно открыть прямо в Telegram.`}
+          </p>
+        </div>
+        {!st.linked && <button className="btn-primary" disabled={busy} onClick={connect}>{busy ? "Готовим ссылку…" : "Подключить Telegram"}</button>}
+      </div>
+      {st.linked && (
+        <label className="flex items-center gap-2 text-sm font-semibold">
+          <input type="checkbox" className="h-4 w-4" checked={st.notify} onChange={(e) => toggle(e.target.checked)} />
+          Присылать напоминания и уведомления
+        </label>
+      )}
+      {!st.linked && <p className="text-xs text-muted">Откроется Telegram — нажми «Старт», и аккаунт подключится. Ссылка действует час.</p>}
+      {err && <p className="text-sm font-semibold text-red">{err}</p>}
     </section>
   );
 }

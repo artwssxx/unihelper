@@ -108,10 +108,21 @@ export function fmtTime(sec: number): string {
   return `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
 }
 
+/** Открыта ли страница внутри Telegram (мини-приложение). Сам скрипт Telegram может быть загружен и вне его. */
+export function inTelegram(): boolean {
+  if (typeof window === "undefined") return false;
+  const wa = (window as unknown as { Telegram?: { WebApp?: { initData?: string } } }).Telegram?.WebApp;
+  let flag = false;
+  try {
+    flag = sessionStorage.getItem("uh-tg") === "1";
+  } catch {}
+  return Boolean(wa?.initData) || flag || /Telegram/i.test(navigator.userAgent);
+}
+
 /** Хард-режим недоступен на телефоне и в Telegram: там уведомления дают ложные срабатывания. */
 export function hardModeAvailable(): boolean {
   if (typeof window === "undefined") return false;
-  const tg = Boolean((window as unknown as { Telegram?: { WebApp?: unknown } }).Telegram?.WebApp) || /Telegram/i.test(navigator.userAgent);
+  const tg = inTelegram();
   const coarse = window.matchMedia?.("(pointer: coarse)").matches ?? false;
   const mobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
   return !tg && !coarse && !mobile && Boolean(document.documentElement.requestFullscreen);
@@ -119,7 +130,7 @@ export function hardModeAvailable(): boolean {
 
 export function deviceInfo() {
   return {
-    telegram: Boolean((window as unknown as { Telegram?: { WebApp?: unknown } }).Telegram?.WebApp),
+    telegram: inTelegram(),
     coarse: window.matchMedia?.("(pointer: coarse)").matches ?? false,
   };
 }
