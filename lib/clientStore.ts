@@ -64,6 +64,8 @@ export interface Stored {
   essays?: EssayVersion[];
   /** id вопросов из прошлых моков — чтобы давать новые. */
   seenQuestions?: string[];
+  /** Свои вузы ученика (добавлены через подбор). */
+  customUnis?: import("./types").Program[];
   /** Демо для инвесторов: вымышленный ученик и пошаговый тур. */
   demo?: { active: boolean; step: number; tour: boolean };
 }
@@ -99,6 +101,14 @@ export function reset(): void {
 }
 
 /** Хук: актуальное состояние хранилища; null до гидрации. */
+/** Подписка на любые изменения хранилища (для синхронизации с аккаунтом). */
+export function subscribe(fn: () => void): () => void {
+  listeners.add(fn);
+  return () => {
+    listeners.delete(fn);
+  };
+}
+
 export function useStore(): Stored | null {
   const [state, setState] = useState<Stored | null>(null);
   useEffect(() => {

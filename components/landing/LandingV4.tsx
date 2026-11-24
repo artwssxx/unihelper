@@ -100,7 +100,7 @@ function Nav({ t, lang, chooseLang }: { t: T; lang: Lang; chooseLang: (l: Lang) 
             ))}
           </div>
           <span className={s.hideM}><ThemeToggle /></span>
-          <Link href="/dashboard" className={cx(s.btn, s.btnGhost, s.btnSm, s.hideM)}>{t.nav.login}</Link>
+          <Link href="/login" className={cx(s.btn, s.btnGhost, s.btnSm, s.hideM)}>{t.nav.login}</Link>
           <Link href="/quiz" className={cx(s.btn, s.btnPri, s.btnSm)}>{t.nav.start}</Link>
         </div>
       </div>

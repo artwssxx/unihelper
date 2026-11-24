@@ -9,6 +9,8 @@ import { COUNTRIES, MAJORS, profileSchema } from "@/lib/profileSchema";
 import { scoreProfile } from "@/lib/scoring/strength";
 import type { CountryCode, Major, Profile } from "@/lib/types";
 import { useProfile } from "@/lib/useProfile";
+import Link from "next/link";
+import { useAuth, usePlan } from "@/lib/auth";
 
 const LEVELS = [
   { v: "none", label: "Пока нет" }, { v: "school", label: "Школа" }, { v: "city", label: "Город / область" },
@@ -20,7 +22,7 @@ export default function ProfilePage() {
   const [draft, setDraft] = useState<Profile | null>(null);
   const [saved, setSaved] = useState(false);
   if (profile === undefined) return null;
-  if (profile === null) return <NeedProfile />;
+  if (profile === null) return (<div className="space-y-5"><NeedProfile /><AccountCard /></div>);
   const p = draft ?? store!.profile!;
   const s = scoreProfile(profile);
   const set = (patch: Partial<Profile>) => { setDraft({ ...p, ...patch }); setSaved(false); };
@@ -113,6 +115,8 @@ export default function ProfilePage() {
         </div>
       </section>
 
+      <AccountCard />
+
       <section className="card flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="m-0 text-lg font-extrabold">Данные на этом устройстве</h2>
@@ -126,4 +130,34 @@ export default function ProfilePage() {
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return <label className="block text-sm font-semibold text-ink-2">{label}<div className="mt-1.5">{children}</div></label>;
+}
+
+function AccountCard() {
+  const { user, ready, signOut, enabled } = useAuth();
+  const { isPro, planExpiresAt } = usePlan();
+  if (!ready || !enabled) return null;
+  const via = user?.provider === "telegram" ? "Telegram" : user?.provider === "google" ? "Google" : "почта";
+  return (
+    <section className="card flex flex-wrap items-center justify-between gap-4">
+      <div>
+        <h2 className="m-0 text-lg font-extrabold">Аккаунт</h2>
+        {user ? (
+          <p className="mt-1 text-sm text-body">
+            Вы вошли через {via}{user.email ? ` (${user.email})` : ""}. Профиль, моки и прогресс синхронизируются между устройствами.
+            {" "}Тариф: <b>{isPro ? `Pro${planExpiresAt ? ` до ${new Date(planExpiresAt).toLocaleDateString("ru-RU")}` : ""}` : "Free"}</b>.
+          </p>
+        ) : (
+          <p className="mt-1 text-sm text-body">Войдите, чтобы не потерять профиль и историю моков и открыть их на телефоне и в Telegram.</p>
+        )}
+      </div>
+      <div className="flex gap-2">
+        <Link href="/pricing" className="btn-secondary">Тарифы</Link>
+        {user ? (
+          <button className="btn-secondary" onClick={signOut}>Выйти</button>
+        ) : (
+          <Link href="/login?next=/profile" className="btn-primary">Войти</Link>
+        )}
+      </div>
+    </section>
+  );
 }

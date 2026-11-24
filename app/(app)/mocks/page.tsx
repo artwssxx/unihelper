@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import * as I from "@/components/icons";
 import MockTrend from "@/components/MockTrend";
+import ProLock from "@/components/ProLock";
+import { usePlan } from "@/lib/auth";
 import { useStore } from "@/lib/clientStore";
 import { SECTION_TITLE, hardModeAvailable, loadResult } from "@/lib/mocks/client";
 import type { Section } from "@/lib/mocks/types";
@@ -21,6 +23,17 @@ export default function MocksHub() {
   const [canHard, setCanHard] = useState(true);
   useEffect(() => setCanHard(hardModeAvailable()), []);
   const history = [...(store?.mocks ?? [])].sort((a, b) => b.finishedAt.localeCompare(a.finishedAt));
+  const { limits, isPro } = usePlan();
+  // Лимит Free считается по попыткам этого месяца.
+  const month = new Date().toISOString().slice(0, 7);
+  const thisMonth = history.filter((h) => h.finishedAt.startsWith(month));
+  const used = { sat: thisMonth.filter((h) => h.exam === "sat").length, reading: thisMonth.filter((h) => h.section === "reading").length };
+  const blocked = (s: Section): string | null => {
+    if (s === "writing" && !limits.writingAi) return "IELTS Writing с ИИ-оценкой доступен в Pro.";
+    if ((s === "math" || s === "rw") && used.sat >= limits.satMocksPerMonth) return `В Free — ${limits.satMocksPerMonth} SAT-мок в месяц. Этот месяц уже использован.`;
+    if (s === "reading" && used.reading >= limits.ieltsReadingPerMonth) return `В Free — ${limits.ieltsReadingPerMonth} IELTS Reading в месяц. Этот месяц уже использован.`;
+    return null;
+  };
 
   return (
     <div className="space-y-8">
@@ -43,6 +56,7 @@ export default function MocksHub() {
           const key = c.section;
           const mode = modes[key] ?? "light";
           const hardOff = !canHard;
+          const lock = blocked(c.section);
           return (
             <div key={key} className={`lift rounded-[28px] p-7 ${c.section === "math" ? "bg-inv text-white" : "border border-line bg-surface"}`}>
               <div className="flex flex-wrap items-start justify-between gap-3">
@@ -58,22 +72,30 @@ export default function MocksHub() {
                       role="radio"
                       aria-checked={mode === m}
                       disabled={m === "hard" && hardOff}
-                      onClick={() => setModes({ ...modes, [key]: m })}
+                      onClick={() => (m === "hard" && !limits.hardMode ? setModes({ ...modes, [key]: "light", [`${key}-lock`]: "hard" } as typeof modes) : setModes({ ...modes, [key]: m }))}
                       className={`rounded-lg px-3.5 py-2 text-sm font-bold transition disabled:opacity-40 ${
                         mode === m ? (m === "hard" ? "bg-orange text-white" : "bg-primary text-white") : c.section === "math" ? "text-navy-text" : "text-muted"
                       }`}
                     >
-                      {m === "light" ? "Лёгкий" : "Хард"}
+                      {m === "light" ? "Лёгкий" : isPro ? "Хард" : "Хард · Pro"}
                     </button>
                   ))}
                 </div>
+                {lock ? (
+                  <Link href="/pricing" className="btn-primary">Открыть в Pro</Link>
+                ) : (
                 <Link
                   href={`/mocks/run?exam=${c.exam}&section=${c.section}&mode=${mode}`}
                   className={c.section === "math" ? "inline-flex items-center justify-center rounded-xl bg-white px-[18px] py-[13px] text-[15px] font-extrabold text-[#2446B5]" : "btn-primary"}
                 >
                   Начать мок
                 </Link>
+                )}
               </div>
+              {lock && <p className={`mt-3 text-sm ${c.section === "math" ? "text-navy-text" : "text-body"}`}>{lock}</p>}
+              {(modes as Record<string, string>)[`${key}-lock`] && !limits.hardMode && (
+                <div className="mt-3"><ProLock compact title="хард-режим" /></div>
+              )}
             </div>
           );
         })}

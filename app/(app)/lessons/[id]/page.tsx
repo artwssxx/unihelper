@@ -6,6 +6,8 @@ import * as I from "@/components/icons";
 import { update, useStore } from "@/lib/clientStore";
 import { COURSES } from "@/lib/content/lessons";
 import { useContent } from "@/lib/useContent";
+import ProLock from "@/components/ProLock";
+import { usePlan } from "@/lib/auth";
 import type { PublicQuestion } from "@/lib/mocks/types";
 
 const L = "ABCDEFGH";
@@ -14,6 +16,7 @@ type Res = { id: string; correct: boolean; answer: string; explanation: string }
 export default function LessonPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const { lessons: LESSONS } = useContent();
+  const { limits } = usePlan();
   const lesson = LESSONS.find((l) => l.id === id);
   const store = useStore();
   const [qs, setQs] = useState<PublicQuestion[]>([]);
@@ -60,6 +63,10 @@ export default function LessonPage({ params }: { params: Promise<{ id: string }>
         <p className="max-w-sm text-sm text-navy-text">Пока — конспект урока ниже. {lesson.isPro ? "Полный курс будет доступен в Pro." : "Вводные уроки бесплатны."}</p>
       </div>
 
+      {lesson.isPro && !limits.proLessons ? (
+        <ProLock title="Полный курс" text="Этот урок входит в Pro. Вводные уроки каждого курса — бесплатно." />
+      ) : (
+      <>
       <section className="card">
         <h2 className="m-0 text-xl font-extrabold">Конспект</h2>
         <ul className="mt-4 space-y-3">
@@ -115,6 +122,8 @@ export default function LessonPage({ params }: { params: Promise<{ id: string }>
             </div>
           )}
         </section>
+      )}
+      </>
       )}
 
       <div className="flex flex-wrap items-center justify-between gap-3">

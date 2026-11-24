@@ -3,6 +3,7 @@ import { z } from "zod";
 import { ruleCheck } from "@/lib/essayRules";
 import { aiEnabled, checkEssay } from "@/lib/server/ai";
 import { clientKey, takeQuota } from "@/lib/server/rateLimit";
+import { limitsFor } from "@/lib/server/plan";
 
 export const maxDuration = 60;
 
@@ -13,7 +14,9 @@ export async function POST(req: Request) {
   if (!parsed.success) return NextResponse.json({ error: "invalid" }, { status: 400 });
   const { prompt, text } = parsed.data;
   // Free: 3 ИИ-проверки (лимит в памяти сервера; строгий учёт — таблица usage).
-  if (!aiEnabled() || !takeQuota(clientKey(req) + ":essay", 3).ok) {
+  // Лимит по тарифу (в памяти сервера; строгий учёт по аккаунту — таблица usage).
+  const limit = limitsFor(req).essayAiPerMonth;
+  if (!aiEnabled() || !takeQuota(clientKey(req) + ":essay:" + limit, limit).ok) {
     return NextResponse.json({ ...ruleCheck(text), limited: aiEnabled() });
   }
   try {

@@ -9,6 +9,7 @@ import { isMobileUA } from "@/lib/mocks/device";
 import { buildReadingTest, buildSatModule1, getQuestion, toPublic } from "@/lib/mocks/engine";
 import { sign, type AttemptState } from "@/lib/mocks/token";
 import { clientKey, takeQuota } from "@/lib/server/rateLimit";
+import { limitsFor } from "@/lib/server/plan";
 
 const body = z.object({
   exam: z.enum(["sat", "ielts"]),
@@ -27,6 +28,11 @@ export async function POST(req: Request) {
   if (!parsed.success) return NextResponse.json({ error: "invalid" }, { status: 400 });
   const { exam, section, mode, seen, device, profileId } = parsed.data;
   if ((exam === "sat") !== (section === "math" || section === "rw")) return NextResponse.json({ error: "invalid" }, { status: 400 });
+
+  // Тариф: хард-режим и IELTS Writing — в Pro.
+  const limits = limitsFor(req);
+  if (mode === "hard" && !limits.hardMode) return NextResponse.json({ error: "pro_required" }, { status: 402 });
+  if (section === "writing" && !limits.writingAi) return NextResponse.json({ error: "pro_required" }, { status: 402 });
 
   // Хард-режим: только браузер на компьютере, вне Telegram (на телефоне уведомления дают ложные срабатывания).
   if (mode === "hard" && (isMobileUA(req.headers.get("user-agent") ?? "") || device?.telegram || device?.coarse)) {

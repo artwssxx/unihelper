@@ -6,6 +6,7 @@ import { TASK1, TASK2 } from "@/lib/mocks/bank/ieltsWriting";
 import { verify } from "@/lib/mocks/token";
 import { aiEnabled, evaluateWriting } from "@/lib/server/ai";
 import { clientKey, takeQuota } from "@/lib/server/rateLimit";
+import { limitsFor } from "@/lib/server/plan";
 
 export const maxDuration = 60;
 
@@ -31,6 +32,7 @@ export async function POST(req: Request) {
     minWords: { task1: TASK1.minWords, task2: TASK2.minWords },
   };
   if (!aiEnabled()) return NextResponse.json({ ...base, ai: false });
+  if (!limitsFor(req).writingAi) return NextResponse.json({ ...base, ai: false, pro: true });
   // Free: до 5 проверок Writing в день на клиента (Pro — больше, когда появится оплата).
   if (!takeQuota(clientKey(req) + ":writing", 5).ok) return NextResponse.json({ ...base, ai: false, limit: true });
   try {

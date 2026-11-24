@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
+import { useAuth, usePlan } from "@/lib/auth";
 import { useStore } from "@/lib/clientStore";
 import DemoTour from "./DemoTour";
 import ThemeToggle from "./ThemeToggle";
@@ -21,6 +22,7 @@ const TOOLS = [
   { href: "/essays", label: "Эссе", icon: I.Pen },
   { href: "/portfolio", label: "Сайт-портфолио", icon: I.Globe },
   { href: "/profile", label: "Профиль", icon: I.User },
+  { href: "/pricing", label: "Тарифы", icon: I.Card },
 ];
 const ALL = [...MAIN, ...TOOLS];
 
@@ -37,6 +39,7 @@ export function initials(name?: string): string {
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const path = usePathname();
   const store = useStore();
+  const { user, ready } = useAuth();
   const [open, setOpen] = useState(false);
   const current = ALL.find((n) => path === n.href || path.startsWith(n.href + "/"));
 
@@ -98,13 +101,16 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             >
               <I.Bell />
             </Link>
+            {ready && !user && (
+              <Link href={`/login?next=${encodeURIComponent(path)}`} className="btn-secondary px-4 py-2.5 text-sm">Войти</Link>
+            )}
             <Link
               href="/profile"
               aria-label="Профиль"
               className="flex h-11 w-11 items-center justify-center rounded-full font-extrabold text-white"
               style={{ background: "var(--grad)" }}
             >
-              {initials(store?.contact?.fullName)}
+              {initials(user?.name ?? store?.contact?.fullName ?? user?.email ?? undefined)}
             </Link>
           </div>
         </header>
@@ -150,12 +156,13 @@ function NavLink(props: { href: string; label: string; icon: (p: { size?: number
 }
 
 function PlanCard() {
+  const { isPro, planExpiresAt } = usePlan();
   return (
-    <div className="mt-6 rounded-2xl bg-bg p-4">
-      <div className="text-sm font-extrabold">Тариф Free</div>
-      <div className="mt-1 text-[13px] leading-relaxed text-muted">
-        Лёгкий режим моков и базовая оценка. Хард-режим и все уроки — в Pro.
+    <Link href="/pricing" className="mt-6 block rounded-2xl p-4" style={isPro ? { background: "var(--grad)", color: "#fff" } : { background: "var(--line-3)" }}>
+      <div className="text-sm font-extrabold">{isPro ? "Pro" : "Тариф Free"}{isPro && planExpiresAt ? ` до ${new Date(planExpiresAt).toLocaleDateString("ru-RU", { day: "numeric", month: "short" })}` : ""}</div>
+      <div className={`mt-1 text-[13px] leading-relaxed ${isPro ? "opacity-90" : "text-muted"}`}>
+        {isPro ? "Хард-режим, все уроки, ИИ-проверки и шаблоны открыты." : "Лёгкий режим моков и базовая оценка. Хард-режим и все уроки — в Pro."}
       </div>
-    </div>
+    </Link>
   );
 }

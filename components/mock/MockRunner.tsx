@@ -160,7 +160,7 @@ export default function MockRunner({ exam, section, mode }: { exam: Exam; sectio
         body: JSON.stringify({ exam, section, mode, seen: seenQuestions(), device: deviceInfo(), profileId: load().profileId ?? null }),
       });
       const json = await res.json();
-      if (!res.ok) throw new Error(json.error === "hard_desktop_only" ? "Хард-режим доступен только в браузере на компьютере." : "Не удалось начать мок.");
+      if (!res.ok) throw new Error(json.error === "hard_desktop_only" ? "Хард-режим доступен только в браузере на компьютере." : json.error === "pro_required" ? "Этот режим доступен в Pro. Откройте раздел «Тарифы» — в тестовой версии Pro включается бесплатно." : "Не удалось начать мок.");
       const att = json as AttemptPayload;
       const act: ActiveAttempt = {
         exam, section, mode, att, receivedAt: Date.now(), answers: {}, times: {}, flags: [], cur: 0,

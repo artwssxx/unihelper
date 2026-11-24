@@ -3,6 +3,7 @@ import { z } from "zod";
 import { profileSchema } from "@/lib/profileSchema";
 import { aiEnabled, streamChat } from "@/lib/server/ai";
 import { clientKey, takeQuota } from "@/lib/server/rateLimit";
+import { limitsFor } from "@/lib/server/plan";
 
 const DAILY_LIMIT = 20;
 
@@ -23,8 +24,9 @@ export async function POST(req: Request) {
   const { profile, profileId, messages } = parsed.data;
   if (messages[messages.length - 1].role !== "user") return NextResponse.json({ error: "invalid" }, { status: 400 });
 
-  const quota = takeQuota(clientKey(req, profileId) + ":chat", DAILY_LIMIT);
-  if (!quota.ok) return NextResponse.json({ error: "limit", limit: DAILY_LIMIT }, { status: 429 });
+  const daily = limitsFor(req).chatPerDay ?? DAILY_LIMIT;
+  const quota = takeQuota(clientKey(req, profileId) + ":chat:" + daily, daily);
+  if (!quota.ok) return NextResponse.json({ error: "limit", limit: daily }, { status: 429 });
 
   const headers = { "content-type": "text/plain; charset=utf-8", "x-remaining": String(quota.remaining) };
   if (!aiEnabled()) {

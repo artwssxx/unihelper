@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import type { Lesson } from "@/lib/content/lessons";
 import { getContent } from "@/lib/server/contentStore";
+import { limitsFor } from "@/lib/server/plan";
 import { getQuestion, isCorrect, toPublic } from "@/lib/mocks/engine";
 
 // Мини-тест урока: вопросы без ответов, проверка — на сервере.
@@ -9,6 +10,7 @@ export async function GET(req: Request) {
   const id = new URL(req.url).searchParams.get("id");
   const l = ((await getContent("lessons")) as Lesson[]).find((x) => x.id === id);
   if (!l) return NextResponse.json({ error: "not_found" }, { status: 404 });
+  if (l.isPro && !limitsFor(req).proLessons) return NextResponse.json({ error: "pro_required" }, { status: 402 });
   return NextResponse.json({ questions: l.quiz.map((q) => getQuestion(q)).filter(Boolean).map((q) => toPublic(q!)) });
 }
 
