@@ -1,36 +1,38 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Unihelper — MVP
 
-## Getting Started
+ИИ-консультант по поступлению за рубеж на грант. Реализует «MVP за один день» из плана продукта
+с моделью оценки из раздела 2 (Profile Strength + Admission Fit + Funding Fit).
 
-First, run the development server:
+**Что есть:** лендинг → анкета из 8 шагов → сила профиля по 5 осям и 3 совета → подборка из 30 программ
+(15 зарубежных грантов/вузов + 15 узбекских частных вузов) с двумя оценками, причинами, списком неизвестного
+и уровнем уверенности → «Хочу консультацию» (лид в базу + сообщение в Telegram команды) → ИИ-чат с контекстом профиля.
+
+## Запуск
 
 ```bash
+npm install
+cp .env.example .env.local   # ключи необязательны — без них демо-режим
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Открыть http://localhost:3000.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Подключение сервисов
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+1. **Supabase**: создать проект → SQL Editor → выполнить `supabase/migrations/0001_init.sql`, затем `supabase/seed.sql`.
+   В `.env.local` — `NEXT_PUBLIC_SUPABASE_URL` и `SUPABASE_SERVICE_ROLE_KEY`.
+2. **Claude API**: `ANTHROPIC_API_KEY`. Модель — `ANTHROPIC_MODEL` (по умолчанию `claude-opus-5-5`).
+3. **Telegram**: создать бота в @BotFather, добавить в чат команды, указать `TELEGRAM_BOT_TOKEN` и `TELEGRAM_ADMIN_CHAT_ID`.
+4. **Деплой**: импортировать репозиторий в Vercel и задать те же переменные.
 
-## Learn More
+## Перед запуском обязательно
 
-To learn more about Next.js, take a look at the following resources:
+- Проверить все данные в `data/programs.ts` по официальным сайтам (сейчас `verifiedAt: null`, значения ориентировочные),
+  проставить `verifiedAt`, пересобрать `npm run seed:sql`. Список узбекских вузов сверить с реестром Минвуза.
+- Уточнить у юриста требования закона РУз о персональных данных (особенно до 18 лет).
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Что сознательно не сделано (по плану — вручную или позже)
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Вход по magic link / Telegram, оплата Click/Payme, напоминания, лента активностей, админка, языки uz/en,
+конвейер сбора данных и живой веб-поиск. Лимит чата (20 сообщений/день) сейчас в памяти процесса — для строгого учёта
+перевести на таблицу `usage`.
