@@ -1,0 +1,18 @@
+{
+  "sat": {
+    "math": { "modules": 2, "questionsPerModule": 22, "minutesPerModule": 35 },
+    "rw": { "modules": 2, "questionsPerModule": 27, "minutesPerModule": 32 },
+    "difficultyWeights": { "1": 1, "2": 1.5, "3": 2 },
+    "module1Mix": { "1": 0.34, "2": 0.33, "3": 0.33 },
+    "module2Mix": {
+      "easy": { "1": 0.55, "2": 0.45, "3": 0 },
+      "hard": { "1": 0, "2": 0.4, "3": 0.6 }
+    },
+    "hardPathThreshold": 0.6
+  },
+  "ielts": {
+    "reading": { "questions": 40, "minutes": 60 },
+    "writing": { "minutes": 60, "task1MinWords": 150, "task2MinWords": 250 }
+  },
+  "hardModeGraceSec": 20
+}

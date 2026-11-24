@@ -90,7 +90,7 @@ export default function Quiz() {
       const json = await res.json();
       if (!res.ok) throw new Error(json.error);
       save({ profile: prof.data, contact: cont.data, profileId: json.id, step: 0, draft: prof.data });
-      router.push("/result");
+      router.push("/dashboard");
     } catch {
       setError("Не удалось сохранить. Проверьте интернет и попробуйте ещё раз.");
       setBusy(false);
@@ -107,8 +107,8 @@ export default function Quiz() {
           <span>Шаг {step + 1} из {STEPS}</span>
           <span>{Math.round(((step + 1) / STEPS) * 100)}%</span>
         </div>
-        <div className="h-2 overflow-hidden rounded-full bg-border">
-          <div className="h-full rounded-full bg-accent transition-all" style={{ width: `${((step + 1) / STEPS) * 100}%` }} />
+        <div className="h-2 overflow-hidden rounded-full bg-line">
+          <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${((step + 1) / STEPS) * 100}%` }} />
         </div>
       </div>
 
@@ -224,7 +224,7 @@ export default function Quiz() {
               step={500}
               value={p.budgetUsd}
               onChange={(e) => set({ budgetUsd: Number(e.target.value) })}
-              className="w-full accent-[var(--accent)]"
+              className="w-full accent-[#2E6BE6]"
             />
             <div className="flex justify-between text-xs text-muted"><span>$0</span><span>$60 000+</span></div>
           </Q>
@@ -244,10 +244,10 @@ export default function Quiz() {
           </Q>
         )}
 
-        {error && <p className="rounded-xl bg-danger-soft px-4 py-3 text-sm text-danger">{error}</p>}
+        {error && <p className="rounded-xl bg-red-soft px-4 py-3 text-sm text-red">{error}</p>}
 
         <div className="flex gap-3">
-          {step > 0 && <button className="btn-ghost" onClick={() => go(step - 1)}>Назад</button>}
+          {step > 0 && <button className="btn-secondary" onClick={() => go(step - 1)}>Назад</button>}
           {step < STEPS - 1 ? (
             <button className="btn-primary flex-1" disabled={!stepValid()} onClick={() => go(step + 1)}>Дальше</button>
           ) : (

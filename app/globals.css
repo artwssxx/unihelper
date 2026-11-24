@@ -1,89 +1,141 @@
 @import "tailwindcss";
 
+/* Дизайн-система UniHelper — из макетов (landing, dashboard, mock-hard). */
 :root {
-  --bg: #f7f7f4;
+  --bg: #f4f7fc;
   --surface: #ffffff;
-  --fg: #1a1a18;
-  --muted: #6b6b66;
-  --border: #e3e2dc;
-  --accent: #1f6f5c;
-  --accent-fg: #ffffff;
-  --accent-soft: #e3f1ec;
-  --warn: #9a5b00;
-  --warn-soft: #fdf1dc;
-  --danger: #a33a2c;
-  --danger-soft: #fbe6e2;
-  --info: #2d5aa8;
-  --info-soft: #e6eefb;
-  --ok: #1f7a3d;
-  --ok-soft: #e1f3e6;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #141413;
-    --surface: #1e1e1c;
-    --fg: #ededea;
-    --muted: #a2a29b;
-    --border: #34342f;
-    --accent: #5fbfa3;
-    --accent-fg: #0d1f1a;
-    --accent-soft: #1d332c;
-    --warn: #e8b35c;
-    --warn-soft: #3a2c14;
-    --danger: #ef8b7c;
-    --danger-soft: #3d1f1a;
-    --info: #8db0ef;
-    --info-soft: #1c2840;
-    --ok: #7fd59a;
-    --ok-soft: #183222;
-  }
+  --ink: #0e1a3a;
+  --ink-2: #3f4b6b;
+  --body: #4a5675;
+  --muted: #5b6785;
+  --line: #e3e9f4;
+  --line-2: #d9e2f2;
+  --line-3: #eef2f9;
+  --primary: #2e6be6;
+  --primary-ink: #1f4fcb;
+  --primary-soft: #eaf1fe;
+  --primary-soft-2: #d3e1fb;
+  --primary-mid: #9dbbf5;
+  --orange: #e8652b;
+  --orange-ink: #c2501a;
+  --orange-ink-2: #b2461a;
+  --orange-soft: #fdeee6;
+  --peach: #f6b48e;
+  --navy-2: #1a2a52;
+  --navy-line: #33467a;
+  --navy-text: #c9d3ea;
+  --green: #1f7a3d;
+  --green-soft: #e3f4e9;
+  --red: #b42318;
+  --red-soft: #fdecea;
 }
 
 @theme inline {
   --color-bg: var(--bg);
   --color-surface: var(--surface);
-  --color-fg: var(--fg);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-body: var(--body);
   --color-muted: var(--muted);
-  --color-border: var(--border);
-  --color-accent: var(--accent);
-  --color-accent-fg: var(--accent-fg);
-  --color-accent-soft: var(--accent-soft);
-  --color-warn: var(--warn);
-  --color-warn-soft: var(--warn-soft);
-  --color-danger: var(--danger);
-  --color-danger-soft: var(--danger-soft);
-  --color-info: var(--info);
-  --color-info-soft: var(--info-soft);
-  --color-ok: var(--ok);
-  --color-ok-soft: var(--ok-soft);
-  --font-sans: var(--font-inter), system-ui, sans-serif;
+  --color-line: var(--line);
+  --color-line-2: var(--line-2);
+  --color-line-3: var(--line-3);
+  --color-primary: var(--primary);
+  --color-primary-ink: var(--primary-ink);
+  --color-primary-soft: var(--primary-soft);
+  --color-primary-soft-2: var(--primary-soft-2);
+  --color-primary-mid: var(--primary-mid);
+  --color-orange: var(--orange);
+  --color-orange-ink: var(--orange-ink);
+  --color-orange-ink-2: var(--orange-ink-2);
+  --color-orange-soft: var(--orange-soft);
+  --color-peach: var(--peach);
+  --color-navy-2: var(--navy-2);
+  --color-navy-line: var(--navy-line);
+  --color-navy-text: var(--navy-text);
+  --color-green: var(--green);
+  --color-green-soft: var(--green-soft);
+  --color-red: var(--red);
+  --color-red-soft: var(--red-soft);
+  --font-sans: var(--font-manrope), system-ui, sans-serif;
 }
 
+html {
+  scroll-behavior: smooth;
+}
 body {
+  margin: 0;
   background: var(--bg);
-  color: var(--fg);
+  color: var(--ink);
   font-family: var(--font-sans);
 }
+button {
+  font-family: inherit;
+  cursor: pointer;
+}
+button:disabled {
+  cursor: not-allowed;
+}
 
-@utility btn {
-  @apply inline-flex items-center justify-center rounded-xl px-5 py-3 font-semibold transition disabled:opacity-50;
-}
 @utility btn-primary {
-  @apply inline-flex items-center justify-center rounded-xl px-5 py-3 font-semibold transition disabled:opacity-50 bg-accent text-accent-fg hover:opacity-90;
+  @apply inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-[18px] py-[13px] text-[15px] font-bold text-white transition hover:bg-primary-ink disabled:opacity-50;
 }
-@utility btn-ghost {
-  @apply inline-flex items-center justify-center rounded-xl px-5 py-3 font-semibold transition disabled:opacity-50 border border-border bg-surface text-fg hover:bg-bg;
+@utility btn-secondary {
+  @apply inline-flex items-center justify-center gap-2 rounded-xl border border-line-2 bg-surface px-[18px] py-[13px] text-[15px] font-bold text-ink transition hover:border-primary-mid disabled:opacity-50;
+}
+@utility btn-dark {
+  @apply inline-flex items-center justify-center gap-2 rounded-[10px] bg-ink px-[14px] py-[10px] text-[13px] font-bold text-white disabled:opacity-50;
 }
 @utility card {
-  @apply rounded-2xl border border-border bg-surface p-5;
+  @apply rounded-[22px] border border-line bg-surface p-6;
+}
+@utility lbl {
+  @apply text-xs font-extrabold tracking-[0.1em] text-muted;
+}
+@utility eyebrow {
+  @apply text-[13px] font-extrabold tracking-[0.12em] text-orange-ink;
+}
+@utility pill {
+  @apply inline-flex items-center rounded-full px-[10px] py-[5px] text-xs font-bold whitespace-nowrap;
 }
 @utility input {
-  @apply w-full rounded-xl border border-border bg-surface px-4 py-3 text-fg outline-none focus:border-accent;
+  @apply w-full rounded-xl border border-line-2 bg-surface px-4 py-3 text-[15px] text-ink outline-none focus:border-primary;
 }
 @utility chip {
-  @apply rounded-xl border border-border bg-surface px-4 py-3 text-left transition;
+  @apply rounded-[14px] border-[1.5px] border-line bg-surface px-4 py-3 text-left text-[15px] font-semibold text-ink transition hover:border-primary-mid;
   &[data-on="true"] {
-    @apply border-accent bg-accent-soft;
+    @apply border-primary bg-primary-soft;
   }
+}
+@utility lift {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  &:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 16px 40px rgba(14, 26, 58, 0.08);
+  }
+}
+
+/* Варианты ответа в моке — как в макете mock-hard */
+@utility opt {
+  @apply flex w-full items-center gap-4 rounded-2xl border-[1.5px] border-line bg-surface px-[18px] py-4 text-left text-[17px] font-semibold text-ink hover:border-primary-mid;
+  & > b {
+    @apply flex h-[34px] w-[34px] flex-none items-center justify-center rounded-[10px] border-[1.5px] border-[#c7d4ee] font-extrabold;
+  }
+  &[data-on="true"] {
+    @apply border-primary bg-primary-soft;
+  }
+  &[data-on="true"] > b {
+    @apply border-primary bg-primary text-white;
+  }
+  &[data-state="correct"] {
+    @apply border-green bg-green-soft;
+  }
+  &[data-state="wrong"] {
+    @apply border-red bg-red-soft;
+  }
+}
+
+.no-select {
+  user-select: none;
+  -webkit-user-select: none;
 }

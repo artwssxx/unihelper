@@ -43,6 +43,9 @@ export interface Profile {
   // Пока не оцениваются в анкете — так и показываем «не оценено».
   essays: AssessmentState;
   recommendations: AssessmentState;
+  /** Баллы хард-моков (середина диапазона). Только для Profile Strength, НЕ для требований вузов. */
+  mockSat?: number | null;
+  mockIelts?: number | null;
 }
 
 export type FundingType = "none" | "partial" | "full";

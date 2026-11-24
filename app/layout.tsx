@@ -1,32 +1,21 @@
 import type { Metadata, Viewport } from "next";
-import { Inter } from "next/font/google";
-import Link from "next/link";
+import { Manrope } from "next/font/google";
 import "./globals.css";
 
-const inter = Inter({ variable: "--font-inter", subsets: ["latin", "cyrillic"] });
+const manrope = Manrope({ variable: "--font-manrope", subsets: ["latin", "cyrillic"], weight: ["400", "500", "600", "700", "800"] });
 
 export const metadata: Metadata = {
-  title: "Unihelper — поступление на грант",
-  description: "Узнай, насколько ты подходишь программам и грантам, получи план и не пропусти ни одного дедлайна.",
+  title: "UniHelper — поступление за рубеж по плану",
+  description:
+    "Unihelper собирает портфолио, честно показывает, каким программам и грантам ты подходишь, и ведёт по дорожной карте до отправки заявки.",
 };
 
-export const viewport: Viewport = { width: "device-width", initialScale: 1 };
+export const viewport: Viewport = { width: "device-width", initialScale: 1, themeColor: "#2E6BE6" };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="ru">
-      <body className={`${inter.variable} antialiased`}>
-        <header className="mx-auto flex max-w-3xl items-center justify-between px-4 py-4">
-          <Link href="/" className="text-lg font-bold tracking-tight">
-            Uni<span className="text-accent">helper</span>
-          </Link>
-          <nav className="flex gap-4 text-sm text-muted">
-            <Link href="/result" className="hover:text-fg">Мой результат</Link>
-            <Link href="/chat" className="hover:text-fg">ИИ-помощник</Link>
-          </nav>
-        </header>
-        <main className="mx-auto max-w-3xl px-4 pb-16">{children}</main>
-      </body>
+      <body className={`${manrope.variable} antialiased`}>{children}</body>
     </html>
   );
 }

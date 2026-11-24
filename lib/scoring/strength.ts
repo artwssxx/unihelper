@@ -28,14 +28,16 @@ function academics(p: Profile): AxisResult {
 function tests(p: Profile): AxisResult {
   const parts: string[] = [];
   let best: StrengthLevel = 0;
-  if (p.ielts != null) {
-    best = Math.max(best, levelByThresholds(p.ielts, STRENGTH_RULES.tests.ielts)) as StrengthLevel;
-    parts.push(`IELTS ${p.ielts}`);
-  }
-  if (p.sat != null) {
-    best = Math.max(best, levelByThresholds(p.sat, STRENGTH_RULES.tests.sat)) as StrengthLevel;
-    parts.push(`SAT ${p.sat}`);
-  }
+  const take = (v: number | null | undefined, th: readonly number[], label: string) => {
+    if (v == null) return;
+    best = Math.max(best, levelByThresholds(v, th)) as StrengthLevel;
+    parts.push(label);
+  };
+  take(p.ielts, STRENGTH_RULES.tests.ielts, `IELTS ${p.ielts}`);
+  take(p.sat, STRENGTH_RULES.tests.sat, `SAT ${p.sat}`);
+  // Моки учитываются в силе профиля с пометкой, но не заменяют реальный балл.
+  if (p.mockSat != null && (p.sat == null || p.mockSat > p.sat)) take(p.mockSat, STRENGTH_RULES.tests.sat, `SAT ≈ ${p.mockSat} по моку`);
+  if (p.mockIelts != null && (p.ielts == null || p.mockIelts > p.ielts)) take(p.mockIelts, STRENGTH_RULES.tests.ielts, `IELTS Reading ≈ ${p.mockIelts} по моку`);
   if (!parts.length) return { axis: "tests", level: 0, note: "тесты ещё не сданы" };
   return { axis: "tests", level: best, note: parts.join(", ") };
 }

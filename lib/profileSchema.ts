@@ -21,6 +21,8 @@ export const profileSchema = z.object({
   budgetUsd: z.number().min(0).max(200000),
   essays: assessment,
   recommendations: assessment,
+  mockSat: z.number().int().min(400).max(1600).nullish(),
+  mockIelts: z.number().min(0).max(9).nullish(),
 });
 
 export const contactSchema = z.object({

@@ -46,6 +46,20 @@ describe("scoreProfile", () => {
   });
 });
 
+describe("моки в профиле", () => {
+  it("хард-мок поднимает ось тестов с пометкой «по моку»", () => {
+    const r = scoreProfile({ ...base, ielts: null, sat: null, mockSat: 1460 });
+    const t = r.axes.find((a) => a.axis === "tests")!;
+    expect(t.level).toBe(3);
+    expect(t.note).toContain("по моку");
+  });
+
+  it("мок-балл не используется для формальных требований вуза", () => {
+    const r = admissionFit({ ...base, sat: null, mockSat: 1550 }, getProgram("harvard")!);
+    expect(r.label).toBe("not_eligible");
+  });
+});
+
 describe("admissionFit", () => {
   it("не выполнен минимальный IELTS → «не соответствует требованиям»", () => {
     const r = admissionFit({ ...base, ielts: 5.0 }, prog({ requirements: { minIelts: 6, minGpa100: null, satRequired: false } }));
