@@ -16,6 +16,7 @@ const MAIN = [
   { href: "/mocks", label: "Моки SAT / IELTS", icon: I.Timer },
   { href: "/events", label: "Ивенты", icon: I.Calendar },
   { href: "/lessons", label: "Уроки", icon: I.Play },
+  { href: "/community", label: "Комьюнити", icon: I.Users },
 ];
 const TOOLS = [
   { href: "/assistant", label: "AI Advisor", icon: I.Spark },

@@ -77,3 +77,12 @@ export const Target = ({ size = 22, className, color }: P) => (
 export const Card = ({ size = 22, className, color }: P) => (
   <svg {...base(size, color, className)}><rect x="3" y="6" width="18" height="13" rx="2" /><path d="M3 10h18M7 15h4" /></svg>
 );
+export const Users = ({ size = 18, className, color }: P) => (
+  <svg {...base(size, color, className)}><circle cx="9" cy="8" r="3.5" /><path d="M2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6" /><path d="M16 4.6a3.5 3.5 0 0 1 0 6.8M18.5 14.4c1.8.8 3 2.8 3 5.6" /></svg>
+);
+export const Chat = ({ size = 18, className, color }: P) => (
+  <svg {...base(size, color, className)}><path d="M4 5h16v11H9l-5 4z" /><path d="M8 9.5h8M8 12.5h5" /></svg>
+);
+export const Send = ({ size = 18, className, color }: P) => (
+  <svg {...base(size, color, className)}><path d="M21 3 10 14" /><path d="m21 3-7 18-4-7-7-4z" /></svg>
+);

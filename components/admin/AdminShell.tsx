@@ -13,6 +13,7 @@ const NAV = [
   { href: "/admin/lessons", label: "Уроки", icon: I.Play },
   { href: "/admin/questions", label: "Банк вопросов", icon: I.Timer },
   { href: "/admin/leads", label: "Лиды вузов", icon: I.User },
+  { href: "/admin/community", label: "Комьюнити", icon: I.Users },
 ];
 
 export default function AdminShell({ children }: { children: React.ReactNode }) {
