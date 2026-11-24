@@ -5,6 +5,8 @@ import { aiEnabled, generateAdvice } from "@/lib/server/ai";
 import { clientKey, takeQuota } from "@/lib/server/rateLimit";
 import { scoreProfile } from "@/lib/scoring/strength";
 
+export const maxDuration = 60;
+
 const body = z.object({ profile: profileSchema, profileId: z.string().max(64).nullish() });
 
 // 3 совета. С ключом ИИ — персональные, без ключа или при ошибке — из правил (lib/scoring).

@@ -4,6 +4,8 @@ import { ruleCheck } from "@/lib/essayRules";
 import { aiEnabled, checkEssay } from "@/lib/server/ai";
 import { clientKey, takeQuota } from "@/lib/server/rateLimit";
 
+export const maxDuration = 60;
+
 const body = z.object({ prompt: z.string().max(1000), text: z.string().min(50).max(15000) });
 
 export async function POST(req: Request) {

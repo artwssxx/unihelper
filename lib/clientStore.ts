@@ -64,6 +64,8 @@ export interface Stored {
   essays?: EssayVersion[];
   /** id вопросов из прошлых моков — чтобы давать новые. */
   seenQuestions?: string[];
+  /** Демо для инвесторов: вымышленный ученик и пошаговый тур. */
+  demo?: { active: boolean; step: number; tour: boolean };
 }
 
 const listeners = new Set<() => void>();

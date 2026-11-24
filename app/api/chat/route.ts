@@ -6,6 +6,8 @@ import { clientKey, takeQuota } from "@/lib/server/rateLimit";
 
 const DAILY_LIMIT = 20;
 
+export const maxDuration = 60;
+
 const body = z.object({
   profile: profileSchema,
   profileId: z.string().max(64).nullish(),

@@ -5,6 +5,8 @@ import { profileSchema } from "@/lib/profileSchema";
 import { aiEnabled, draftPortfolio } from "@/lib/server/ai";
 import { clientKey, takeQuota } from "@/lib/server/rateLimit";
 
+export const maxDuration = 60;
+
 const body = z.object({ profile: profileSchema });
 
 export async function POST(req: Request) {

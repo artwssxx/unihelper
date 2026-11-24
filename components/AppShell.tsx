@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { useStore } from "@/lib/clientStore";
+import DemoTour from "./DemoTour";
 import * as I from "./icons";
 
 const MAIN = [
@@ -104,8 +105,14 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             </Link>
           </div>
         </header>
-        <div className="mt-6">{children}</div>
+        {store?.demo?.active && (
+          <p className="mt-4 rounded-xl bg-orange-soft px-4 py-2 text-[13px] font-semibold text-[#8A3613]">
+            Демо-режим: ученик и его история вымышленные, мок-баллы посчитаны движком на смоделированных ответах. ИИ отвечает вживую.
+          </p>
+        )}
+        <div className={store?.demo?.active ? "mt-6 pb-56 sm:pb-24" : "mt-6"}>{children}</div>
       </main>
+      {store?.demo?.active && <DemoTour demo={store.demo} />}
     </div>
   );
 }

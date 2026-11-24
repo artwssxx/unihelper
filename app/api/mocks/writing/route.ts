@@ -7,6 +7,8 @@ import { verify } from "@/lib/mocks/token";
 import { aiEnabled, evaluateWriting } from "@/lib/server/ai";
 import { clientKey, takeQuota } from "@/lib/server/rateLimit";
 
+export const maxDuration = 60;
+
 const body = z.object({ token: z.string().max(200_000), task1: z.string().max(8000), task2: z.string().max(12000) });
 
 const words = (s: string) => (s.trim().match(/\S+/g) ?? []).length;
