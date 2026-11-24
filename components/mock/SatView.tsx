@@ -3,6 +3,7 @@
 import { useState } from "react";
 import * as I from "@/components/icons";
 import type { ActiveAttempt } from "@/lib/mocks/client";
+import Calculator from "./Calculator";
 import QuestionGrid from "./QuestionGrid";
 
 const L = "ABCDEFGH";
@@ -21,6 +22,7 @@ export default function SatView(props: {
   const [checks, setChecks] = useState<Record<string, Check>>({});
   const [hints, setHints] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
+  const [calc, setCalc] = useState(false);
   if (!q) return null;
   const given = a.answers[q.id] ?? "";
   const flagged = a.flags.includes(q.id);
@@ -44,19 +46,32 @@ export default function SatView(props: {
 
   return (
     <main className="mx-auto flex max-w-[1180px] flex-wrap gap-7 px-4 pb-10 pt-8 sm:px-6">
+      {calc && a.section === "math" && <Calculator onClose={() => setCalc(false)} />}
       <section className="min-w-0 flex-[999_1_560px]">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <span className="text-sm font-extrabold tracking-[0.08em] text-muted">
             ВОПРОС {a.cur + 1} ИЗ {a.att.questions.length}
           </span>
-          <button
-            onClick={() => props.toggleFlag(q.id)}
-            aria-pressed={flagged}
-            className="flex items-center gap-2 rounded-[10px] border border-line bg-surface px-3.5 py-2 text-sm font-bold text-ink"
-          >
-            <I.Flag />
-            {flagged ? "Отмечено" : "Отметить"}
-          </button>
+          <div className="flex flex-wrap gap-2">
+            {a.section === "math" && (
+              <button
+                onClick={() => setCalc((x) => !x)}
+                aria-pressed={calc}
+                className={`flex items-center gap-2 rounded-[10px] border px-3.5 py-2 text-sm font-bold ${calc ? "border-primary bg-primary-soft text-primary-ink" : "border-line bg-surface text-ink"}`}
+              >
+                <I.Chart size={16} />
+                Калькулятор
+              </button>
+            )}
+            <button
+              onClick={() => props.toggleFlag(q.id)}
+              aria-pressed={flagged}
+              className="flex items-center gap-2 rounded-[10px] border border-line bg-surface px-3.5 py-2 text-sm font-bold text-ink"
+            >
+              <I.Flag />
+              {flagged ? "Отмечено" : "Отметить"}
+            </button>
+          </div>
         </div>
 
         <div className="mt-4 rounded-3xl border border-line bg-surface p-5 sm:p-8">

@@ -5,6 +5,7 @@ import cfg from "@/config/mocks.json";
 import { isClosed, recordFinish } from "@/lib/mocks/attemptStore";
 import { buildResult, buildSatModule2, getQuestion, gradeIds, module2Path, toPublic } from "@/lib/mocks/engine";
 import { sign, verify } from "@/lib/mocks/token";
+import { ensurePoolQuestions } from "@/lib/server/readingPool";
 
 const body = z.object({
   token: z.string().max(200_000),
@@ -32,6 +33,7 @@ export async function POST(req: Request) {
     if (parsed.data.answers[id] != null) answers[id] = parsed.data.answers[id];
     if (parsed.data.times[id] != null) times[id] = parsed.data.times[id];
   }
+  await ensurePoolQuestions([...st.done.flatMap((m) => m.qids), ...st.qids]);
   const late = st.deadlineAt != null && Date.now() > st.deadlineAt + cfg.hardModeGraceSec * 1000;
   const done = [...st.done, { module: st.module, qids: st.qids, answers, times }];
 

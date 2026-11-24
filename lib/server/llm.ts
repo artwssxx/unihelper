@@ -15,7 +15,8 @@ export type ChatMessage = { role: "user" | "assistant"; content: string };
 
 export interface LLM {
   name: string;
-  json<T>(o: { system: string; user: string; schema: z.ZodType<T>; tier: Tier; maxTokens?: number }): Promise<T>;
+  /** timeoutMs — лимит на один вызов модели (по умолчанию 20/28 с); для длинных ответов, например текста IELTS, больше. */
+  json<T>(o: { system: string; user: string; schema: z.ZodType<T>; tier: Tier; maxTokens?: number; timeoutMs?: number }): Promise<T>;
   stream(o: { system: string; messages: ChatMessage[]; tier: Tier; maxTokens?: number }): AsyncGenerator<string>;
 }
 
@@ -29,7 +30,7 @@ function compatProvider(cfg: { name: string; baseUrl: string; key: string; model
   const headers = { authorization: `Bearer ${cfg.key}`, "content-type": "application/json" };
 
   // Бюджет каждого запроса: укладываемся в лимит функции Vercel (maxDuration = 60 с).
-  async function call(model: string, body: Record<string, unknown>, tier: Tier, deadline: number): Promise<Response> {
+  async function call(model: string, body: Record<string, unknown>, tier: Tier, deadline: number, timeoutMs?: number): Promise<Response> {
     const budgetLeft = () => deadline - Date.now();
     if (budgetLeft() < 3_000) throw new Error(`${cfg.name}: время на ответ исчерпано`);
     let res: Response;
@@ -38,7 +39,7 @@ function compatProvider(cfg: { name: string; baseUrl: string; key: string; model
         method: "POST",
         headers,
         body: JSON.stringify({ model, ...body }),
-        signal: AbortSignal.timeout(Math.max(3_000, Math.min(tier === "fast" ? 20_000 : 28_000, budgetLeft()))),
+        signal: AbortSignal.timeout(Math.max(3_000, Math.min(timeoutMs ?? (tier === "fast" ? 20_000 : 28_000), budgetLeft()))),
       });
     } catch (e) {
       throw new RetryableError(`${model}: ${(e as Error).message}`);
@@ -52,7 +53,7 @@ function compatProvider(cfg: { name: string; baseUrl: string; key: string; model
   return {
     name: cfg.name,
 
-    async json({ system, user, schema, tier, maxTokens = 4000 }) {
+    async json({ system, user, schema, tier, maxTokens = 4000, timeoutMs }) {
       const deadline = Date.now() + 55_000;
       const jsonSchema = JSON.stringify(z.toJSONSchema(schema));
       const sys = `${system}\n\nОтвечай ТОЛЬКО валидным JSON без пояснений и без markdown, строго по этой JSON Schema:\n${jsonSchema}`;
@@ -63,7 +64,7 @@ function compatProvider(cfg: { name: string; baseUrl: string; key: string; model
             messages: [{ role: "system", content: sys }, { role: "user", content: user }],
             response_format: { type: "json_object" },
             max_tokens: maxTokens,
-          }, tier, deadline);
+          }, tier, deadline, timeoutMs);
           const data = await res.json();
           const text: string = data.choices?.[0]?.message?.content ?? "";
           const cleaned = text.replace(/^```(?:json)?\s*|\s*```$/g, "").trim();

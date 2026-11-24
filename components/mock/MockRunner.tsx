@@ -10,6 +10,7 @@ import {
   type ActiveAttempt, type AttemptPayload, type WritingResult,
 } from "@/lib/mocks/client";
 import type { Exam, Mode, MockResult, Section } from "@/lib/mocks/types";
+import { clearMarks } from "./PassageMarker";
 import ReadingView from "./ReadingView";
 import SatView from "./SatView";
 import WritingView from "./WritingView";
@@ -199,7 +200,7 @@ export default function MockRunner({ exam, section, mode }: { exam: Exam; sectio
         pushHistory({
           attemptId: cur.att.attemptId, exam: "ielts", section: "writing", mode: cur.mode, status: "completed", finishedAt: new Date().toISOString(),
           band: bands.length ? Math.round((bands.reduce((s, b) => s + b, 0) / bands.length) * 2) / 2 : undefined,
-        });
+        }, cur.att.taskIds ?? []);
         return done(cur.att.attemptId);
       }
       const res = await fetch("/api/mocks/submit", {
@@ -247,6 +248,7 @@ export default function MockRunner({ exam, section, mode }: { exam: Exam; sectio
 
   function done(id: string) {
     saveActive(null);
+    clearMarks(id);
     if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
     router.push(`/mocks/result/${id}`);
   }

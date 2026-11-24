@@ -19,6 +19,7 @@ type R = () => number;
 const int = (r: R, lo: number, hi: number) => lo + Math.floor(r() * (hi - lo + 1));
 const pick = <T,>(r: R, xs: readonly T[]): T => xs[Math.floor(r() * xs.length)];
 const LETTERS = ["A", "B", "C", "D"];
+const gcd = (a: number, b: number): number => (b === 0 ? Math.abs(a) : gcd(b, a % b));
 
 /** Подписанный коэффициент: «+ 5», «− 5». */
 const sg = (n: number) => (n < 0 ? `− ${-n}` : `+ ${n}`);
@@ -310,11 +311,159 @@ const TEMPLATES: Template[] = [
       };
     },
   },
+  // ───── Добавлено для генерации: каждая попытка берёт новые числа ─────
+  {
+    key: "ineq",
+    make: (r) => {
+      const a = int(r, 2, 6), b = int(r, -9, 12), k = int(r, -3, 9), t = int(r, 1, a - 1);
+      const c = a * k + b + t;
+      return {
+        domain: "Algebra", skill: "Линейные неравенства", difficulty: 1,
+        stem: `Какое наибольшее целое значение x удовлетворяет неравенству ${a}x ${sg(b)} < ${num(c)}?`,
+        correct: k, distractors: [k + 1, k - 1, c - b],
+        explanation: `${a}x < ${num(c - b)}, значит x < ${num(c - b)}/${a} ≈ ${(Math.round(((c - b) / a) * 100) / 100).toString().replace(".", ",")}. Наибольшее целое — ${num(k)}.`,
+        hint: "Решите как уравнение, затем найдите ближайшее целое, которое строго меньше границы.",
+        fmt: (v) => num(Number(v)),
+      };
+    },
+  },
+  {
+    key: "fval",
+    make: (r) => {
+      const a = int(r, 2, 5), b = int(r, -8, 9), k = int(r, -4, 5);
+      if (k === 0 || k === 1) return null;
+      const val = a * k * k + b;
+      return {
+        domain: "Advanced Math", skill: "Функции", difficulty: 1,
+        stem: `Функция задана формулой f(x) = ${a}x² ${sg(b)}. Чему равно f(${num(k)})?`,
+        correct: val, distractors: [a * k + b, (a * k) ** 2 + b, -a * k * k + b],
+        explanation: `f(${num(k)}) = ${a}·${par(k)}² ${sg(b)} = ${a}·${k * k} ${sg(b)} = ${num(val)}.`,
+        hint: "Подставьте значение вместо x и сначала возведите в квадрат.",
+        fmt: (v) => num(Number(v)),
+      };
+    },
+  },
+  {
+    key: "ratio",
+    make: (r) => {
+      const p = int(r, 2, 7), q = int(r, 2, 7), m = int(r, 2, 6);
+      if (p === q) return null;
+      const n = (p + q) * m;
+      return {
+        domain: "Problem-Solving and Data Analysis", skill: "Пропорции", difficulty: 1,
+        stem: `В кружке ${n} участников. Отношение числа девочек к числу мальчиков равно ${p} : ${q}. Сколько девочек в кружке?`,
+        correct: p * m, distractors: [q * m, n - p, p * q],
+        explanation: `Всего частей ${p} + ${q} = ${p + q}, одна часть = ${n} / ${p + q} = ${m}. Девочек ${p}·${m} = ${p * m}.`,
+        hint: "Найдите, сколько человек приходится на одну часть отношения.",
+      };
+    },
+  },
+  {
+    key: "prob",
+    make: (r) => {
+      const red = int(r, 2, 9), blue = int(r, 2, 9), green = int(r, 1, 8);
+      const t = red + blue + green;
+      const f = (a: number) => { const g = gcd(a, t); return `${a / g}/${t / g}`; };
+      return {
+        domain: "Problem-Solving and Data Analysis", skill: "Вероятность", difficulty: 2,
+        stem: `В коробке ${red} красных, ${blue} синих и ${green} зелёных жетонов. Наугад вынимают один жетон. Какова вероятность, что он НЕ синий?`,
+        correct: f(red + green), distractors: [f(blue), f(red), f(green)],
+        explanation: `Не синих жетонов ${red} + ${green} = ${red + green} из ${t}, вероятность ${red + green}/${t} = ${f(red + green)}.`,
+        hint: "Вероятность = благоприятные исходы / все исходы.",
+      };
+    },
+  },
+  {
+    key: "angles",
+    make: (r) => {
+      const a = int(r, 25, 85), b = int(r, 20, 80);
+      if (a + b >= 170) return null;
+      const c = 180 - a - b;
+      return {
+        domain: "Geometry and Trigonometry", skill: "Углы треугольника", difficulty: 1,
+        stem: `Два угла треугольника равны ${a}° и ${b}°. Чему равен третий угол (в градусах)?`,
+        correct: c, distractors: [360 - a - b, 180 - a, a + b],
+        explanation: `Сумма углов треугольника 180°: 180 − ${a} − ${b} = ${c}°.`,
+        hint: "Сумма углов любого треугольника равна 180°.",
+      };
+    },
+  },
+  {
+    key: "trig",
+    make: (r) => {
+      const [a, b, c] = pick(r, [[3, 4, 5], [5, 12, 13], [8, 15, 17], [7, 24, 25], [20, 21, 29]] as const);
+      return {
+        domain: "Geometry and Trigonometry", skill: "Тригонометрия", difficulty: 2,
+        stem: `В прямоугольном треугольнике ABC угол C прямой, BC = ${a}, AC = ${b}, AB = ${c}. Чему равен sin A?`,
+        correct: `${a}/${c}`, distractors: [`${b}/${c}`, `${a}/${b}`, `${b}/${a}`],
+        explanation: `sin A = противолежащий катет / гипотенуза = BC / AB = ${a}/${c}.`,
+        hint: "SOH: sin = противолежащий / гипотенуза. Противолежащий углу A катет — BC.",
+      };
+    },
+  },
+  {
+    key: "growth",
+    make: (r) => {
+      const p0 = int(r, 2, 9) * 100, rate = pick(r, [10, 20, 50]);
+      const m = 1 + rate / 100;
+      const two = Math.round(p0 * m * m);
+      return {
+        domain: "Advanced Math", skill: "Экспоненциальные модели", difficulty: 2,
+        stem: `Число подписчиков школьного канала было ${p0} и каждый месяц увеличивается на ${rate}% по сравнению с предыдущим месяцем. Сколько подписчиков будет через 2 месяца?`,
+        correct: two, distractors: [Math.round(p0 * (1 + (2 * rate) / 100)), Math.round(p0 * m), Math.round(p0 * m * m * m)],
+        explanation: `Рост на ${rate}% — умножение на ${String(m).replace(".", ",")}. Через 2 месяца: ${p0}·${String(m).replace(".", ",")}² = ${two}. Сложные проценты не складываются: это не ${p0}·(1 + ${2 * rate}/100).`,
+        hint: "Каждый месяц число умножается на один и тот же множитель.",
+      };
+    },
+  },
+  {
+    key: "absval",
+    make: (r) => {
+      const a = int(r, -6, 9), b = int(r, 1, 9);
+      if (a === 0) return null;
+      return {
+        domain: "Algebra", skill: "Модуль", difficulty: 2,
+        stem: `Чему равна сумма всех решений уравнения |x ${sg(-a)}| = ${b}?`,
+        correct: 2 * a, spr: true,
+        explanation: `x ${sg(-a)} = ${b} или x ${sg(-a)} = −${b}: x = ${num(a + b)} или x = ${num(a - b)}. Сумма ${num(2 * a)}.`,
+        hint: "Модуль равен b, когда выражение под ним равно b или −b.",
+      };
+    },
+  },
+  {
+    key: "circleeq",
+    make: (r) => {
+      const h = int(r, -6, 6), k = int(r, -6, 6), rad = int(r, 2, 9);
+      if (h === 0 || k === 0) return null;
+      const D = -2 * h, E = -2 * k, F = h * h + k * k - rad * rad;
+      if (F === 0) return null;
+      return {
+        domain: "Geometry and Trigonometry", skill: "Уравнение окружности", difficulty: 3,
+        stem: `Окружность в плоскости xy задана уравнением x² + y² ${sg(D)}x ${sg(E)}y ${sg(F)} = 0. Чему равен радиус окружности?`,
+        correct: rad, distractors: [rad * rad, Math.abs(h) + Math.abs(k) === rad ? rad + 1 : Math.abs(h) + Math.abs(k), Math.abs(F) === rad ? rad + 2 : Math.abs(F)],
+        explanation: `Выделим полные квадраты: (x ${sg(-h)})² + (y ${sg(-k)})² = ${h * h} + ${k * k} ${sg(-F)} = ${rad * rad}. Радиус √${rad * rad} = ${rad}.`,
+        hint: "Выделите полные квадраты по x и по y: справа получится r².",
+      };
+    },
+  },
+  {
+    key: "linmodel",
+    make: (r) => {
+      const fee = int(r, 2, 9) * 10, per = int(r, 3, 12) * 5, n = int(r, 4, 15);
+      const total = fee + per * n;
+      return {
+        domain: "Algebra", skill: "Линейные модели", difficulty: 2,
+        stem: `Курс английского стоит ${fee} тыс. сум за вступление и ${per} тыс. сум за каждое занятие. Ученик заплатил всего ${total} тыс. сум. Сколько занятий он посетил?`,
+        correct: n, distractors: [Math.round(total / per), n + 1, Math.round((total + fee) / per)],
+        explanation: `${fee} + ${per}·n = ${total} → ${per}·n = ${total - fee} → n = ${n}.`,
+        hint: "Составьте уравнение: постоянная часть + цена за единицу × количество.",
+      };
+    },
+  },
 ];
 
-function toQuestion(key: string, seed: number, d: Draft, r: R): Question | null {
+function toQuestion(id: string, d: Draft, r: R): Question | null {
   const fmt = d.fmt ?? ((v: number | string) => String(v));
-  const id = `m-${key}-${seed}`;
   if (d.spr) {
     return {
       id, exam: "sat", section: "math", domain: d.domain, skill: d.skill, difficulty: d.difficulty,
@@ -347,7 +496,7 @@ export function buildMathBank(variantsPerTemplate = 16): Question[] {
       const r = rng(seed * 7919 + t.key.length * 104729 + t.key.charCodeAt(0));
       const d = t.make(r);
       if (!d) continue;
-      const q = toQuestion(t.key, seed, d, r);
+      const q = toQuestion(`m-${t.key}-${seed}`, d, r);
       if (!q) continue;
       if (out.some((o) => o.stem === q.stem)) continue;
       out.push(q);
@@ -355,4 +504,17 @@ export function buildMathBank(variantsPerTemplate = 16): Question[] {
     }
   }
   return out;
+}
+
+// ── Генерация на лету: вопрос восстанавливается по ID «m-<шаблон>~<сид в base36>» ──
+
+export const MATH_KEYS = TEMPLATES.map((t) => t.key);
+
+/** Задача шаблона key с сидом seed. null — если на этом сиде вышли совпадающие варианты ответа. */
+export function makeMath(key: string, seed: number): Question | null {
+  const t = TEMPLATES.find((x) => x.key === key);
+  if (!t) return null;
+  const r = rng(seed);
+  const d = t.make(r);
+  return d ? toQuestion(`m-${key}~${seed.toString(36)}`, d, r) : null;
 }

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getQuestion, isCorrect } from "@/lib/mocks/engine";
 import { verify } from "@/lib/mocks/token";
+import { ensurePoolQuestions } from "@/lib/server/readingPool";
 
 const body = z.object({ token: z.string().max(200_000), qid: z.string().max(40), answer: z.string().max(200).optional(), hint: z.boolean().optional() });
 
@@ -11,7 +12,9 @@ export async function POST(req: Request) {
   if (!parsed.success) return NextResponse.json({ error: "invalid" }, { status: 400 });
   const st = verify(parsed.data.token);
   if (!st || st.mode !== "light" || !st.qids.includes(parsed.data.qid)) return NextResponse.json({ error: "forbidden" }, { status: 403 });
-  const q = getQuestion(parsed.data.qid)!;
+  await ensurePoolQuestions([parsed.data.qid]);
+  const q = getQuestion(parsed.data.qid);
+  if (!q) return NextResponse.json({ error: "not_found" }, { status: 404 });
   if (parsed.data.hint) return NextResponse.json({ hint: q.hint ?? "Перечитайте условие и исключите заведомо неверные варианты." });
   return NextResponse.json({ correct: isCorrect(q, parsed.data.answer), answer: q.answer, accept: q.accept ?? [], explanation: q.explanation });
 }

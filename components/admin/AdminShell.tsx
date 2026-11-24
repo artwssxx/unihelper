@@ -13,6 +13,7 @@ const NAV = [
   { href: "/admin/lessons", label: "Уроки", icon: I.Play },
   { href: "/admin/blog", label: "Блог", icon: I.Pen },
   { href: "/admin/questions", label: "Банк вопросов", icon: I.Timer },
+  { href: "/admin/reading", label: "Тесты IELTS Reading", icon: I.Pen },
   { href: "/admin/leads", label: "Лиды вузов", icon: I.User },
   { href: "/admin/community", label: "Комьюнити", icon: I.Users },
   { href: "/admin/telegram", label: "Telegram-бот", icon: I.Send },

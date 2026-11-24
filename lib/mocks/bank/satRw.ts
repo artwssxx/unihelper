@@ -72,7 +72,7 @@ const RAW: Raw[] = [
     "While researching a topic, a student took these notes:\n• The Amu Darya is one of the longest rivers in Central Asia.\n• It flows into the Aral Sea region.\n• Much of its water is used to irrigate cotton fields.",
     "The student wants to explain why less water reaches the Aral Sea region. Which choice most effectively uses relevant information from the notes?",
     ["The Amu Darya is one of the longest rivers in Central Asia.", "Because much of the Amu Darya's water is used to irrigate cotton fields, less of it reaches the Aral Sea region.", "Cotton is grown in Central Asia.", "The Amu Darya and the Aral Sea are both in Central Asia."], "B",
-    "Только вариант B объясняет причину: воду забирают на орошение."],
+    "Причину объясняет только вариант про орошение хлопковых полей: воду забирают на поля."],
   ["rw-013", CS, "Words in Context", 1,
     "The coach praised the players for their ______ effort: even when they were losing by ten points, they kept running hard until the final whistle.",
     "Which choice completes the text with the most logical and precise word?",

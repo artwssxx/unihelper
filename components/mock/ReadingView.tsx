@@ -1,6 +1,7 @@
 "use client";
 
 import type { ActiveAttempt } from "@/lib/mocks/client";
+import PassageMarker from "./PassageMarker";
 
 const L = "ABCDEFGH";
 
@@ -41,8 +42,11 @@ export default function ReadingView(props: {
       </div>
       <div className="grid gap-5 lg:grid-cols-2">
         <article className="rounded-3xl border border-line bg-surface p-6 lg:max-h-[calc(100vh-190px)] lg:overflow-y-auto">
-          <h2 className="text-xl font-extrabold">{passage?.title}</h2>
-          <div className="mt-4 whitespace-pre-line text-[16px] leading-[1.75] text-ink">{passage?.text}</div>
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <h2 className="text-xl font-extrabold">{passage?.title}</h2>
+            <span className="text-xs text-muted">Выдели текст — можно подсветить, подчеркнуть или оставить заметку</span>
+          </div>
+          {passage && <PassageMarker attemptId={a.att.attemptId} passageId={passage.id} text={passage.text} />}
         </article>
         <section className="space-y-4 lg:max-h-[calc(100vh-190px)] lg:overflow-y-auto lg:pr-1">
           {qs.map(({ q, i }) => {

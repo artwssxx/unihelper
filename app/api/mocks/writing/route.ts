@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import cfg from "@/config/mocks.json";
 import { isClosed, markInterrupted } from "@/lib/mocks/attemptStore";
-import { TASK1, TASK2 } from "@/lib/mocks/bank/ieltsWriting";
+import { writingTasks } from "@/lib/mocks/bank/ieltsWriting";
 import { verify } from "@/lib/mocks/token";
 import { aiEnabled, evaluateWriting } from "@/lib/server/ai";
 import { clientKey, takeQuota } from "@/lib/server/rateLimit";
@@ -26,6 +26,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "time_over" }, { status: 409 });
   }
   const { task1, task2 } = parsed.data;
+  const { task1: TASK1, task2: TASK2 } = writingTasks(st.qids);
   const counts = { task1: words(task1), task2: words(task2) };
   const base = {
     attemptId: st.id, counts,

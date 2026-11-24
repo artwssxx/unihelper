@@ -4,11 +4,12 @@ import { z } from "zod";
 import cfg from "@/config/mocks.json";
 import { recordStart } from "@/lib/mocks/attemptStore";
 import { PASSAGES } from "@/lib/mocks/bank/ieltsReading";
-import { TASK1, TASK2 } from "@/lib/mocks/bank/ieltsWriting";
+import { pickWritingIds, writingTasks } from "@/lib/mocks/bank/ieltsWriting";
 import { isMobileUA } from "@/lib/mocks/device";
 import { buildReadingTest, buildSatModule1, getQuestion, toPublic } from "@/lib/mocks/engine";
 import { sign, type AttemptState } from "@/lib/mocks/token";
 import { clientKey, takeQuota } from "@/lib/server/rateLimit";
+import { pickPoolTest } from "@/lib/server/readingPool";
 import { limitsFor } from "@/lib/server/plan";
 
 const body = z.object({
@@ -43,15 +44,23 @@ export async function POST(req: Request) {
   let qids: string[] = [];
   let minutes: number;
   let totalModules = 1;
+  let passages = section === "reading" ? PASSAGES : undefined;
   if (exam === "sat") {
     const spec = cfg.sat[section as "math" | "rw"];
     qids = buildSatModule1(section as "math" | "rw", new Set(seen ?? []), rand);
     minutes = spec.minutesPerModule;
     totalModules = spec.modules;
   } else if (section === "reading") {
-    qids = buildReadingTest();
+    // Сначала — новый тест из пула (ИИ + проверка), которого ученик ещё не видел; иначе — тест из банка.
+    const pool = await pickPoolTest(new Set(seen ?? [])).catch(() => null);
+    if (pool) {
+      qids = pool.questions.map((q) => q.id);
+      passages = pool.passages;
+    } else qids = buildReadingTest(rand);
     minutes = cfg.ielts.reading.minutes;
   } else {
+    // Writing: новая диаграмма Task 1 и тема Task 2, которой ещё не было у ученика.
+    qids = pickWritingIds(rand, new Set(seen ?? []));
     minutes = cfg.ielts.writing.minutes;
   }
 
@@ -69,8 +78,9 @@ export async function POST(req: Request) {
     durationSec: minutes * 60,
     deadlineAt: st.deadlineAt,
     serverNow: now,
-    questions: qids.map((id) => toPublic(getQuestion(id)!)),
-    passages: section === "reading" ? PASSAGES : undefined,
-    writing: section === "writing" ? { task1: TASK1, task2: TASK2 } : undefined,
+    questions: section === "writing" ? [] : qids.map((id) => toPublic(getQuestion(id)!)),
+    passages,
+    writing: section === "writing" ? writingTasks(qids) : undefined,
+    taskIds: section === "writing" ? qids : undefined,
   });
 }

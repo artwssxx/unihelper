@@ -1,7 +1,8 @@
 import cfg from "@/config/mocks.json";
 import satScale from "@/config/sat-scale.json";
 import readingScale from "@/config/ielts-reading-scale.json";
-import { buildMathBank } from "./bank/satMath";
+import { buildMathBank, makeMath, MATH_KEYS, rng } from "./bank/satMath";
+import { makeRw, rwGeneratorBases } from "./bank/rwGen";
 import { buildRwBank } from "./bank/satRw";
 import { buildReadingBank } from "./bank/ieltsReading";
 import type { Difficulty, DomainStat, MockResult, Mode, PublicQuestion, Question, ReviewItem, Section } from "./types";
@@ -17,8 +18,69 @@ export function bank(): Map<string, Question> {
   return BANK;
 }
 
+// ── Варианты: «<база>~<сид base36>». Каждая попытка получает новые сиды, поэтому моки не повторяются:
+// SAT Math — новые числа в шаблоне, SAT RW — генераторы и перемешанные варианты ответов,
+// IELTS Reading (multiple choice) — перемешанные варианты. Вопрос восстанавливается по ID на сервере.
+
+const GEN = new Map<string, Question>();
+export const baseOf = (id: string) => id.split("~")[0];
+
+function permutable(q: Question) {
+  return q.answerType === "mcq" && q.choices?.length === 4 && (q.exam === "sat" || q.skill === "Multiple choice");
+}
+
+function permuted(q: Question, seed: number, id: string): Question {
+  const r = rng(seed);
+  const order = shuffle([0, 1, 2, 3], r);
+  const letters = ["A", "B", "C", "D"];
+  return { ...q, id, choices: order.map((i) => q.choices![i]), answer: letters[order.indexOf(letters.indexOf(q.answer))] };
+}
+
 export function getQuestion(id: string): Question | undefined {
-  return bank().get(id);
+  const fixed = bank().get(id);
+  if (fixed) return fixed;
+  const cached = GEN.get(id);
+  if (cached) return cached;
+  const [base, s] = id.split("~");
+  if (!s || !/^[0-9a-z]{1,8}$/.test(s)) return undefined;
+  const seed = parseInt(s, 36);
+  let q: Question | null | undefined;
+  if (base.startsWith("m-")) q = makeMath(base.slice(2), seed);
+  else if (base.startsWith("rwg-")) q = makeRw(id);
+  else {
+    const orig = bank().get(base);
+    if (orig && permutable(orig)) q = permuted(orig, seed, id);
+  }
+  if (!q || q.id !== id) return undefined;
+  if (GEN.size > 20_000) GEN.clear();
+  GEN.set(id, q);
+  return q;
+}
+
+/** Вопросы из пула тестов в базе (IELTS Reading от ИИ): сервер подгружает их перед проверкой. */
+export function registerQuestions(qs: Question[]) {
+  if (GEN.size > 20_000) GEN.clear();
+  for (const q of qs) GEN.set(q.id, q);
+}
+
+const newSeed = (rand: Rand) => (Math.floor(rand() * 2_000_000_000) + 1).toString(36);
+
+/** Пул вопросов одной попытки SAT: свежие варианты всех шаблонов и вопросов банка. */
+export function satPool(section: "math" | "rw", rand: Rand): Question[] {
+  const out: Question[] = [];
+  const add = (base: string, variants: number) => {
+    let made = 0;
+    for (let t = 0; t < variants * 6 && made < variants; t++) {
+      const q = getQuestion(`${base}~${newSeed(rand)}`);
+      if (q) { out.push(q); made++; }
+    }
+  };
+  if (section === "math") for (const key of MATH_KEYS) add(`m-${key}`, 3);
+  else {
+    for (const q of sectionQuestions("rw")) add(q.id, 1);
+    for (const b of rwGeneratorBases()) add(b, 1);
+  }
+  return out;
 }
 
 export function sectionQuestions(section: Section): Question[] {
@@ -69,11 +131,29 @@ export function pickQuestions(
 ): string[] {
   const exclude = opts.exclude ?? new Set();
   const seen = opts.seen ?? new Set();
-  const avail = pool.filter((q) => !exclude.has(q.id));
+  // Сравниваем по базе: вариант уже виденного вопроса тоже считается виденным.
+  const isSeen = (q: Question) => seen.has(q.id) || seen.has(baseOf(q.id));
+  const avail = pool.filter((q) => !exclude.has(q.id) && !exclude.has(baseOf(q.id)));
   const byDiff = (d: number) =>
-    [...diversify(shuffle(avail.filter((q) => q.difficulty === d && !seen.has(q.id)), opts.rand)),
-     ...diversify(shuffle(avail.filter((q) => q.difficulty === d && seen.has(q.id)), opts.rand))];
+    [...diversify(shuffle(avail.filter((q) => q.difficulty === d && !isSeen(q)), opts.rand)),
+     ...diversify(shuffle(avail.filter((q) => q.difficulty === d && isSeen(q)), opts.rand))];
   const chosen: Question[] = [];
+  const families = new Set<string>();
+  // Сначала по одному варианту каждого шаблона; повтор шаблона (с другими числами) — только при нехватке.
+  const skillCount = (q: Question) => chosen.filter((c) => c.skill === q.skill).length;
+  const takeFrom = (list: Question[], n: number, allowRepeat: boolean) => {
+    let took = 0;
+    // Повторяя шаблон, берём сначала навыки, которых в модуле меньше всего.
+    const ordered = allowRepeat ? [...list].sort((a, b) => skillCount(a) - skillCount(b)) : list;
+    for (const q of ordered) {
+      if (took >= n) break;
+      if (chosen.includes(q) || (!allowRepeat && families.has(baseOf(q.id)))) continue;
+      chosen.push(q);
+      families.add(baseOf(q.id));
+      took++;
+    }
+    return took;
+  };
   const targets = ([1, 2, 3] as const).map((d) => ({ d, n: Math.round(count * (mix[String(d)] ?? 0)) }));
   // поправка округления
   let diff = count - targets.reduce((s, t) => s + t.n, 0);
@@ -81,31 +161,33 @@ export function pickQuestions(
     if (diff === 0) break;
     if ((mix[String(t.d)] ?? 0) > 0) { t.n += Math.sign(diff); diff -= Math.sign(diff); }
   }
-  for (const t of targets) chosen.push(...byDiff(t.d).slice(0, t.n));
+  for (const t of targets) {
+    const got = takeFrom(byDiff(t.d), t.n, false);
+    if (got < t.n) takeFrom(byDiff(t.d), t.n - got, true);
+  }
   if (chosen.length < count) {
     // нехватка: ближайшая по весу сложность
     const weighted = ([1, 2, 3] as Difficulty[]).sort((a, b) => (mix[String(b)] ?? 0) - (mix[String(a)] ?? 0));
-    for (const d of weighted) {
-      for (const q of byDiff(d)) {
-        if (chosen.length >= count) break;
-        if (!chosen.includes(q)) chosen.push(q);
-      }
-    }
+    for (const d of weighted) takeFrom(byDiff(d), count - chosen.length, false);
+    for (const d of weighted) takeFrom(byDiff(d), count - chosen.length, true);
   }
   // в модуле вопросы идут от простых к сложным, как на digital SAT
   return chosen.slice(0, count).sort((a, b) => a.difficulty - b.difficulty).map((q) => q.id);
 }
 
 export function buildSatModule1(section: "math" | "rw", seen: Set<string>, rand: Rand): string[] {
-  return pickQuestions(sectionQuestions(section), satSpec(section).questionsPerModule, cfg.sat.module1Mix, { seen, rand });
+  return pickQuestions(satPool(section, rand), satSpec(section).questionsPerModule, cfg.sat.module1Mix, { seen, rand });
 }
 
+/** Модуль 2: вопросы модуля 1 исключены, их шаблоны — в конце очереди (как виденные). */
 export function buildSatModule2(section: "math" | "rw", path: "easy" | "hard", exclude: Set<string>, seen: Set<string>, rand: Rand): string[] {
-  return pickQuestions(sectionQuestions(section), satSpec(section).questionsPerModule, cfg.sat.module2Mix[path], { exclude, seen, rand });
+  const avoid = new Set([...seen, ...[...exclude].map(baseOf)]);
+  return pickQuestions(satPool(section, rand), satSpec(section).questionsPerModule, cfg.sat.module2Mix[path], { exclude, seen: avoid, rand });
 }
 
-export function buildReadingTest(): string[] {
-  return sectionQuestions("reading").map((q) => q.id);
+/** IELTS Reading: варианты в multiple choice перемешиваются при каждой попытке. */
+export function buildReadingTest(rand: Rand = Math.random): string[] {
+  return sectionQuestions("reading").map((q) => (permutable(q) ? `${q.id}~${newSeed(rand)}` : q.id));
 }
 
 const norm = (s: string) => s.trim().toLowerCase().replace(/[’']/g, "'").replace(/\s+/g, " ").replace(/^(the|a|an) /, "");
@@ -237,7 +319,8 @@ export function buildResult(args: {
     res.scoreHigh = s.high;
     res.module2Path = args.path;
   }
-  if (args.section === "reading") res.band = ieltsReadingBand(g.correct);
+  // Тест из пула может содержать чуть меньше 40 вопросов: приводим к шкале из 40.
+  if (args.section === "reading") res.band = ieltsReadingBand(g.total === 40 || !g.total ? g.correct : Math.round((g.correct * 40) / g.total));
   res.tips = ruleTips(res);
   return res;
 }

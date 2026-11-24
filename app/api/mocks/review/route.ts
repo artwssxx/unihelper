@@ -3,6 +3,7 @@ import { z } from "zod";
 import { markInterrupted } from "@/lib/mocks/attemptStore";
 import { buildResult } from "@/lib/mocks/engine";
 import { verify } from "@/lib/mocks/token";
+import { ensurePoolQuestions } from "@/lib/server/readingPool";
 
 const body = z.object({
   token: z.string().max(200_000),
@@ -16,6 +17,7 @@ export async function POST(req: Request) {
   const st = verify(parsed.data.token);
   if (!st || st.section === "writing") return NextResponse.json({ error: "bad_token" }, { status: 400 });
   await markInterrupted(st.id, "unload");
+  await ensurePoolQuestions([...st.done.flatMap((m) => m.qids), ...st.qids]);
   const answers: Record<string, string> = {};
   for (const id of st.qids) if (parsed.data.answers[id] != null) answers[id] = parsed.data.answers[id];
   const r = buildResult({

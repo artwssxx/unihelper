@@ -12,7 +12,7 @@ Next.js 15 App Router, TypeScript strict, Tailwind v4 (токены дизайн
 - `app/(site)` — лендинг и анкета; `app/(app)` — кабинет с боковым меню (главная, программы, карта, моки, ивенты, уроки, AI Advisor, эссе, портфолио, профиль); `app/(exam)/mocks/run` — прохождение мока без меню
 - `app/api/` — `profile`, `advice`, `chat`, `leads`, `mocks/*` (start, submit, check, event, review, writing), `lessons`, `ai/essay`, `ai/portfolio`
 - `lib/scoring/` — Profile Strength, Admission Fit, Funding Fit, подбор. Пороги — в `config.ts`
-- `lib/mocks/` — банки вопросов (`bank/`), движок (`engine.ts`), подписанный токен попытки (`token.ts`), учёт прерываний (`attemptStore.ts`)
+- `lib/mocks/` — банки вопросов (`bank/`), движок (`engine.ts`), подписанный токен попытки (`token.ts`), учёт прерываний (`attemptStore.ts`). Генерация: ID варианта `<база>~<сид base36>` — `getQuestion` восстанавливает вопрос на сервере (Math — шаблон с сидом, RW — `bank/rwGen.ts` или перемешанные варианты). IELTS Reading из пула ИИ — `lib/server/readingPool.ts` (текст → вопросы → независимое решение; сохраняются только совпавшие), перед проверкой — `ensurePoolQuestions`. Калькулятор — `lib/mocks/calc.ts` (без eval)
 - `config/` — структура моков, таблицы пересчёта SAT и IELTS (калибровать вручную)
 - `lib/roadmap.ts` — дорожная карта по шаблонам; `lib/content/` — уроки и ивенты
 - `data/programs.ts` — программы и гранты (источник для `supabase/seed.sql`)

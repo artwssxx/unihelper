@@ -20,6 +20,8 @@ export interface AttemptPayload {
     task1: { title: string; minutes: number; minWords: number; prompt: string; chart: { unit: string; series: string[]; categories: { label: string; values: number[] }[] } };
     task2: { title: string; minutes: number; minWords: number; prompt: string };
   };
+  /** ID заданий Writing (чтобы в следующий раз дать другую тему). */
+  taskIds?: string[];
 }
 
 export interface ActiveAttempt {

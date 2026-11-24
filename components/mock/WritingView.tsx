@@ -57,19 +57,26 @@ export default function WritingView(props: { a: ActiveAttempt; setEssay: (t: "ta
 }
 
 function BarChart({ chart }: { chart: { unit: string; series: string[]; categories: { label: string; values: number[] }[] } }) {
-  const max = 70;
+  // Шкала подбирается под данные: «красивый» шаг 1/2/5 × 10ⁿ, 4–7 делений.
+  const top = Math.max(...chart.categories.flatMap((c) => c.values), 1);
+  const raw = top / 5;
+  const pow = 10 ** Math.floor(Math.log10(raw));
+  const step = [1, 2, 5, 10].map((m) => m * pow).find((x) => x >= raw) ?? raw;
+  const max = Math.ceil(top / step) * step;
+  const ticks = Array.from({ length: Math.round(max / step) + 1 }, (_, i) => Math.round(i * step * 100) / 100);
   const colors = ["#9DBBF5", "#2E6BE6"];
-  const W = 520, H = 260, pad = 36, bw = 26;
+  const W = 520, H = 260, pad = 44, bw = 26;
   const groupW = (W - pad * 2) / chart.categories.length;
+  const label = `Столбчатая диаграмма (${chart.unit}): ${chart.categories.map((c) => `${c.label} — ${c.values.join(" и ")}`).join("; ")}; годы ${chart.series.join(" и ")}`;
   return (
     <figure className="mt-5">
-      <svg viewBox={`0 0 ${W} ${H + 40}`} className="w-full" role="img" aria-label="Столбчатая диаграмма: доля жителей, пользующихся общественным транспортом в 2010 и 2020 годах, по городам A–D">
-        {[0, 10, 20, 30, 40, 50, 60, 70].map((t) => {
+      <svg viewBox={`0 0 ${W} ${H + 40}`} className="w-full" role="img" aria-label={label}>
+        {ticks.map((t) => {
           const y = H - (t / max) * (H - 20);
           return (
             <g key={t}>
-              <line x1={pad} x2={W - 8} y1={y} y2={y} stroke="#E3E9F4" />
-              <text x={pad - 6} y={y + 4} fontSize="11" textAnchor="end" fill="#5B6785">{t}</text>
+              <line x1={pad} x2={W - 8} y1={y} y2={y} style={{ stroke: "var(--line)" }} />
+              <text x={pad - 6} y={y + 4} fontSize="11" textAnchor="end" style={{ fill: "var(--muted)" }}>{t}</text>
             </g>
           );
         })}
@@ -82,15 +89,15 @@ function BarChart({ chart }: { chart: { unit: string; series: string[]; categori
                 return (
                   <g key={si}>
                     <rect x={x0 + si * bw} y={H - h} width={bw - 4} height={h} rx="4" fill={colors[si]} />
-                    <text x={x0 + si * bw + (bw - 4) / 2} y={H - h - 5} fontSize="11" textAnchor="middle" fill="#0E1A3A" fontWeight="700">{v}</text>
+                    <text x={x0 + si * bw + (bw - 4) / 2} y={H - h - 5} fontSize="11" textAnchor="middle" fontWeight="700" style={{ fill: "var(--text)" }}>{v}</text>
                   </g>
                 );
               })}
-              <text x={x0 + bw} y={H + 18} fontSize="12" textAnchor="middle" fill="#0E1A3A" fontWeight="600">{c.label}</text>
+              <text x={x0 + bw} y={H + 18} fontSize="12" textAnchor="middle" fontWeight="600" style={{ fill: "var(--text)" }}>{c.label}</text>
             </g>
           );
         })}
-        <text x={8} y={14} fontSize="11" fill="#5B6785">{chart.unit}</text>
+        <text x={8} y={14} fontSize="11" style={{ fill: "var(--muted)" }}>{chart.unit}</text>
       </svg>
       <figcaption className="mt-2 flex gap-4 text-sm text-muted">
         {chart.series.map((s, i) => (
