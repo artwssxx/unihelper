@@ -11,11 +11,14 @@ const finished = new Set<string>();
 export async function recordStart(st: AttemptState, profileId?: string | null) {
   const db = supabaseAdmin();
   if (!db) return;
-  const { error } = await db.from("mock_attempts").insert({
+  const row = {
     id: st.id, profile_id: profileId ?? null, exam: st.exam, section: st.section, mode: st.mode,
     question_ids: st.qids, started_at: new Date(st.startedAt).toISOString(),
     deadline_at: st.deadlineAt ? new Date(st.deadlineAt).toISOString() : null, status: "in_progress",
-  });
+  };
+  let { error } = await db.from("mock_attempts").insert(row);
+  // Профиль из браузера может не существовать в базе (создан до её подключения) — пишем без привязки.
+  if (error?.code === "23503" || error?.code === "22P02") ({ error } = await db.from("mock_attempts").insert({ ...row, profile_id: null }));
   if (error) console.error("[mocks] start", error.message);
 }
 

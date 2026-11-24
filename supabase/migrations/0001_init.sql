@@ -62,7 +62,7 @@ create table if not exists public.programs (
 create table if not exists public.leads (
   id uuid primary key default gen_random_uuid(),
   profile_id uuid references public.profiles(id) on delete set null,
-  program_id text not null references public.programs(id),
+  program_id text not null, -- без внешнего ключа: программы из админки живут в content_items
   full_name text not null,
   phone text not null,
   email text,

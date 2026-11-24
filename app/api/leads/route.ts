@@ -26,14 +26,17 @@ export async function POST(req: Request) {
 
   const db = supabaseAdmin();
   if (db) {
-    const { error } = await db.from("leads").insert({
+    const row = {
       profile_id: profileId ?? null,
       program_id: program.id,
       full_name: contact.fullName,
       phone: contact.phone,
       email: contact.email || null,
       consent_at: new Date().toISOString(),
-    });
+    };
+    let { error } = await db.from("leads").insert(row);
+    // Профиль из браузера может не существовать в базе — сохраняем заявку без привязки.
+    if (error?.code === "23503") ({ error } = await db.from("leads").insert({ ...row, profile_id: null }));
     if (error) {
       console.error("[leads]", error);
       return NextResponse.json({ error: "db_error" }, { status: 500 });
