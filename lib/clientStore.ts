@@ -30,14 +30,32 @@ export interface EventRegistration {
   at: string;
 }
 
+export type PortfolioTemplate = "minimal" | "creative" | "academic" | "bold" | "night";
+export interface PortfolioBlock {
+  id: string;
+  type: "text" | "links" | "skills";
+  title: string;
+  text?: string;
+  links?: { label: string; url: string }[];
+  items?: string[];
+}
 export interface PortfolioState {
   slug: string;
-  template: "minimal" | "creative" | "academic";
+  template: PortfolioTemplate;
   visibility: "draft" | "link" | "public";
   about: string;
+  headline?: string;
   sections: Record<string, boolean>;
   showFields: Record<string, boolean>;
   projects: { title: string; text: string }[];
+  /** Порядок разделов (встроенные и свои блоки). */
+  order?: string[];
+  blocks?: PortfolioBlock[];
+  accent?: string;
+  font?: "sans" | "serif";
+  hideBadge?: boolean;
+  /** Опубликовано: адрес и токен ссылки (для режима «по ссылке»). */
+  published?: { url: string; at: string } | null;
 }
 
 export interface EssayVersion {
