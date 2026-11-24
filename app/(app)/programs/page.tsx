@@ -61,7 +61,7 @@ export default function ProgramsPage() {
         ))}
       </div>
 
-      {leadFor && <LeadModal item={leadFor} profile={profile} profileId={store?.profileId ?? null} contact={store?.contact ?? null} onClose={() => setLeadFor(null)} />}
+      {leadFor && <LeadModal item={leadFor} profile={profile} profileId={store?.profileId ?? null} contact={store?.contact ?? null} demo={Boolean(store?.demo?.active)} onClose={() => setLeadFor(null)} />}
     </div>
   );
 }
@@ -100,12 +100,14 @@ function ProgramCard({ item, inList, onToggle, onLead }: { item: MatchItem; inLi
   );
 }
 
-function LeadModal(props: { item: MatchItem; profile: Profile; profileId: string | null; contact: ContactInfo | null; onClose: () => void }) {
+function LeadModal(props: { item: MatchItem; profile: Profile; profileId: string | null; contact: ContactInfo | null; demo: boolean; onClose: () => void }) {
   const [consent, setConsent] = useState(false);
   const [state, setState] = useState<"idle" | "sending" | "done" | "error">("idle");
   const p = props.item.program;
   async function send() {
     if (!props.contact) return setState("error");
+    // В демо заявка никуда не отправляется.
+    if (props.demo) return setState("done");
     setState("sending");
     const res = await fetch("/api/leads", {
       method: "POST",
@@ -120,7 +122,9 @@ function LeadModal(props: { item: MatchItem; profile: Profile; profileId: string
         {state === "done" ? (
           <>
             <h2 id="leadT" className="text-lg font-extrabold">Заявка отправлена</h2>
-            <p className="text-sm text-body">Приёмная комиссия {p.university} свяжется с тобой по телефону.</p>
+            <p className="text-sm text-body">
+              {props.demo ? "В демо заявка не отправляется. В реальном продукте вуз получит контакт и профиль, а команда — уведомление в Telegram." : `Приёмная комиссия ${p.university} свяжется с тобой по телефону.`}
+            </p>
             <button className="btn-primary w-full" onClick={props.onClose}>Готово</button>
           </>
         ) : (

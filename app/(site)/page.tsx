@@ -35,6 +35,7 @@ export default function Landing() {
         </nav>
         <div className="flex items-center gap-2.5">
           <span className="hidden text-[13px] font-bold text-muted md:inline" title="Узбекский и английский — скоро">RU · UZ · EN</span>
+          <Link href="/demo" className="hidden rounded-xl px-3 py-[11px] text-sm font-bold text-orange-ink sm:inline">Демо для инвесторов</Link>
           <Link href="/dashboard" className="rounded-xl border border-line-2 bg-surface px-[18px] py-[11px] text-sm font-bold">Войти</Link>
           <Link href="/quiz" className="rounded-xl bg-primary px-[18px] py-[11px] text-sm font-bold text-white hover:bg-primary-ink">Начать бесплатно</Link>
         </div>
@@ -49,7 +50,7 @@ export default function Landing() {
           </p>
           <div className="mt-9 flex flex-wrap gap-3">
             <Link href="/quiz" className="rounded-[14px] bg-primary px-6 py-4 text-base font-bold text-white hover:bg-primary-ink">Оценить профиль за 3 минуты</Link>
-            <a href="#how" className="rounded-[14px] border border-line-2 bg-surface px-6 py-4 text-base font-bold">Как это работает</a>
+            <Link href="/demo" className="rounded-[14px] border border-line-2 bg-surface px-6 py-4 text-base font-bold">Смотреть демо</Link>
           </div>
           <div className="mt-7 flex flex-wrap gap-5 text-sm font-semibold text-muted">
             <span>✓ Бесплатный старт</span><span>✓ Русский, скоро узбекский и английский</span><span>✓ Браузер и телефон</span>

@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import * as I from "@/components/icons";
 import MockTrend from "@/components/MockTrend";
 import { useStore } from "@/lib/clientStore";
-import { SECTION_TITLE, hardModeAvailable } from "@/lib/mocks/client";
+import { SECTION_TITLE, hardModeAvailable, loadResult } from "@/lib/mocks/client";
 import type { Section } from "@/lib/mocks/types";
 
 const CARDS: { exam: "sat" | "ielts"; section: Section; title: string; text: string; meta: string }[] = [
@@ -140,9 +140,11 @@ export default function MocksHub() {
                       )}
                     </td>
                     <td className="py-3 text-right">
+                      {loadResult(h.attemptId) && (
                       <Link className="inline-flex items-center gap-1 font-bold text-primary" href={`/mocks/result/${h.attemptId}`}>
                         Разбор <I.Check size={14} />
                       </Link>
+                      )}
                     </td>
                   </tr>
                 ))}

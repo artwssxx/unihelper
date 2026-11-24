@@ -73,7 +73,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         </div>
       )}
 
-      <main className="min-w-0 flex-1 px-4 pb-12 pt-5 sm:px-8 sm:pt-6">
+      <main className={`min-w-0 flex-1 px-4 pb-12 pt-5 sm:px-8 sm:pt-6 ${store?.demo?.active && store.demo.tour ? "xl:pr-[400px]" : ""}`}>
         <header className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <button
@@ -110,7 +110,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             Демо-режим: ученик и его история вымышленные, мок-баллы посчитаны движком на смоделированных ответах. ИИ отвечает вживую.
           </p>
         )}
-        <div className={store?.demo?.active ? "mt-6 pb-56 sm:pb-24" : "mt-6"}>{children}</div>
+        <div className={store?.demo?.active ? "mt-6 pb-64 sm:pb-28 xl:pb-0" : "mt-6"}>{children}</div>
       </main>
       {store?.demo?.active && <DemoTour demo={store.demo} />}
     </div>

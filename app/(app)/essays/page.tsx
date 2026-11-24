@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { update, useStore } from "@/lib/clientStore";
 import type { EssayFeedback } from "@/lib/essayRules";
 
@@ -22,6 +22,15 @@ export default function EssaysPage() {
   const [error, setError] = useState<string | null>(null);
   const words = (text.match(/\S+/g) ?? []).length;
   const versions = [...(store?.essays ?? [])].reverse();
+  // В демо подставляем последний черновик, чтобы проверку можно было запустить одной кнопкой.
+  useEffect(() => {
+    const last = store?.essays?.[store.essays.length - 1];
+    if (store?.demo?.active && last && !text) {
+      setText(last.text);
+      setPrompt(PROMPTS.includes(last.prompt) ? last.prompt : PROMPTS[0]);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [store?.demo?.active]);
 
   async function check() {
     setBusy(true);
@@ -68,7 +77,7 @@ export default function EssaysPage() {
           </label>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <span className="text-sm text-muted">{words} слов</span>
-            <button className="btn-primary" onClick={check} disabled={busy || text.trim().length < 50}>{busy ? "Проверяем…" : "Проверить эссе"}</button>
+            <button className="btn-primary" onClick={check} disabled={busy || text.trim().length < 50}>{busy ? "ИИ читает эссе… до 30 секунд" : "Проверить эссе"}</button>
           </div>
           {error && <p className="text-sm text-red">{error}</p>}
         </section>

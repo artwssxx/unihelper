@@ -38,7 +38,7 @@ function compatProvider(cfg: { name: string; baseUrl: string; key: string; model
         method: "POST",
         headers,
         body: JSON.stringify({ model, ...body }),
-        signal: AbortSignal.timeout(Math.max(3_000, Math.min(tier === "fast" ? 25_000 : 45_000, budgetLeft()))),
+        signal: AbortSignal.timeout(Math.max(3_000, Math.min(tier === "fast" ? 20_000 : 28_000, budgetLeft()))),
       });
     } catch (e) {
       throw new RetryableError(`${model}: ${(e as Error).message}`);
@@ -171,7 +171,7 @@ export function llm(): LLM | null {
         key: gemini,
         models: {
           fast: list(process.env.GEMINI_MODELS_FAST, ["gemini-3.5-flash-lite", "gemini-flash-lite-latest", "gemini-3.5-flash"]),
-          smart: list(process.env.GEMINI_MODELS_SMART, ["gemini-3.5-flash", "gemini-3.8-flash", "gemini-flash-latest", "gemini-3.5-flash-lite"]),
+          smart: list(process.env.GEMINI_MODELS_SMART, ["gemini-3.5-flash", "gemini-3.5-flash-lite", "gemini-flash-latest", "gemini-flash-lite-latest"]),
         },
       });
     }

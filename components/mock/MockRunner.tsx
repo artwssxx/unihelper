@@ -367,7 +367,7 @@ export default function MockRunner({ exam, section, mode }: { exam: Exam; sectio
           disabled={phase === "submitting"}
           className="rounded-[10px] border border-navy-line bg-transparent px-3.5 py-2 text-sm font-bold text-white"
         >
-          {phase === "submitting" ? "Отправляем…" : isWriting ? "Сдать работу" : exam === "sat" && a.att.module < a.att.totalModules ? "Завершить модуль" : "Завершить тест"}
+          {phase === "submitting" ? (isWriting ? "ИИ оценивает… до минуты" : "Отправляем…") : isWriting ? "Сдать работу" : exam === "sat" && a.att.module < a.att.totalModules ? "Завершить модуль" : "Завершить тест"}
         </button>
       </header>
 
