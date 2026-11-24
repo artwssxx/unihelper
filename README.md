@@ -48,6 +48,7 @@ npm run dev
 - `GEMINI_API_KEY` — ИИ по умолчанию (бесплатный тариф Google AI Studio): чат, советы, Writing, эссе, портфолио. При перегрузке модели запрос автоматически уходит на следующую в цепочке
 - `ANTHROPIC_API_KEY` / `OPENAI_COMPAT_*` + `AI_PROVIDER` — переключение на Claude или другой OpenAI-совместимый провайдер без правки кода
 - `TELEGRAM_BOT_TOKEN`, `NEXT_PUBLIC_TELEGRAM_BOT_USERNAME` — бот, мини-приложение и вход через Telegram; после деплоя нажмите «Подключить бота» в `/admin/telegram`
+- Домены: основной — `unihelper-eight.vercel.app` (`NEXT_PUBLIC_SITE_URL`; к нему привязан вход через Telegram в @BotFather, вебхук бота и ссылки в sitemap). Дополнительный — `unihelper.net` (www → без www): всё работает так же, вход через Telegram ведёт на основной адрес
 - `NEXT_PUBLIC_GA_ID` — Google Analytics 4 (G-XXXXXXX): посещения считаются всегда обезличенно (без cookies), события продукта и cookies — только после согласия в плашке; реклама выключена, админка не отслеживается
 - `CRON_SECRET` — защита еженедельной рассылки `/api/telegram/cron` (Vercel Cron, `vercel.json`)
 - `TELEGRAM_ADMIN_CHAT_ID` — уведомления команде о лидах и жалобах

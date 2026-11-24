@@ -1,5 +1,6 @@
 "use client";
 
+import { SITE_URL } from "@/lib/site";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
@@ -8,6 +9,8 @@ import { useAuth } from "@/lib/auth";
 import { supabaseBrowser } from "@/lib/supabaseClient";
 
 const BOT = process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME;
+// Виджет Telegram работает только на домене, привязанном к боту в @BotFather (/setdomain) — это основной адрес сайта.
+const TG_HOST = new URL(SITE_URL).host;
 
 export async function finishTelegramLogin(payload: unknown): Promise<boolean> {
   const sb = supabaseBrowser();
@@ -33,9 +36,14 @@ export default function LoginCard({ next = "/dashboard" }: { next?: string }) {
     if (ready && user) router.replace(next);
   }, [ready, user, next, router]);
 
+  // На других адресах сайта (например, unihelper.net) виджет показал бы «Bot domain invalid» —
+  // там вместо него ссылка на вход через Telegram на основном адресе.
+  const [tgHere, setTgHere] = useState<boolean | null>(null);
+  useEffect(() => setTgHere(location.host === TG_HOST || location.hostname === "localhost"), []);
+
   // Виджет входа Telegram (нужны бот и домен, привязанный в @BotFather командой /setdomain).
   useEffect(() => {
-    if (!BOT || !tgBox.current) return;
+    if (!BOT || !tgHere || !tgBox.current) return;
     (window as unknown as { onTelegramAuth: (u: unknown) => void }).onTelegramAuth = async (u: unknown) => {
       setErr(null);
       if (await finishTelegramLogin({ mode: "widget", data: u })) router.replace(next);
@@ -51,7 +59,7 @@ export default function LoginCard({ next = "/dashboard" }: { next?: string }) {
     s.setAttribute("data-onauth", "onTelegramAuth(user)");
     tgBox.current.innerHTML = "";
     tgBox.current.appendChild(s);
-  }, [router, next]);
+  }, [router, next, tgHere]);
 
   async function sendLink(e: React.FormEvent) {
     e.preventDefault();
@@ -88,7 +96,12 @@ export default function LoginCard({ next = "/dashboard" }: { next?: string }) {
       <p className="text-sm text-body">Аккаунт сохраняет профиль, моки и план на всех устройствах. Данные из этого браузера перенесутся в аккаунт.</p>
 
       <div className="space-y-2.5">
-        {BOT ? (
+        {BOT && tgHere === false ? (
+          <a className="btn-secondary w-full" href={`${SITE_URL}/login?next=${encodeURIComponent(next)}`}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m22 3-20 8 7 2 2 7 4-5 5 4z" /></svg>
+            Войти через Telegram на {TG_HOST}
+          </a>
+        ) : BOT ? (
           <div ref={tgBox} className="flex min-h-[44px] justify-center" aria-label="Войти через Telegram" />
         ) : (
           <button className="btn-secondary w-full" disabled title="Подключим вместе с ботом Unihelper">
