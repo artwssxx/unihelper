@@ -1,5 +1,6 @@
 "use client";
 
+import { track } from "@/lib/analytics";
 import { useEffect, useState } from "react";
 import type { PublicQuestion } from "@/lib/mocks/types";
 
@@ -27,6 +28,7 @@ export default function LessonQuiz({ lessonId, onScore }: { lessonId: string; on
     if (!res?.ok) return;
     const j = await res.json();
     setResults(j);
+    track("lesson_quiz", { lesson: lessonId, score: Math.round(j.score * 100) });
     onScore?.(j.score);
   }
 

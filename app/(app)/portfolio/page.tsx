@@ -1,5 +1,6 @@
 "use client";
 
+import { track } from "@/lib/analytics";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import NeedProfile from "@/components/NeedProfile";
@@ -137,6 +138,7 @@ export default function PortfolioPage() {
       const text = j?.message ?? (res?.status === 401 ? "Войдите, чтобы опубликовать." : res?.status === 409 ? "Этот адрес уже занят — выберите другой." : "Не удалось опубликовать. Проверьте адрес страницы.");
       return setMsg({ ok: false, text });
     }
+    track("portfolio_publish", { visibility });
     const url = `${location.origin}${j.path}`;
     set({ visibility, published: { url, at: new Date().toISOString() } });
     setMsg({ ok: true, text: visibility === "public" ? "Опубликовано." : "Опубликовано по ссылке — поисковики страницу не видят." });

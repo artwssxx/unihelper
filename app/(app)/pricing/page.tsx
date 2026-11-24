@@ -1,5 +1,6 @@
 "use client";
 
+import { track } from "@/lib/analytics";
 import Link from "next/link";
 import { useState } from "react";
 import { useAuth, usePlan } from "@/lib/auth";
@@ -15,6 +16,7 @@ export default function PricingPage() {
     setBusy(true);
     setMsg(null);
     const ok = await setPlan(a);
+    if (ok && a === "activate-test") track("pro_test_activate");
     setBusy(false);
     setMsg(ok ? (a === "activate-test" ? "Pro включён на 30 дней (тестовый доступ)." : "Вы вернулись на Free.") : "Не получилось, попробуйте ещё раз.");
   }

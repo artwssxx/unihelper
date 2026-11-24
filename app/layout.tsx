@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Instrument_Serif, Manrope } from "next/font/google";
 import "./globals.css";
+import Analytics from "@/components/Analytics";
 import TelegramBridge from "@/components/TelegramBridge";
 import { AuthProvider } from "@/lib/auth";
 
@@ -29,6 +30,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <AuthProvider>
           {children}
           <TelegramBridge />
+          <Analytics />
         </AuthProvider>
       </body>
     </html>

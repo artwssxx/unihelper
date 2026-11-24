@@ -1,5 +1,6 @@
 "use client";
 
+import { track } from "@/lib/analytics";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import NeedProfile from "@/components/NeedProfile";
@@ -29,6 +30,7 @@ export default function Assistant() {
     setInput("");
     setBusy(true);
     setNotice(null);
+    track("ai_question");
     try {
       const res = await fetch("/api/chat", {
         method: "POST",

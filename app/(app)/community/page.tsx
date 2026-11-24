@@ -1,5 +1,6 @@
 "use client";
 
+import { track } from "@/lib/analytics";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
@@ -226,6 +227,7 @@ function Posts({ hasProfile }: { hasProfile: boolean }) {
     const r = await api("/api/community/posts", { method: "POST", json: { ...f, roles: f.roles.split(",").map((x) => x.trim()).filter(Boolean) } });
     setBusy(false);
     if (!r.ok) return setMsg(r.data.message ?? "Не удалось опубликовать.");
+    track("community_post", { kind: f.kind });
     setCreating(false);
     setF({ kind: "team", title: "", body: "", roles: "" });
     load();
@@ -407,6 +409,7 @@ function Orgs({ hasProfile }: { hasProfile: boolean }) {
       setBusy(false);
       return setMsg(r.data.message ?? "Не удалось создать.");
     }
+    track("community_org_create", { kind: f.kind });
     router.push(`/community/org/${r.data.id}`);
   }
 

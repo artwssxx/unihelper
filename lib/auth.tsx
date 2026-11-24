@@ -1,5 +1,6 @@
 "use client";
 
+import { track } from "@/lib/analytics";
 import type { Session } from "@supabase/supabase-js";
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { load, save, subscribe, type Stored } from "./clientStore";
@@ -72,8 +73,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setReady(true);
       if (data.session) syncFromServer(data.session);
     });
-    const { data: sub } = sb.auth.onAuthStateChange((_e, s) => {
+    const { data: sub } = sb.auth.onAuthStateChange((e, s) => {
       setSession(s);
+      if (e === "SIGNED_IN" && s) {
+        const k = `uh-login-tracked:${s.user.id}`;
+        try {
+          if (!sessionStorage.getItem(k)) {
+            sessionStorage.setItem(k, "1");
+            track("login", { method: String(s.user.user_metadata?.provider || s.user.app_metadata?.provider || "email") });
+          }
+        } catch {}
+      }
       if (s) syncFromServer(s);
       else synced.current = null;
     });

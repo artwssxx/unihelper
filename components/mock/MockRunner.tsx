@@ -1,5 +1,6 @@
 "use client";
 
+import { track } from "@/lib/analytics";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -168,6 +169,7 @@ export default function MockRunner({ exam, section, mode }: { exam: Exam; sectio
         lightRemaining: att.durationSec, essays: section === "writing" ? { task1: "", task2: "" } : undefined,
       };
       persist(act);
+      track("mock_start", { exam, section, mode });
       qStart.current = Date.now();
       finishing.current = false;
       setPhase("running");
@@ -247,6 +249,7 @@ export default function MockRunner({ exam, section, mode }: { exam: Exam; sectio
   }, [persist, trackTime]);
 
   function done(id: string) {
+    if (a) track("mock_complete", { exam: a.exam, section: a.section, mode: a.mode });
     saveActive(null);
     clearMarks(id);
     if (document.fullscreenElement) document.exitFullscreen().catch(() => {});

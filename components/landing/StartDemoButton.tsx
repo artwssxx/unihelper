@@ -1,5 +1,6 @@
 "use client";
 
+import { track } from "@/lib/analytics";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { startDemo } from "@/lib/demo";
@@ -17,6 +18,7 @@ export default function StartDemoButton({ light = false }: { light?: boolean }) 
           setErr(false);
           try {
             await startDemo();
+            track("demo_start");
             router.push("/dashboard");
           } catch {
             setErr(true);

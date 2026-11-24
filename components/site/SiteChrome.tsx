@@ -1,4 +1,5 @@
 import Link from "next/link";
+import ConsentLink from "@/components/ConsentLink";
 import * as I from "@/components/icons";
 
 // Шапка и подвал публичных страниц (блог, курсы). Без хуков — рендерится на сервере.
@@ -45,6 +46,7 @@ export function SiteFooter() {
           <Link href="/courses" className="hover:text-ink">Курсы</Link>
           <Link href="/pricing" className="hover:text-ink">Тарифы</Link>
           <Link href="/dashboard" className="hover:text-ink">Кабинет</Link>
+          <ConsentLink className="font-bold hover:text-ink" />
         </nav>
       </div>
     </footer>

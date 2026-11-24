@@ -48,6 +48,7 @@ npm run dev
 - `GEMINI_API_KEY` — ИИ по умолчанию (бесплатный тариф Google AI Studio): чат, советы, Writing, эссе, портфолио. При перегрузке модели запрос автоматически уходит на следующую в цепочке
 - `ANTHROPIC_API_KEY` / `OPENAI_COMPAT_*` + `AI_PROVIDER` — переключение на Claude или другой OpenAI-совместимый провайдер без правки кода
 - `TELEGRAM_BOT_TOKEN`, `NEXT_PUBLIC_TELEGRAM_BOT_USERNAME` — бот, мини-приложение и вход через Telegram; после деплоя нажмите «Подключить бота» в `/admin/telegram`
+- `NEXT_PUBLIC_GA_ID` — Google Analytics 4 (G-XXXXXXX): посещения считаются всегда обезличенно (без cookies), события продукта и cookies — только после согласия в плашке; реклама выключена, админка не отслеживается
 - `CRON_SECRET` — защита еженедельной рассылки `/api/telegram/cron` (Vercel Cron, `vercel.json`)
 - `TELEGRAM_ADMIN_CHAT_ID` — уведомления команде о лидах и жалобах
 - `ADMIN_PASSWORD` — вход в `/admin` (локально без него пароль `admin`). Для сохранения правок на Vercel нужна Supabase и миграция `0003_admin_content.sql`

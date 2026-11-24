@@ -1,5 +1,6 @@
 "use client";
 
+import { track } from "@/lib/analytics";
 import { useCallback, useEffect, useState } from "react";
 import NeedProfile from "@/components/NeedProfile";
 import StrengthCard from "@/components/StrengthCard";
@@ -190,6 +191,7 @@ function TelegramCard() {
     setBusy(false);
     const j = r ? await r.json().catch(() => ({})) : {};
     if (!r?.ok || !j.url) return setErr(j.message ?? "Не удалось получить ссылку.");
+    track("telegram_link_start");
     window.open(j.url, "_blank", "noopener,noreferrer");
   }
   async function toggle(notify: boolean) {

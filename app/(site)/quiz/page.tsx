@@ -1,5 +1,6 @@
 "use client";
 
+import { track } from "@/lib/analytics";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { load, save } from "@/lib/clientStore";
@@ -95,6 +96,7 @@ export default function Quiz() {
       const json = await res.json();
       if (!res.ok) throw new Error(json.error);
       save({ profile: prof.data, contact: cont.data, profileId: json.id, step: 0, draft: prof.data });
+      track("profile_complete", { grade: prof.data.grade, major: prof.data.major });
       router.push("/dashboard");
     } catch {
       setError("Не удалось сохранить. Проверьте интернет и попробуйте ещё раз.");

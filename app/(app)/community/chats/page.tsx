@@ -1,5 +1,6 @@
 "use client";
 
+import { track } from "@/lib/analytics";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useRef, useState } from "react";
@@ -147,6 +148,7 @@ function Conversation({ chatId, summary, onBack, onSent }: { chatId: string; sum
     const r = await api(`/api/community/chats/${chatId}/messages`, { method: "POST", json: { body } });
     if (!r.ok) return setErr(r.data.message ?? "Не отправилось. Попробуй ещё раз.");
     setText("");
+    track("community_message", { kind: summary?.kind ?? "direct" });
     await pull();
     onSent();
   }

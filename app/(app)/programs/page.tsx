@@ -1,5 +1,6 @@
 "use client";
 
+import { track } from "@/lib/analytics";
 import { useMemo, useState } from "react";
 import FitPills from "@/components/FitPills";
 import NeedProfile from "@/components/NeedProfile";
@@ -358,6 +359,7 @@ function LeadModal(props: { item: MatchItem; profile: Profile; profileId: string
       body: JSON.stringify({ programId: p.id, profileId: props.profileId, profile: props.profile, contact: props.contact, consent: true }),
     }).catch(() => null);
     setState(res?.ok ? "done" : "error");
+    if (res?.ok) track("lead_submit", { program: p.id });
   }
   return (
     <div className="fixed inset-0 z-[60] flex items-end justify-center bg-[rgba(10,14,28,.5)] p-4 sm:items-center" onClick={props.onClose}>

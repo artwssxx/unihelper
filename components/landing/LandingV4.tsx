@@ -1,5 +1,6 @@
 "use client";
 
+import ConsentLink from "@/components/ConsentLink";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import ThemeToggle from "@/components/ThemeToggle";
@@ -592,6 +593,7 @@ function Footer({ t }: { t: T }) {
             <a href="#faq">{t.nav.faq}</a>
             <Link href="/courses">{t.nav.courses}</Link>
             <Link href="/blog">{t.nav.blog}</Link>
+            <ConsentLink />
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             <b style={{ color: "var(--text)" }}>{t.footer.partners}</b>
