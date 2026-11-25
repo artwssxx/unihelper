@@ -13,7 +13,6 @@ export interface PlanLimits {
   chatPerDay: number;
   proLessons: boolean;
   customUniversities: number;
-  aiUniversityFill: boolean;
   portfolioTemplates: "basic" | "all";
   portfolioHideBadge: boolean;
   communityOpenPosts: number;
@@ -23,12 +22,12 @@ export interface PlanLimits {
 export const LIMITS: Record<Plan, PlanLimits> = {
   free: {
     myPrograms: 3, fitReasons: false, satMocksPerMonth: 1, ieltsReadingPerMonth: 1, hardMode: false, writingAi: false,
-    essayAiPerMonth: 3, chatPerDay: 20, proLessons: false, customUniversities: 2, aiUniversityFill: false,
+    essayAiPerMonth: 3, chatPerDay: 20, proLessons: false, customUniversities: 5,
     portfolioTemplates: "basic", portfolioHideBadge: false, communityOpenPosts: 3, communityOrgs: 1,
   },
   pro: {
     myPrograms: 100, fitReasons: true, satMocksPerMonth: 1000, ieltsReadingPerMonth: 1000, hardMode: true, writingAi: true,
-    essayAiPerMonth: 30, chatPerDay: 100, proLessons: true, customUniversities: 50, aiUniversityFill: true,
+    essayAiPerMonth: 30, chatPerDay: 100, proLessons: true, customUniversities: 50,
     portfolioTemplates: "all", portfolioHideBadge: true, communityOpenPosts: 20, communityOrgs: 5,
   },
 };
@@ -38,7 +37,7 @@ export const FEATURE_ROWS: { label: string; free: string; pro: string }[] = [
   { label: "Profile Strength и подборка программ", free: "да", pro: "да" },
   { label: "Программ в моём списке", free: "до 3", pro: "без лимита" },
   { label: "Причины оценок и что усилить", free: "—", pro: "да" },
-  { label: "Свои вузы в подборке", free: "до 2", pro: "до 50 + ИИ-заполнение требований" },
+  { label: "Свои вузы в подборке (данные заполняются сами)", free: "до 5", pro: "до 50" },
   { label: "SAT-моки", free: "1 в месяц, лёгкий режим", pro: "без лимита, хард-режим" },
   { label: "IELTS Reading", free: "1 в месяц, лёгкий режим", pro: "без лимита, хард-режим" },
   { label: "IELTS Writing с ИИ-оценкой", free: "—", pro: "да" },

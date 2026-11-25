@@ -7,6 +7,7 @@ import NeedProfile from "@/components/NeedProfile";
 import { ProGate } from "@/components/ProLock";
 import { useCoins } from "@/lib/useCoins";
 import AddUniversity, { emptyCustom } from "@/components/programs/AddUniversity";
+import UniDetails from "@/components/programs/UniDetails";
 import WorldCatalog from "@/components/programs/WorldCatalog";
 import { apiFetch, usePlan } from "@/lib/auth";
 import { update } from "@/lib/clientStore";
@@ -99,7 +100,7 @@ export default function ProgramsPage() {
     const { fresh: _f, ...p } = raw as Program & { fresh?: boolean };
     const exists = (store?.customUnis ?? []).some((x) => x.id === p.id);
     if (!exists && custom.length >= limits.customUniversities) {
-      setNote(`В Free можно добавить до ${limits.customUniversities} своих вузов. В Pro — до 50 и с ИИ-заполнением.`);
+      setNote(`В Free можно добавить до ${limits.customUniversities} своих вузов, в Pro — до 50.`);
       setAdding(null);
       return;
     }
@@ -152,7 +153,9 @@ export default function ProgramsPage() {
       {tab === "world" ? (
         <WorldCatalog
           myCountries={profile.targetCountries}
-          onAdd={(h) => setAdding({ ...emptyCustom(h.name, h.country, h.web, major ?? profile.major), fresh: true } as Program)}
+          major={major ?? profile.major}
+          onAdd={(p) => saveCustom(p)}
+          onManual={(h) => setAdding({ ...emptyCustom(h.name, h.country, h.web, major ?? profile.major), fresh: true } as Program)}
           onOpen={(id) => {
             if (all.some((i) => i.program.id === id)) setDetailId(id);
             else setNote("Эта программа есть в каталоге, но не подходит под твои страны или специальность. Поменяй их в профиле, чтобы увидеть оценку.");
@@ -376,15 +379,18 @@ function Detail(props: {
         {p.isCustom && (
           <div className="mt-6 rounded-2xl border border-line p-4">
             <h3 className="font-extrabold">Свой вуз</h3>
-            <p className="mt-1 text-sm text-body">Данные вводите вы (или ИИ-черновик). Чтобы вуз появился у всех с проверенными цифрами — отправьте его эксперту.</p>
+            <p className="mt-1 text-sm text-body">Данные собраны автоматически (или введены вами) и не проверены экспертом. Чтобы вуз появился у всех с проверенными цифрами — отправьте его эксперту.</p>
             <div className="mt-3 flex flex-wrap gap-2">
-              <button className="btn-secondary py-2.5 text-sm" onClick={props.onEdit}>Изменить / обновить с ИИ</button>
+              <button className="btn-secondary py-2.5 text-sm" onClick={props.onEdit}>Изменить данные</button>
               <button className="btn-secondary py-2.5 text-sm" onClick={suggest}>Предложить в каталог</button>
               <button className="btn-secondary py-2.5 text-sm text-red" onClick={props.onRemove}>Удалить</button>
             </div>
             {sent && <p className="mt-2 text-sm font-semibold text-primary-ink">{sent}</p>}
           </div>
         )}
+
+        <h3 className="mt-8 text-xl font-extrabold">О вузе</h3>
+        <div className="mt-3"><UniDetails uni={{ name: p.university, country: p.country, web: p.url }} compact /></div>
       </div>
     </div>
   );

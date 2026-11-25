@@ -1,14 +1,12 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import ProLock from "@/components/ProLock";
-import { apiFetch, usePlan } from "@/lib/auth";
+import { loadUniProfileRetry } from "@/components/programs/UniDetails";
 import { countryName } from "@/lib/countries";
 import { t } from "@/lib/i18n/ru";
 import { MAJORS } from "@/lib/profileConst";
 import type { Major, Program } from "@/lib/types";
-import { CoinUnlockButton } from "@/components/ProLock";
-import { useCoins } from "@/lib/useCoins";
+import { programFromProfile } from "@/lib/uniProfile";
 
 type Hit = { name: string; country: string; web: string | null; programId: string | null; programName?: string };
 
@@ -28,7 +26,7 @@ export function emptyCustom(name: string, country: string, web: string | null, m
   };
 }
 
-/** Модалка «Добавить свой вуз»: автодополнение по справочнику + форма + ИИ-черновик (Pro). */
+/** Модалка «Добавить свой вуз»: поиск по справочнику → данные подтягиваются сами (общий кеш), форма — чтобы поправить. */
 export default function AddUniversity(props: {
   major: Major;
   initial?: Program;
@@ -36,9 +34,6 @@ export default function AddUniversity(props: {
   onOpenCatalog: (programId: string) => void;
   onClose: () => void;
 }) {
-  const { limits } = usePlan();
-  const coins = useCoins();
-  const canFill = limits.aiUniversityFill || (coins.state?.unlocks.credits.ai_uni_fill ?? 0) > 0;
   const [q, setQ] = useState(props.initial?.university ?? "");
   const [hits, setHits] = useState<Hit[]>([]);
   const [p, setP] = useState<Program | null>(props.initial ?? null);
@@ -60,34 +55,21 @@ export default function AddUniversity(props: {
   const set = (patch: Partial<Program>) => setP((x) => (x ? { ...x, ...patch } : x));
   const num = (v: string) => (v === "" ? null : Number(v));
 
-  async function aiFill() {
-    if (!p) return;
+  /** Подтянуть данные вуза из общей базы UniHelper (ИИ собирает один раз для всех). */
+  async function autoFill(base: Program) {
     setBusy(true);
     setMsg(null);
-    const r = await apiFetch("/api/universities/ai-fill", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name: p.university, country: p.country, website: p.url, major: Array.isArray(p.majors) ? p.majors[0] : props.major }),
-    }).catch(() => null);
+    const r = await loadUniProfileRetry({ name: base.university, country: base.country, web: base.url });
     setBusy(false);
-    if (!r?.ok) return setMsg(r?.status === 402 ? "ИИ-заполнение доступно в Pro." : "ИИ сейчас недоступен. Заполните поля вручную.");
-    const { draft: d } = await r.json();
-    if (!d.known) setMsg("ИИ не знает этот вуз уверенно — заполните вручную по официальному сайту.");
-    setConfidence(d.confidence);
-    set({
-      aiDraft: true,
-      city: d.city ?? p.city,
-      url: d.url ?? p.url,
-      tuitionUsd: d.tuitionUsd ?? p.tuitionUsd,
-      livingUsd: d.livingUsd ?? p.livingUsd,
-      acceptanceRate: d.acceptanceRate,
-      typical: { gpa100: d.typicalGpa100, ielts: d.typicalIelts, sat: d.typicalSat },
-      requirements: { minIelts: d.minIelts, minGpa100: d.minGpa100, satRequired: d.satRequired },
-      funding: { type: d.fundingType, basis: d.fundingBasis, needBlindIntl: null, availableToUz: true, note: d.fundingNote },
-      isFullGrant: d.isFullGrant,
-      deadlineNote: `${d.deadlineNote}${d.caveats ? ` · Проверить: ${d.caveats}` : ""}`.slice(0, 290),
-    });
+    if ("error" in r) return setMsg("Данных об этом вузе пока нет — заполните главное по официальному сайту: стоимость и требования.");
+    const filled = programFromProfile({ name: base.university, country: base.country, web: base.url }, r.profile, props.major);
+    setConfidence(r.profile.confidence);
+    setP({ ...filled, id: base.id, name: base.name || filled.name });
   }
+  const pick = (base: Program) => {
+    setP(base);
+    autoFill(base);
+  };
 
   const valid = p && p.university.trim() && Number.isFinite(p.tuitionUsd) && p.tuitionUsd >= 0;
 
@@ -106,7 +88,7 @@ export default function AddUniversity(props: {
                 <li key={`${h.name}-${h.country}`}>
                   <button
                     className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left hover:bg-primary-soft"
-                    onClick={() => (h.programId ? props.onOpenCatalog(h.programId) : setP(emptyCustom(h.name, h.country, h.web, props.major)))}
+                    onClick={() => (h.programId ? props.onOpenCatalog(h.programId) : pick(emptyCustom(h.name, h.country, h.web, props.major)))}
                   >
                     <span>
                       <span className="font-semibold">{h.name}</span>
@@ -124,7 +106,7 @@ export default function AddUniversity(props: {
                 </li>
               )}
             </ul>
-            <p className="text-xs text-muted">Подсказки — из открытого справочника вузов мира (10 000+). Требования и стоимость там нет: их заполняете вы или ИИ, а эксперт проверяет.</p>
+            <p className="text-xs text-muted">Подсказки — из справочника вузов мира (10 000+). Стоимость, требования и стипендии UniHelper подтянет сам — вам останется проверить.</p>
           </div>
         ) : (
           <div className="mt-4 space-y-4">
@@ -133,18 +115,11 @@ export default function AddUniversity(props: {
                 <div className="font-extrabold">{p.university}</div>
                 <div className="text-xs text-muted">{countryName(p.country)}{p.url ? ` · ${p.url}` : ""}</div>
               </div>
-              {canFill ? (
-                <button className="btn-primary py-2.5 text-sm" onClick={aiFill} disabled={busy}>{busy ? "ИИ заполняет…" : "Заполнить с ИИ"}</button>
-              ) : (
-                <span className="flex flex-wrap items-start gap-2">
-                  <CoinUnlockButton item="ai_uni_fill" onUnlocked={aiFill} className="py-2.5 text-sm" />
-                  <ProLock compact title="заполнить с ИИ" />
-                </span>
-              )}
+              <button className="btn-secondary py-2.5 text-sm" onClick={() => p && autoFill(p)} disabled={busy}>{busy ? "Собираем данные…" : "Обновить данные"}</button>
             </div>
             {p.aiDraft && (
               <p className="rounded-xl bg-orange-soft px-4 py-3 text-sm text-orange-ink-2">
-                Черновик ИИ{confidence ? ` (уверенность: ${confidence === "high" ? "высокая" : confidence === "medium" ? "средняя" : "низкая"})` : ""}. Сверьте цифры с официальным сайтом — пока они не проверены, оценка будет с низкой уверенностью.
+                Данные собраны ИИ{confidence ? ` (уверенность: ${confidence === "high" ? "высокая" : confidence === "medium" ? "средняя" : "низкая"})` : ""} и не проверены экспертом. Можно сохранить как есть или поправить цифры по официальному сайту.
               </p>
             )}
             {msg && <p className="rounded-xl bg-primary-soft px-4 py-3 text-sm text-primary-ink">{msg}</p>}

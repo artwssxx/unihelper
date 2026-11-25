@@ -51,7 +51,7 @@ export const REPEAT = {
   invitesPerMonth: 20,
 };
 
-export type ShopItemId = "pro_day" | "pro_week" | "hard_mock" | "writing_ai" | "essay_check" | "chat_pack" | "ai_uni_fill" | "fit_reasons" | "portfolio_pro";
+export type ShopItemId = "pro_day" | "pro_week" | "hard_mock" | "writing_ai" | "essay_check" | "chat_pack" | "fit_reasons" | "portfolio_pro";
 
 export interface ShopItem {
   id: ShopItemId;
@@ -71,7 +71,6 @@ export const SHOP: ShopItem[] = [
   { id: "writing_ai", title: "Проверка IELTS Writing", hint: "ИИ-оценка обоих заданий по 4 критериям", price: 50, uses: 1 },
   { id: "essay_check", title: "Проверка эссе сверх лимита", hint: "Одна ИИ-проверка эссе", price: 25, uses: 1 },
   { id: "chat_pack", title: "+20 сообщений AI Advisor", hint: "Когда закончился дневной лимит", price: 20, uses: 20 },
-  { id: "ai_uni_fill", title: "ИИ-заполнение вуза", hint: "Черновик требований для своего вуза", price: 30, uses: 1 },
   { id: "fit_reasons", title: "Причины оценки программы", hint: "Почему такая метка и что усилить — для одной программы навсегда", price: 15, uses: 1_000_000, perRef: true },
   { id: "portfolio_pro", title: "Pro-шаблоны портфолио", hint: "Все шаблоны, свой цвет, без значка — навсегда", price: 120, uses: 1_000_000 },
 ];

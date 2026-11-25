@@ -4,7 +4,7 @@ import { buy, coinCtx, setPlanCookie } from "@/lib/server/coins";
 import { isResponse } from "@/lib/server/community";
 
 const body = z.object({
-  item: z.enum(["pro_day", "pro_week", "hard_mock", "writing_ai", "essay_check", "chat_pack", "ai_uni_fill", "fit_reasons", "portfolio_pro"]),
+  item: z.enum(["pro_day", "pro_week", "hard_mock", "writing_ai", "essay_check", "chat_pack", "fit_reasons", "portfolio_pro"]),
   ref: z.string().max(64).optional(),
 });
 

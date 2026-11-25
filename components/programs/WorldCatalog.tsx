@@ -2,13 +2,28 @@
 
 import { useEffect, useRef, useState } from "react";
 import * as I from "@/components/icons";
+import UniDetails, { loadUniProfileRetry } from "@/components/programs/UniDetails";
 import { countryName } from "@/lib/countries";
+import type { Major, Program } from "@/lib/types";
+import { programFromProfile } from "@/lib/uniProfile";
 
 type Hit = { name: string; country: string; web: string | null; programId: string | null; programName?: string };
 type Res = { items: Hit[]; total: number; page: number; pages: number; totalWorld: number; facets?: { country: string; count: number }[] };
 
-/** «Все вузы мира»: 10 000+ вузов из открытого справочника — найти, добавить в подборку и получить оценку. */
-export default function WorldCatalog(props: { myCountries?: string[]; onAdd: (h: Hit) => void; onOpen: (programId: string) => void }) {
+/**
+ * «Все вузы мира»: 10 000+ вузов из открытого справочника. Карточку вуза и данные для оценки собирает
+ * система (общий кеш, ИИ один раз для всех) — ученик ничего не заполняет. Ручная форма — только если данных нет.
+ */
+export default function WorldCatalog(props: {
+  myCountries?: string[];
+  major: Major;
+  onAdd: (p: Program) => void;
+  onManual: (h: Hit) => void;
+  onOpen: (programId: string) => void;
+}) {
+  const [adding, setAdding] = useState<string | null>(null);
+  const [failed, setFailed] = useState<string | null>(null);
+  const [open, setOpen] = useState<Hit | null>(null);
   const [q, setQ] = useState("");
   const [country, setCountry] = useState("");
   const [page, setPage] = useState(1);
@@ -38,6 +53,17 @@ export default function WorldCatalog(props: { myCountries?: string[]; onAdd: (h:
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [q, country, page]);
 
+  const keyOf = (h: Hit) => `${h.country}:${h.name}`;
+  async function add(h: Hit) {
+    setAdding(keyOf(h));
+    setFailed(null);
+    const r = await loadUniProfileRetry({ name: h.name, country: h.country, web: h.web });
+    setAdding(null);
+    if ("error" in r) return setFailed(keyOf(h));
+    setOpen(null);
+    props.onAdd(programFromProfile({ name: h.name, country: h.country, web: h.web }, r.profile, props.major));
+  }
+
   const go = (p: number) => {
     setPage(p);
     top.current?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -64,7 +90,7 @@ export default function WorldCatalog(props: { myCountries?: string[]; onAdd: (h:
           </div>
         )}
         <p className="text-xs text-muted">
-          Открытый справочник вузов мира: название, страна и сайт. Требований и цен в нём нет — добавь вуз в подборку, заполни их сам или с ИИ, и UniHelper посчитает оценку по твоему профилю.
+          Нажми «Подробнее» — UniHelper соберёт карточку вуза: рейтинги, стоимость, требования, стипендии и сроки. «Добавить и оценить» — вуз попадёт в подборку с оценкой по твоему профилю, заполнять ничего не нужно.
         </p>
       </div>
 
@@ -83,21 +109,49 @@ export default function WorldCatalog(props: { myCountries?: string[]; onAdd: (h:
                 {h.web.replace(/^https?:\/\//, "").replace(/\/$/, "")} ↗
               </a>
             )}
-            <div className="mt-auto pt-2">
+            <div className="mt-auto flex flex-wrap gap-2 pt-2">
               {h.programId ? (
                 <button className="btn-secondary w-full py-2 text-sm" onClick={() => props.onOpen(h.programId!)}>
                   <I.Check size={15} /> Есть в подборке — открыть оценку
                 </button>
               ) : (
-                <button className="btn-primary w-full py-2 text-sm" onClick={() => props.onAdd(h)}>
-                  Добавить и оценить
-                </button>
+                <>
+                  <button className="btn-secondary flex-1 py-2 text-sm" onClick={() => setOpen(h)}>Подробнее</button>
+                  <button className="btn-primary flex-1 py-2 text-sm" disabled={adding === keyOf(h)} onClick={() => add(h)}>
+                    {adding === keyOf(h) ? "Собираем данные…" : "Добавить и оценить"}
+                  </button>
+                </>
+              )}
+              {failed === keyOf(h) && (
+                <p className="w-full text-xs text-muted">
+                  Не удалось собрать данные автоматически. <button className="font-bold text-primary" onClick={() => props.onManual(h)}>Заполнить вручную</button>
+                </p>
               )}
             </div>
           </article>
         ))}
       </div>
       {res && res.total === 0 && <p className="card text-center text-body">Ничего не нашли. Попробуй другое написание или убери фильтр страны.</p>}
+
+      {open && (
+        <div className="fixed inset-0 z-50 flex justify-end bg-[rgba(10,14,28,.5)]" onClick={() => setOpen(null)}>
+          <div role="dialog" aria-modal aria-labelledby="uniT" className="h-full w-full max-w-[640px] overflow-y-auto bg-surface-solid p-5 shadow-2xl sm:p-6" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h2 id="uniT" className="text-2xl font-extrabold leading-tight" translate="no">{open.name}</h2>
+                <p className="text-sm text-muted">{countryName(open.country)}</p>
+              </div>
+              <button className="rounded-lg p-2 text-muted hover:bg-line-3" aria-label="Закрыть" onClick={() => setOpen(null)}><I.Close size={20} /></button>
+            </div>
+            <div className="sticky top-0 z-10 -mx-5 mt-4 border-b border-line bg-surface-solid px-5 py-3 sm:-mx-6 sm:px-6">
+              <button className="btn-primary w-full" disabled={adding === keyOf(open)} onClick={() => add(open)}>
+                {adding === keyOf(open) ? "Добавляем…" : "Добавить в подборку и оценить"}
+              </button>
+            </div>
+            <div className="mt-4"><UniDetails uni={{ name: open.name, country: open.country, web: open.web }} /></div>
+          </div>
+        </div>
+      )}
 
       {res && res.pages > 1 && (
         <nav className="flex flex-wrap items-center justify-center gap-2" aria-label="Страницы">

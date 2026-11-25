@@ -168,37 +168,3 @@ export async function draftPortfolio(profile: Profile, lang: Lang = "ru") {
   });
 }
 
-const UniDraftSchema = z.object({
-  known: z.boolean().describe("true, если вуз реально существует и ты уверенно его знаешь"),
-  city: z.string().nullable(),
-  url: z.string().nullable().describe("официальный сайт или null"),
-  tuitionUsd: z.number().nullable().describe("обучение для иностранцев в год, $, или null"),
-  livingUsd: z.number().nullable(),
-  minIelts: z.number().nullable(),
-  minGpa100: z.number().nullable(),
-  satRequired: z.boolean(),
-  acceptanceRate: z.number().nullable().describe("0–1 или null"),
-  typicalGpa100: z.number().nullable(),
-  typicalIelts: z.number().nullable(),
-  typicalSat: z.number().nullable(),
-  fundingType: z.enum(["none", "partial", "full"]),
-  fundingBasis: z.enum(["need", "merit", "government", "none"]),
-  fundingNote: z.string(),
-  isFullGrant: z.boolean(),
-  deadlineNote: z.string(),
-  confidence: z.enum(["low", "medium", "high"]),
-  caveats: z.string().describe("что обязательно проверить на официальном сайте"),
-});
-
-/** Черновик требований своего вуза. Только то, в чём модель уверена; остальное — null. */
-export async function draftUniversity(input: { name: string; country: string; website?: string | null; major: string }) {
-  const d = await ai().json({
-    tier: "smart",
-    schema: UniDraftSchema,
-    system: `Ты помогаешь школьнику из Узбекистана заполнить черновик требований вуза для бакалавриата.
-Правила: укажи ТОЛЬКО то, в чём уверен. Если не знаешь числа — null. Не выдумывай дедлайны и суммы: в deadlineNote пиши «сверить на официальном сайте», если не уверен.
-Стоимость — для иностранных студентов, в долларах США в год. Пиши по-русски. Это черновик, его проверит человек.`,
-    user: `Вуз: ${input.name}\nСтрана (ISO2): ${input.country}\nСайт: ${input.website ?? "неизвестен"}\nСпециальность ученика: ${input.major}`,
-  });
-  return d;
-}
