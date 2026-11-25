@@ -376,27 +376,26 @@ export function contextFromPage(html: string): { personId: string; schoolId: str
   };
 }
 
-async function page(jar: Jar, path: string): Promise<string | null> {
+/** HTML страницы eMaktab. expired — сессия кончилась (редирект на вход). */
+async function page(jar: Jar, path: string): Promise<{ html: string | null; expired: boolean }> {
   const r = await fetch(WEB + path, { redirect: "manual", cache: "no-store", signal: AbortSignal.timeout(15_000), headers: { "user-agent": UA, accept: "text/html", cookie: cookieHeader(jar) } }).catch(() => null);
-  if (!r || r.status !== 200) return null;
+  if (!r) return { html: null, expired: false };
   keep(jar, r);
-  return r.text();
+  if (r.status >= 300 && r.status < 400) return { html: null, expired: /login\.emaktab\.uz/.test(r.headers.get("location") ?? "") };
+  return { html: r.status === 200 ? await r.text() : null, expired: false };
 }
 
-export async function importEmaktab(login: string, password: string, captcha?: { answer: string; state: string }): Promise<EmaktabResult> {
+/** Всё для дневника по cookie сессии. Сессия кончилась → expired. Cookie в jar обновляются по ходу. */
+export async function emaktabCollect(jar: Jar): Promise<EmaktabResult | { status: "expired" }> {
   try {
-    const s = await signIn(login, password, captcha);
-    if (!("jar" in s)) return s;
-    const jar = s.jar;
     // Ученик: сначала из страницы оценок (там контекст с personId, школой и классом), иначе — старый API контекста.
-    const fromPage = contextFromPage((await page(jar, "/marks")) ?? "");
+    const marksPage = await page(jar, "/marks");
+    if (marksPage.expired) return { status: "expired" };
+    const fromPage = contextFromPage(marksPage.html ?? "");
     const fromApi = fromPage ? null : personFromContext(await api(jar, "/api/v2/users/me/context"));
     const person = fromPage ?? (fromApi ? { ...fromApi, groupId: null, firstName: null, lastName: null, role: null } : null);
     if (!person?.personId || !person.schoolId)
       return { status: "error", message: "Вход удался, но eMaktab не отдал данные ученика. Если это аккаунт родителя — войди аккаунтом ученика." };
-    if (person.role && /parent|родител/i.test(person.role) && !fromPage?.personId)
-      return { status: "error", message: "Это аккаунт родителя — войди аккаунтом ученика." };
-
     const { year: y, start } = schoolYear();
     const now = Date.now();
     // Отметки — с 1 сентября; расписание и домашка — ещё на 3 недели вперёд.
@@ -426,6 +425,22 @@ export async function importEmaktab(login: string, password: string, captcha?: {
       status: "ok", items, scale, marks: parsed.marks.length, period, grade, className: person.groupName, diary,
       person: { firstName: person.firstName, lastName: person.lastName, region: null, school: person.schoolName ?? null, className: person.groupName, grade },
     };
+  } catch (e) {
+    console.error("[emaktab]", (e as Error).message.slice(0, 120));
+    return { status: "error", message: "eMaktab сейчас не отвечает. Попробуй позже или загрузи фото табеля." };
+  }
+}
+
+/** Импорт по логину и паролю. keep — ученик согласился на автообновление: отдаём cookie сессии (их сохранят зашифрованными). */
+export async function importEmaktab(login: string, password: string, captcha?: { answer: string; state: string }, opts: { keep?: boolean } = {}): Promise<EmaktabResult & { jar?: Jar }> {
+  try {
+    const s = await signIn(login, password, captcha);
+    if (!("jar" in s)) return s;
+    const r = await emaktabCollect(s.jar);
+    if (r.status === "expired") return { status: "error", message: "eMaktab сразу завершил сессию. Попробуй ещё раз." };
+    // Для автообновления хватает долгих cookie входа (UZDnevnikAuth_*): остальные eMaktab выдаёт заново.
+    if (r.status === "ok" && opts.keep) return { ...r, jar: Object.fromEntries(Object.entries(s.jar).filter(([k]) => /^UZDnevnikAuth_/i.test(k))) };
+    return r;
   } catch (e) {
     console.error("[emaktab]", (e as Error).message.slice(0, 120));
     return { status: "error", message: "eMaktab сейчас не отвечает. Попробуй позже или загрузи фото табеля." };

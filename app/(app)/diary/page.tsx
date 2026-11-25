@@ -13,6 +13,7 @@ import { profileMajors } from "@/lib/profileConst";
 import { applySchoolImport } from "@/lib/schoolImport";
 import { profileGpa100 } from "@/lib/scoring/strength";
 import { useContent } from "@/lib/useContent";
+import { useDiaryAutoRefresh } from "@/lib/useDiaryAutoRefresh";
 import { useProfile } from "@/lib/useProfile";
 
 const fmtDay = (iso: string, opts: Intl.DateTimeFormatOptions) => { const [y, m, d] = iso.split("-").map(Number); return new Date(y, m - 1, d).toLocaleDateString("ru-RU", opts); };
@@ -23,7 +24,7 @@ export default function DiaryPage() {
   const [note, setNote] = useState<string | null>(null);
   const diary = store?.diary;
   const done = (r: ImportResult) => {
-    applySchoolImport({ ...r }, { updateGrade: false });
+    applySchoolImport({ ...r, diary: r.diary ? { ...r.diary, auto: Boolean(r.remembered) } : undefined }, { updateGrade: false });
     setNote(`Дневник обновлён: ${r.items.length} предметов с оценками${r.diary ? `, расписание на ${r.diary.days.length} дней` : ""}.`);
   };
   if (profile === undefined) return null;
@@ -76,13 +77,22 @@ function DiaryView({ diary, onDone, programs }: { diary: Diary; onDone: (r: Impo
   const lab = g100 != null ? gpaLabel(g100) : null;
   const insights = useMemo(() => (profile ? diaryInsights(profile, programs, diary) : []), [profile, programs, diary]);
   const [refresh, setRefresh] = useState(false);
+  const auto = useDiaryAutoRefresh();
   const today = todayIso();
+  const onRefresh = async () => {
+    // Автообновление включено — обновляем по сохранённой сессии; кончилась — просим войти.
+    if (diary.auto && (await auto.refresh()) === "done") return;
+    setRefresh(true);
+  };
+  const ago = Math.round((Date.now() - Date.parse(diary.fetchedAt)) / 60_000);
+  const agoText = ago < 1 ? "только что" : ago < 60 ? `${ago} мин назад` : ago < 1440 ? `${Math.round(ago / 60)} ч назад` : new Date(diary.fetchedAt).toLocaleDateString("ru-RU", { day: "numeric", month: "long" });
   const graded = diary.subjects.filter((x) => x.grade != null).sort((a, b) => (b.grade as number) - (a.grade as number));
   const best = graded[0];
   const worst = graded.length > 1 ? graded[graded.length - 1] : null;
   const hwWeek = upcomingHomework(diary, today, 99).filter((h) => h.date >= today && h.date <= shiftIso(today, 7)).length;
   const disconnect = () => {
-    if (confirm("Отключить дневник? Расписание и домашка исчезнут, оценки в профиле останутся.")) update(() => ({ diary: undefined }));
+    if (!confirm("Отключить дневник? Расписание и домашка исчезнут, оценки в профиле останутся.")) return;
+    auto.disableAuto().finally(() => update(() => ({ diary: undefined })));
   };
   return (
     <section className="grid items-start gap-4 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]">
@@ -102,10 +112,16 @@ function DiaryView({ diary, onDone, programs }: { diary: Diary; onDone: (r: Impo
             <Tile label="Пропуски" value={diary.absences ? String(diary.absences.total) : "—"} sub={diary.absences ? "за семестр" : "нет данных"} tone={diary.absences && diary.absences.total >= 10 ? "warn" : undefined} />
             <Tile label="Домашка на неделю" value={String(hwWeek)} sub={`предметов с оценками: ${graded.length}`} />
           </div>
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-t border-line pt-3">
-            <p className="min-w-0 flex-1 text-xs text-muted"><span>{`Из ${SOURCE_NAME[diary.source]}`}</span>{diary.period && <span>{` · ${diary.period}`}</span>} · <span>обновлено</span> <span>{new Date(diary.fetchedAt).toLocaleDateString("ru-RU", { day: "numeric", month: "long" })}</span></p>
-            <button className="btn-secondary py-2 text-sm" onClick={() => setRefresh(true)}>Обновить</button>
-            <button className="py-2 text-sm font-semibold text-muted underline" onClick={disconnect}>Отключить</button>
+          <div className="space-y-2 border-t border-line pt-3">
+            <p className="text-xs text-muted"><span>{`Из ${SOURCE_NAME[diary.source]}`}</span>{diary.period && <span>{` · ${diary.period}`}</span>} · <span>обновлено</span> <span>{agoText}</span></p>
+            <p className={`text-xs font-semibold ${diary.auto ? "text-green" : "text-muted"}`} role="status">
+              {auto.state === "refreshing" ? "Обновляем дневник…" : auto.state === "expired" ? `Сессия ${SOURCE_NAME[diary.source]} закончилась — войди снова, чтобы дневник обновлялся сам.` : auto.state === "error" ? "Не получилось обновить — попробуй позже." : diary.auto ? "Обновляется автоматически, когда открываешь сайт." : "Автообновление выключено — обновляй вручную."}
+            </p>
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+              <button className="btn-secondary py-2 text-sm" disabled={auto.state === "refreshing"} onClick={onRefresh}>{auto.state === "refreshing" ? "Обновляем…" : "Обновить"}</button>
+              {diary.auto && <button className="py-2 text-sm font-semibold text-muted underline" onClick={auto.disableAuto}>Выключить автообновление</button>}
+              <button className="py-2 text-sm font-semibold text-muted underline" onClick={disconnect}>Отключить</button>
+            </div>
           </div>
         </div>
         <DaySchedule diary={diary} />

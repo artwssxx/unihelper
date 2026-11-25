@@ -8,11 +8,13 @@ import { gradesSummary } from "@/lib/grades";
 import { applySchoolImport } from "@/lib/schoolImport";
 import { profileGpa100 } from "@/lib/scoring/strength";
 import { useProfile } from "@/lib/useProfile";
+import { useDiaryAutoRefresh } from "@/lib/useDiaryAutoRefresh";
 
 /** Главная: GPA с оценкой и переход в «Дневник»; без подключённого дневника — кнопки входа eMaktab / EMIS. */
 export default function GpaCard({ className = "" }: { className?: string }) {
   const { profile, store } = useProfile();
   const router = useRouter();
+  useDiaryAutoRefresh(); // главная тоже обновляет дневник в фоне, если он устарел
   if (!profile) return null;
   const diary = store?.diary;
   if (!diary) {
@@ -22,7 +24,7 @@ export default function GpaCard({ className = "" }: { className?: string }) {
           <div className="text-xs font-bold uppercase tracking-wide text-muted">GPA и дневник</div>
           <p className="mt-1 text-sm text-body">Подключи eMaktab или EMIS — покажем GPA, оценки, расписание и домашку, и как это влияет на поступление.</p>
         </div>
-        <SchoolConnect compact onDone={(r) => { applySchoolImport(r); router.push("/diary"); }} />
+        <SchoolConnect compact onDone={(r) => { applySchoolImport({ ...r, diary: r.diary ? { ...r.diary, auto: Boolean(r.remembered) } : undefined }); router.push("/diary"); }} />
       </div>
     );
   }

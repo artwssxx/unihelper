@@ -3470,5 +3470,20 @@
  "Математический диктант": "Math dictation",
  "# четверть": "Quarter #",
  "#/# учебный год (пример)": "#/# school year (sample)",
- "[Пример] Школа № #": "[Sample] School No. #"
+ "[Пример] Школа № #": "[Sample] School No. #",
+ "Обновлять дневник автоматически": "Update the diary automatically",
+ "Сохраним сессию eMaktab (не пароль) на # недели — дневник обновится сам, когда откроешь сайт.": "We’ll keep your eMaktab session (not the password) for # weeks — the diary updates itself when you open the site.",
+ "Сохраним сессию EMIS (не пароль), пока EMIS её держит, — дневник обновится сам, когда откроешь сайт.": "We’ll keep your EMIS session (not the password) while EMIS keeps it — the diary updates itself when you open the site.",
+ "Отключить можно в дневнике.": "You can turn this off in the diary.",
+ "Обновляем дневник…": "Updating the diary…",
+ "Сессия eMaktab закончилась — войди снова, чтобы дневник обновлялся сам.": "Your eMaktab session has ended — sign in again so the diary keeps updating itself.",
+ "Сессия EMIS закончилась — войди снова, чтобы дневник обновлялся сам.": "Your EMIS session has ended — sign in again so the diary keeps updating itself.",
+ "Не получилось обновить — попробуй позже.": "Couldn’t update — try again later.",
+ "Обновляется автоматически, когда открываешь сайт.": "Updates automatically when you open the site.",
+ "Автообновление выключено — обновляй вручную.": "Auto-update is off — update manually.",
+ "Обновляем…": "Updating…",
+ "Выключить автообновление": "Turn off auto-update",
+ "Сегодня обновлений уже много. Попробуй завтра.": "Too many updates today. Try tomorrow.",
+ "eMaktab сразу завершил сессию. Попробуй ещё раз.": "eMaktab ended the session right away. Try again.",
+ "EMIS сразу завершил сессию. Попробуй ещё раз.": "EMIS ended the session right away. Try again."
 }

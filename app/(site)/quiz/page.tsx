@@ -6,7 +6,7 @@ import LoginCard from "@/components/auth/LoginCard";
 import MajorPicker from "@/components/MajorPicker";
 import { useAuth } from "@/lib/auth";
 import { useEffect, useState } from "react";
-import { load, save } from "@/lib/clientStore";
+import { load, save, useStore } from "@/lib/clientStore";
 import { contactSchema, profileSchema } from "@/lib/profileSchema";
 import CountryPicker from "@/components/CountryPicker";
 import SchoolConnect from "@/components/diary/SchoolConnect";
@@ -50,7 +50,7 @@ const STEPS = 9; // 8 вопросов + контакты
 // Анкета — первый шаг регистрации: после неё вход (Telegram, Google или почта), и только потом кабинет.
 export default function Quiz() {
   const router = useRouter();
-  const { user, enabled, ready } = useAuth();
+  const { user, enabled, ready, stateReady } = useAuth();
   const [self, setSelf] = useState("/quiz");
   const [registering, setRegistering] = useState(false);
   const [next, setNext] = useState("/dashboard");
@@ -61,6 +61,16 @@ export default function Quiz() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fillName, setFillName] = useState(true);
+  const store = useStore();
+  const hasProfile = Boolean(store?.profile && store.role !== "parent");
+  // /quiz?edit=1 — осознанно пройти анкету заново (из профиля); иначе вошедший с анкетой уходит в кабинет.
+  const [editing, setEditing] = useState(false);
+  useEffect(() => {
+    setEditing(new URLSearchParams(location.search).has("edit"));
+  }, []);
+  useEffect(() => {
+    if (enabled && user && stateReady && hasProfile && !editing && !new URLSearchParams(location.search).has("edit")) router.replace(next);
+  }, [enabled, user, stateReady, hasProfile, editing, next, router]);
   const [filled, setFilled] = useState<string | null>(null);
 
   useEffect(() => {
@@ -167,7 +177,9 @@ export default function Quiz() {
   }
 
   // Сначала регистрация (Telegram, Google или почта), потом анкета: после входа вернёмся сюда же.
-  if (enabled && !ready) return <div className="card h-64 animate-pulse" aria-busy />;
+  // Аккаунт уже с анкетой (вошёл тем же Google/Telegram/почтой) — анкету не повторяем, сразу в кабинет.
+  if (enabled && (!ready || (user && !stateReady))) return <div className="card h-64 animate-pulse" aria-busy />;
+  if (enabled && user && hasProfile && !editing) return <div className="card h-64 animate-pulse" aria-busy />;
   if (enabled && !user) {
     return (
       <div className="space-y-5 pt-2">

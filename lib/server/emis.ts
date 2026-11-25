@@ -164,19 +164,25 @@ async function pool<T, R>(items: T[], n: number, fn: (x: T) => Promise<R>): Prom
   return out;
 }
 
-export async function importEmis(login: string, password: string, lang: Lang, now = new Date()): Promise<EmisResult> {
-  let token: string | null = null;
-  try {
-    const auth = await call("login/", { method: "POST", body: JSON.stringify({ login: login.trim(), password }) });
-    if (auth.status === 401 || auth.status === 400) return { status: "invalid", message: "Неверный логин или пароль EMIS." };
-    if (auth.status === 429) return { status: "error", message: "EMIS просит подождать: слишком много попыток входа. Попробуй через несколько минут." };
-    token = ((auth.body?.result as Rec | undefined)?.access_token as string) ?? null;
-    if (!token) return { status: "error", message: "EMIS не принял вход. Попробуй позже или загрузи скриншот оценок." };
-    const tk = token;
+/** Вход в EMIS: токен сессии или ответ ученику. */
+async function emisLogin(login: string, password: string): Promise<{ token: string } | EmisResult> {
+  const auth = await call("login/", { method: "POST", body: JSON.stringify({ login: login.trim(), password }) });
+  if (auth.status === 401 || auth.status === 400) return { status: "invalid", message: "Неверный логин или пароль EMIS." };
+  if (auth.status === 429) return { status: "error", message: "EMIS просит подождать: слишком много попыток входа. Попробуй через несколько минут." };
+  const token = ((auth.body?.result as Rec | undefined)?.access_token as string) ?? null;
+  if (!token) return { status: "error", message: "EMIS не принял вход. Попробуй позже или загрузи скриншот оценок." };
+  return { token };
+}
 
+export const emisLogout = (token: string) => call("logout/", { method: "POST", token }).then(() => undefined, () => undefined);
+
+/** Всё для дневника по токену: оценки, разбивка, расписание, пропуски, данные для анкеты. Токен истёк → expired. */
+export async function emisCollect(tk: string, lang: Lang, now = new Date()): Promise<EmisResult | { status: "expired" }> {
+  try {
     const [profile, ratings, curriculum, hours, subjects] = await Promise.all([
       call("profile/", { token: tk }), call("ratings/", { token: tk }), call("curriculum/", { token: tk }), call("class-hours/", { token: tk }), call("edu-subjects/", { token: tk }),
     ]);
+    if (ratings.status === 401 || profile.status === 401) return { status: "expired" };
     if (ratings.status !== 200) return { status: "error", message: "Вход в EMIS удался, но оценки не открылись. Попробуй позже." };
     const { items, semesters } = gradesFromEmis(ratings.body?.results, lang);
     const p = (profile.body?.result ?? {}) as Rec & { course?: number; edu_group?: { current_semester?: number; name?: string } };
@@ -249,8 +255,31 @@ export async function importEmis(login: string, password: string, lang: Lang, no
   } catch (e) {
     console.error("[emis]", (e as Error).name, (e as Error).message.slice(0, 100));
     return { status: "error", message: "EMIS сейчас не отвечает. Попробуй позже или загрузи скриншот оценок." };
+  }
+}
+
+/**
+ * Импорт по логину и паролю. keep — ученик согласился на автообновление: сессию не закрываем и отдаём токен
+ * вызывающему (он сохранит его зашифрованным). Иначе сессия закрывается сразу.
+ */
+export async function importEmis(login: string, password: string, lang: Lang, opts: { keep?: boolean; now?: Date } = {}): Promise<EmisResult & { token?: string }> {
+  let token: string | null = null;
+  try {
+    const l = await emisLogin(login, password);
+    if (!("token" in l)) return l;
+    token = l.token;
+    const r = await emisCollect(token, lang, opts.now);
+    if (r.status === "expired") return { status: "error", message: "EMIS сразу завершил сессию. Попробуй ещё раз." };
+    if (r.status === "ok" && opts.keep) {
+      const keepToken = token;
+      token = null; // не выходим — сессия нужна для автообновления
+      return { ...r, token: keepToken };
+    }
+    return r;
+  } catch (e) {
+    console.error("[emis]", (e as Error).name, (e as Error).message.slice(0, 100));
+    return { status: "error", message: "EMIS сейчас не отвечает. Попробуй позже или загрузи скриншот оценок." };
   } finally {
-    // Закрываем сессию: токен больше не нужен и не должен оставаться действующим.
-    if (token) await call("logout/", { method: "POST", token }).catch(() => null);
+    if (token) await emisLogout(token);
   }
 }

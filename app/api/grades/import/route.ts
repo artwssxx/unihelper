@@ -3,6 +3,7 @@ import { z } from "zod";
 import { getUser } from "@/lib/server/auth";
 import { importEmaktab } from "@/lib/server/emaktab";
 import { importEmis } from "@/lib/server/emis";
+import { saveLink } from "@/lib/server/schoolLink";
 import { langOf } from "@/lib/server/replyLang";
 import { gradesFromFile } from "@/lib/server/gradesPhoto";
 import { clientKey, takeQuota } from "@/lib/server/rateLimit";
@@ -17,11 +18,13 @@ const body = z.discriminatedUnion("source", [
     login: z.string().trim().min(2).max(80),
     password: z.string().min(1).max(128),
     captcha: z.object({ answer: z.string().trim().min(1).max(20), state: z.string().max(20_000) }).optional(),
+    remember: z.boolean().optional(),
   }),
   z.object({
     source: z.literal("emis"),
     login: z.string().trim().min(2).max(80),
     password: z.string().min(1).max(128),
+    remember: z.boolean().optional(),
   }),
   z.object({
     source: z.literal("file"),
@@ -43,12 +46,19 @@ export async function POST(req: Request) {
     // Капча — это продолжение той же попытки, её не считаем отдельно.
     if (!d.captcha && !takeQuota(who + ":emaktab", 12).ok)
       return NextResponse.json({ status: "error", message: "Сегодня попыток входа в eMaktab уже много. Попробуй завтра, чтобы eMaktab не заблокировал аккаунт." }, { status: 429 });
-    return NextResponse.json(await importEmaktab(d.login, d.password, d.captcha));
+    // Автообновление — только вошедшим и только с согласия: храним зашифрованные cookie сессии, не пароль.
+    const keep = Boolean(user && d.remember);
+    const { jar, ...r } = await importEmaktab(d.login, d.password, d.captcha, { keep });
+    const remembered = Boolean(user && jar && r.status === "ok" && (await saveLink(user.id, "emaktab", { kind: "emaktab", jar })));
+    return NextResponse.json({ ...r, remembered });
   }
   if (d.source === "emis") {
     if (!takeQuota(who + ":emis", 12).ok)
       return NextResponse.json({ status: "error", message: "Сегодня попыток входа в EMIS уже много. Попробуй завтра." }, { status: 429 });
-    return NextResponse.json(await importEmis(d.login, d.password, langOf(req)));
+    const keep = Boolean(user && d.remember);
+    const { token, ...r } = await importEmis(d.login, d.password, langOf(req), { keep });
+    const remembered = Boolean(user && token && r.status === "ok" && (await saveLink(user.id, "emis", { kind: "emis", token })));
+    return NextResponse.json({ ...r, remembered });
   }
   if (!takeQuota(who + ":gradesfile", 15).ok)
     return NextResponse.json({ status: "error", message: "Сегодня распознаваний уже много. Попробуй завтра или введи оценки вручную." }, { status: 429 });

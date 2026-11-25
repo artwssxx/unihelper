@@ -2,12 +2,12 @@
 
 import { useState } from "react";
 import { Close } from "@/components/icons";
-import { apiFetch } from "@/lib/auth";
+import { apiFetch, useAuth } from "@/lib/auth";
 import type { Diary, DiaryPerson } from "@/lib/diary";
 import { parseGradesText, type GradeItem, type GradeScale, type GradeSource } from "@/lib/grades";
 import { readFile } from "@/lib/readFile";
 
-export type ImportResult = { items: GradeItem[]; scale: GradeScale; source: GradeSource; period?: string; grade?: number | null; note?: string; diary?: Diary; person?: DiaryPerson };
+export type ImportResult = { items: GradeItem[]; scale: GradeScale; source: GradeSource; period?: string; grade?: number | null; note?: string; diary?: Diary; person?: DiaryPerson; remembered?: boolean };
 type Mode = "emaktab" | "emis" | "file" | "text";
 
 const TABS: [Mode, string][] = [["emaktab", "eMaktab"], ["emis", "EMIS (лицеи)"], ["file", "Фото или PDF"], ["text", "Вставить таблицу"]];
@@ -74,6 +74,8 @@ export function SystemLogin({ system, onResult }: { system: "emaktab" | "emis"; 
   const [err, setErr] = useState<string | null>(null);
   const [captcha, setCaptcha] = useState<{ image: string | null; state: string; message: string } | null>(null);
   const [answer, setAnswer] = useState("");
+  const { user } = useAuth();
+  const [remember, setRemember] = useState(true);
 
   async function go() {
     setBusy(true);
@@ -81,7 +83,7 @@ export function SystemLogin({ system, onResult }: { system: "emaktab" | "emis"; 
     const r = await apiFetch("/api/grades/import", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ source: system, login, password, ...(captcha && answer ? { captcha: { answer, state: captcha.state } } : {}) }),
+      body: JSON.stringify({ source: system, login, password, remember: Boolean(user && remember), ...(captcha && answer ? { captcha: { answer, state: captcha.state } } : {}) }),
     }).catch(() => null);
     const j = r ? await r.json().catch(() => null) : null;
     setBusy(false);
@@ -89,7 +91,7 @@ export function SystemLogin({ system, onResult }: { system: "emaktab" | "emis"; 
     if (j.status === "ok") {
       setPassword("");
       try { localStorage.setItem(`uh-login-${system}`, login.trim()); } catch { /* без запоминания */ }
-      return onResult({ items: j.items, scale: j.scale, source: system, period: j.period, grade: j.grade, diary: j.diary, person: j.person, note: system === "emaktab" ? `Из eMaktab: ${j.marks} отметок за ${j.period}.` : `Из EMIS: ${j.items.length} предметов (${j.period}).` });
+      return onResult({ items: j.items, scale: j.scale, source: system, period: j.period, grade: j.grade, diary: j.diary ? { ...j.diary, auto: Boolean(j.remembered) } : undefined, person: j.person, remembered: Boolean(j.remembered), note: system === "emaktab" ? `Из eMaktab: ${j.marks} отметок за ${j.period}.` : `Из EMIS: ${j.items.length} предметов (${j.period}).` });
     }
     if (j.status === "captcha") {
       setCaptcha({ image: j.image, state: j.state, message: j.message });
@@ -120,6 +122,12 @@ export function SystemLogin({ system, onResult }: { system: "emaktab" | "emis"; 
           )}
           <input className="input" inputMode="text" autoComplete="off" value={answer} onChange={(e) => setAnswer(e.target.value)} placeholder="Код с картинки" aria-label="Код с картинки" />
         </div>
+      )}
+      {user && (
+        <label className="flex items-start gap-2 text-sm font-semibold">
+          <input type="checkbox" className="mt-0.5 h-5 w-5 flex-none" checked={remember} onChange={(e) => setRemember(e.target.checked)} />
+          <span>Обновлять дневник автоматически<span className="block text-xs font-normal text-muted">{system === "emaktab" ? "Сохраним сессию eMaktab (не пароль) на 2 недели — дневник обновится сам, когда откроешь сайт." : "Сохраним сессию EMIS (не пароль), пока EMIS её держит, — дневник обновится сам, когда откроешь сайт."} Отключить можно в дневнике.</span></span>
+        </label>
       )}
       <p className="text-xs text-muted">{t.note}</p>
       {err && <p className="text-sm font-semibold text-red">{err}</p>}

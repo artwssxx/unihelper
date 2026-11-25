@@ -31,7 +31,7 @@ export default function GradesCard() {
     setImporting(false);
     // Отметки «спецпредмет», поставленные раньше, переносим на те же предметы.
     const was = new Map((g?.items ?? []).map((i) => [i.subject.toLowerCase(), i.special]));
-    setDraft({ items: r.items.map((i) => ({ ...i, special: i.special ?? was.get(i.subject.toLowerCase()) })), scale: r.scale, source: r.source, period: r.period, grade: r.grade, note: r.note, diary: r.diary });
+    setDraft({ items: r.items.map((i) => ({ ...i, special: i.special ?? was.get(i.subject.toLowerCase()) })), scale: r.scale, source: r.source, period: r.period, grade: r.grade, note: r.note, diary: r.diary ? { ...r.diary, auto: Boolean(r.remembered) } : undefined });
     setUpdGrade(true);
   };
   const manual = () =>

@@ -3470,5 +3470,20 @@
  "Математический диктант": "Matematik diktant",
  "# четверть": "#-chorak",
  "#/# учебный год (пример)": "#/# o‘quv yili (namuna)",
- "[Пример] Школа № #": "[Namuna] #-maktab"
+ "[Пример] Школа № #": "[Namuna] #-maktab",
+ "Обновлять дневник автоматически": "Kundalikni avtomatik yangilash",
+ "Сохраним сессию eMaktab (не пароль) на # недели — дневник обновится сам, когда откроешь сайт.": "eMaktab sessiyasini (parolni emas) # haftaga saqlaymiz — saytni ochganingda kundalik o‘zi yangilanadi.",
+ "Сохраним сессию EMIS (не пароль), пока EMIS её держит, — дневник обновится сам, когда откроешь сайт.": "EMIS sessiyasini (parolni emas) EMIS uni ushlab turguncha saqlaymiz — saytni ochganingda kundalik o‘zi yangilanadi.",
+ "Отключить можно в дневнике.": "Kundalikda o‘chirish mumkin.",
+ "Обновляем дневник…": "Kundalik yangilanmoqda…",
+ "Сессия eMaktab закончилась — войди снова, чтобы дневник обновлялся сам.": "eMaktab sessiyasi tugadi — kundalik o‘zi yangilanishi uchun qayta kir.",
+ "Сессия EMIS закончилась — войди снова, чтобы дневник обновлялся сам.": "EMIS sessiyasi tugadi — kundalik o‘zi yangilanishi uchun qayta kir.",
+ "Не получилось обновить — попробуй позже.": "Yangilab bo‘lmadi — keyinroq urinib ko‘r.",
+ "Обновляется автоматически, когда открываешь сайт.": "Saytni ochganingda avtomatik yangilanadi.",
+ "Автообновление выключено — обновляй вручную.": "Avtomatik yangilanish o‘chiq — qo‘lda yangila.",
+ "Обновляем…": "Yangilanmoqda…",
+ "Выключить автообновление": "Avtomatik yangilanishni o‘chirish",
+ "Сегодня обновлений уже много. Попробуй завтра.": "Bugun yangilanishlar ko‘p bo‘ldi. Ertaga urinib ko‘r.",
+ "eMaktab сразу завершил сессию. Попробуй ещё раз.": "eMaktab sessiyani darhol tugatdi. Yana urinib ko‘r.",
+ "EMIS сразу завершил сессию. Попробуй ещё раз.": "EMIS sessiyani darhol tugatdi. Yana urinib ko‘r."
 }

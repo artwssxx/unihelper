@@ -48,6 +48,8 @@ export interface Diary {
   subjects: DiarySubject[];
   days: DiaryDay[];
   absences: { total: number; items: { date: string; subject: string }[] } | null;
+  /** Включено автообновление: на сервере хранится зашифрованная сессия (не пароль). */
+  auto?: boolean;
 }
 /** Данные ученика для автозаполнения анкеты (с его согласия). Без ПИНФЛ, паспорта, даты рождения и адреса. */
 export interface DiaryPerson { firstName: string | null; lastName: string | null; region: string | null; school: string | null; className: string | null; grade: number | null }
