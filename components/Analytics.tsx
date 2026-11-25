@@ -20,6 +20,19 @@ function tabId(): string {
   }
 }
 
+function siteTabId(): string {
+  const key = "uh-site-tab";
+  try {
+    const existing = sessionStorage.getItem(key);
+    if (existing) return existing;
+    const id = crypto.randomUUID();
+    sessionStorage.setItem(key, id);
+    return id;
+  } catch {
+    return crypto.randomUUID();
+  }
+}
+
 type W = Window & { dataLayer?: unknown[]; gtag?: (...a: unknown[]) => void };
 
 /** Настройка GA под текущее согласие: с cookies или без них. Первый вызов создаёт gtag. */
@@ -51,6 +64,23 @@ export default function Analytics() {
   const [ready, setReady] = useState(false);
   const [banner, setBanner] = useState(false);
   const last = useRef<string | null>(null);
+  const lastSitePath = useRef<string | null>(null);
+  const siteTab = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!path || path === lastSitePath.current) return;
+    lastSitePath.current = path;
+    if (isUntracked(path) || !globalThis.crypto?.randomUUID) return;
+
+    siteTab.current ??= siteTabId();
+    void fetch("/api/analytics/page-view", {
+      method: "POST",
+      headers: { "x-unihelper-tab": siteTab.current },
+      credentials: "omit",
+      referrerPolicy: "no-referrer",
+      keepalive: true,
+    }).catch(() => {});
+  }, [path]);
 
   useEffect(() => {
     if (!GA_ID) return;
