@@ -14,6 +14,10 @@ export async function GET() {
     return [s, { total: qs.length, d1: qs.filter((q) => q.difficulty === 1).length, d2: qs.filter((q) => q.difficulty === 2).length, d3: qs.filter((q) => q.difficulty === 3).length }];
   }));
   const db = supabaseAdmin();
+  const [accounts, traffic] = db ? await Promise.all([
+    db.rpc("admin_site_accounts").abortSignal(AbortSignal.timeout(3000)),
+    db.rpc("admin_site_traffic").abortSignal(AbortSignal.timeout(3000)),
+  ]) : [null, null];
   let leads: { id: string; program_id: string; full_name: string; phone: string; status: string; created_at: string }[] | null = null;
   let mockAttempts: number | null = null;
   if (db) {
@@ -37,5 +41,7 @@ export async function GET() {
     bank,
     leads,
     mockAttempts,
+    accounts: accounts?.data ?? null,
+    traffic: traffic?.data ?? null,
   });
 }

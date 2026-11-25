@@ -10,12 +10,26 @@ type Stats = {
   stalePrograms: number;
   pendingSuggestions: number | null;
   bank: Record<"math" | "rw" | "reading", { total: number; d1: number; d2: number; d3: number }>;
+  accounts: { total: number; new7Days: number } | null;
+  traffic: { visitsToday: number; viewsToday: number; visits7Days: number; views7Days: number } | null;
   leads: unknown[] | null; mockAttempts: number | null;
 };
 
 export default function AdminHome() {
   const [s, setS] = useState<Stats | null>(null);
-  useEffect(() => { fetch("/api/admin/stats", { cache: "no-store" }).then((r) => r.json()).then(setS); }, []);
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/admin/stats", { cache: "no-store" })
+      .then((response) => {
+        if (!response.ok) throw new Error("Failed to load admin stats");
+        return response.json();
+      })
+      .then(setS)
+      .catch(() => setFailed(true));
+  }, []);
+
+  if (failed) return <p role="alert" className="text-muted">Не удалось загрузить обзор. Обновите страницу.</p>;
   if (!s) return <p className="text-muted">Загрузка…</p>;
   const sections = [
     { href: "/admin/programs", t: "Программы и гранты", n: s.content.programs },
@@ -33,6 +47,21 @@ export default function AdminHome() {
         <Status label="База данных" ok={s.database} text={s.database ? "Supabase подключена" : "не подключена — данные учеников в браузере"} />
         <Status label="Сохранение правок" ok={s.storage !== "readonly"} text={s.storage === "supabase" ? "в Supabase" : s.storage === "file" ? "в локальный файл" : "только чтение — нужна база"} />
       </div>
+      <section className="card" aria-labelledby="audience-heading">
+        <h2 id="audience-heading" className="text-xl font-extrabold">Аудитория сайта</h2>
+        <p className="mt-1 text-sm text-muted">
+          Посещение — сессия вкладки браузера. Просмотры включают переходы между страницами и перезагрузки. Дни считаются по Ташкенту.
+        </p>
+        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <Metric label="Аккаунты всего" value={s.accounts?.total} />
+          <Metric label="Новые аккаунты за 7 дней" value={s.accounts?.new7Days} />
+          <Metric label="Посещения сегодня" value={s.traffic?.visitsToday} />
+          <Metric label="Посещения за 7 дней" value={s.traffic?.visits7Days} />
+          <Metric label="Просмотры сегодня" value={s.traffic?.viewsToday} />
+          <Metric label="Просмотры за 7 дней" value={s.traffic?.views7Days} />
+        </div>
+        {(!s.accounts || !s.traffic) && <p className="mt-3 text-sm text-muted">Часть статистики недоступна.</p>}
+      </section>
       <div className="grid gap-4 md:grid-cols-3">
         {sections.map((x) => (
           <Link key={x.href} href={x.href} className="card lift block">
@@ -83,6 +112,15 @@ function Status({ label, ok, text }: { label: string; ok: boolean; text: string 
         <div className="font-extrabold">{label}</div>
         <div className="text-sm text-body">{text}</div>
       </div>
+    </div>
+  );
+}
+
+function Metric({ label, value }: { label: string; value?: number }) {
+  return (
+    <div className="rounded-2xl border border-line p-4">
+      <div className="text-sm font-bold text-muted">{label}</div>
+      <div className="mt-1 text-2xl font-extrabold">{value?.toLocaleString("ru-RU") ?? "—"}</div>
     </div>
   );
 }
