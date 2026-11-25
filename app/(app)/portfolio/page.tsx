@@ -41,6 +41,7 @@ export default function PortfolioPage() {
   const [consent, setConsent] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const drag = useRef<string | null>(null);
+  const [overId, setOverId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!store || pf) return;
@@ -265,16 +266,34 @@ export default function PortfolioPage() {
                 return (
                   <li
                     key={id}
-                    draggable
-                    onDragStart={() => (drag.current = id)}
-                    onDragOver={(e) => e.preventDefault()}
-                    onDrop={() => dropOn(id)}
-                    className="rounded-xl border border-line bg-surface-solid p-3"
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      if (overId !== id) setOverId(id);
+                    }}
+                    onDragLeave={() => overId === id && setOverId(null)}
+                    onDrop={() => {
+                      setOverId(null);
+                      dropOn(id);
+                    }}
+                    className={`rounded-xl border bg-surface-solid p-3 transition ${overId === id ? "border-primary ring-2 ring-primary-soft" : "border-line"}`}
                   >
                     <div className="flex items-center gap-2">
-                      <svg width="14" height="14" viewBox="0 0 24 24" className="flex-none cursor-grab text-muted" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
-                        <path d="M9 5h.01M15 5h.01M9 12h.01M15 12h.01M9 19h.01M15 19h.01" />
-                      </svg>
+                      {/* Перетаскивается только за ручку: иначе в полях блока нельзя выделить текст мышью. */}
+                      <span
+                        draggable
+                        onDragStart={(e) => {
+                          drag.current = id;
+                          e.dataTransfer.effectAllowed = "move";
+                        }}
+                        onDragEnd={() => setOverId(null)}
+                        className="flex h-7 w-6 flex-none cursor-grab items-center justify-center rounded-md text-muted hover:bg-line-3 active:cursor-grabbing"
+                        title="Перетащи, чтобы поменять порядок"
+                        aria-hidden
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
+                          <path d="M9 5h.01M15 5h.01M9 12h.01M15 12h.01M9 19h.01M15 19h.01" />
+                        </svg>
+                      </span>
                       <span className="min-w-0 flex-1 truncate text-sm font-bold">
                         {labelOf(id)}
                         {block ? <span className="ml-1.5 text-xs font-semibold text-muted">свой блок</span> : null}
@@ -297,17 +316,12 @@ export default function PortfolioPage() {
                       <div className="mt-2.5 space-y-2">
                         <input className="input py-2 text-sm" aria-label="Заголовок блока" value={block.title} onChange={(e) => setBlock(block.id, { title: e.target.value })} />
                         {block.type === "text" && (
-                          <textarea className="input min-h-20 text-sm" aria-label="Текст блока" value={block.text ?? ""} onChange={(e) => setBlock(block.id, { text: e.target.value })} />
+                          <>
+                            <textarea className="input min-h-20 text-sm" aria-label="Текст блока" value={block.text ?? ""} placeholder="Напиши текст — блок появится на сайте" onChange={(e) => setBlock(block.id, { text: e.target.value })} />
+                            {!block.text?.trim() && <p className="text-xs text-muted">Пустой блок на сайте не показывается.</p>}
+                          </>
                         )}
-                        {block.type === "skills" && (
-                          <input
-                            className="input py-2 text-sm"
-                            aria-label="Навыки через запятую"
-                            value={(block.items ?? []).join(", ")}
-                            onChange={(e) => setBlock(block.id, { items: e.target.value.split(",").map((x) => x.trim()).filter(Boolean) })}
-                            placeholder="Python, английский B2, публичные выступления"
-                          />
-                        )}
+                        {block.type === "skills" && <SkillsInput items={block.items ?? []} onChange={(items) => setBlock(block.id, { items })} />}
                         {block.type === "links" && (
                           <div className="space-y-2">
                             {(block.links ?? []).map((l, i) => (
@@ -424,6 +438,24 @@ function Card({ title, action, children }: { title: string; action?: React.React
       </div>
       {children}
     </div>
+  );
+}
+
+/** Навыки через запятую: держим набранный текст как есть, иначе запятая пропадала при вводе. */
+function SkillsInput({ items, onChange }: { items: string[]; onChange: (items: string[]) => void }) {
+  const [text, setText] = useState(items.join(", "));
+  return (
+    <input
+      className="input py-2 text-sm"
+      aria-label="Навыки через запятую"
+      value={text}
+      onChange={(e) => {
+        setText(e.target.value);
+        onChange(e.target.value.split(",").map((x) => x.trim()).filter(Boolean).slice(0, 30));
+      }}
+      onBlur={() => setText(items.join(", "))}
+      placeholder="Python, английский B2, публичные выступления"
+    />
   );
 }
 

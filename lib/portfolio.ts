@@ -54,7 +54,8 @@ export function newBlock(type: PortfolioBlock["type"]): PortfolioBlock {
   return { id, type, title: "Свой раздел", text: "" };
 }
 
-const safeUrl = (u: string) => (/^https?:\/\//i.test(u) ? u.slice(0, 300) : null);
+/** Только http(s) с адресом сайта: «https://» без домена и javascript:… на сайт не попадут. */
+const safeUrl = (u: string) => (/^https?:\/\/[^\s/]+\.[^\s]+/i.test(u.trim()) ? u.trim().slice(0, 300) : null);
 
 export function buildSnapshot(args: {
   pf: PortfolioState;

@@ -45,7 +45,7 @@ describe("портфолио: публичный снимок", () => {
     const pf: PortfolioState = {
       ...base,
       order: ["projects", "b-1", "about"],
-      blocks: [{ id: "b-1", type: "links", title: "Ссылки", links: [{ label: "ok", url: "https://github.com/x" }, { label: "bad", url: "javascript:alert(1)" }] }],
+      blocks: [{ id: "b-1", type: "links", title: "Ссылки", links: [{ label: "ok", url: "https://github.com/x" }, { label: "bad", url: "javascript:alert(1)" }, { label: "empty", url: "https://" }] }],
     };
     const s = buildSnapshot({ pf, ...args });
     expect(s.sections.slice(0, 3).map((x) => x.id)).toEqual(["projects", "b-1", "about"]);
