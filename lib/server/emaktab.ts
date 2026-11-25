@@ -174,8 +174,9 @@ async function signIn(login: string, password: string, captcha?: { answer: strin
     }
     if (!f) {
       const title = page.body.match(/<title[^>]*>([^<]{0,80})/i)?.[1]?.trim() ?? "";
+      const text = page.body.replace(/<script[\s\S]*?<\/script>|<style[\s\S]*?<\/style>/gi, " ").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim().slice(0, 220);
       console.error("[emaktab] нет формы входа", page.status, new URL(page.url).host + new URL(page.url).pathname, title);
-      return { status: "error", message: "eMaktab не показал форму входа. Возможно, сайт обновился — попробуй загрузить скриншот оценок.", diag: `HTTP ${page.status} · ${new URL(page.url).host}${new URL(page.url).pathname} · «${title}» · ${page.body.length} байт` };
+      return { status: "error", message: "eMaktab не показал форму входа. Возможно, сайт обновился — попробуй загрузить скриншот оценок.", diag: `HTTP ${page.status} · ${new URL(page.url).host}${new URL(page.url).pathname} · «${title}» · ${text}` };
     }
     if (f.captcha) return captchaChallenge(f, jar, "eMaktab просит ввести код с картинки.");
     form = f;
