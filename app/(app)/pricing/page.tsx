@@ -2,13 +2,14 @@
 
 import { track } from "@/lib/analytics";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useAuth, usePlan } from "@/lib/auth";
 import { FEATURE_ROWS } from "@/lib/plans";
 
 export default function PricingPage() {
   const { plan, isPro, planExpiresAt, testProAllowed, setPlan } = usePlan();
-  const { user } = useAuth();
+  const { user, earlyAccessUntil, refreshPlan } = useAuth();
+  useEffect(() => { void refreshPlan(); }, [refreshPlan]);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
 
@@ -18,7 +19,7 @@ export default function PricingPage() {
     const ok = await setPlan(a);
     if (ok && a === "activate-test") track("pro_test_activate");
     setBusy(false);
-    setMsg(ok ? (a === "activate-test" ? "Pro включён на 30 дней (тестовый доступ)." : "Вы вернулись на Free.") : "Не получилось, попробуйте ещё раз.");
+    setMsg(ok ? (a === "activate-test" ? "Бесплатный Pro включён на 30 дней." : "Вы вернулись на Free.") : "Не получилось, попробуйте ещё раз.");
   }
 
   return (
@@ -44,18 +45,26 @@ export default function PricingPage() {
           {testProAllowed && (
             <div className="mt-2 rounded-2xl bg-navy-2 p-4">
               <p className="text-sm text-navy-text">
-                <b className="text-white">Тестовый режим:</b> оплата через Click и Payme появится позже. Пока Pro можно включить бесплатно на 30 дней{user ? " — он сохранится в аккаунте" : ". Войдите, чтобы Pro сохранился на всех устройствах"}.
+                <b className="text-white">В честь открытия:</b> Pro можно получить бесплатно на 30 дней{user ? " — он сохранится в аккаунте" : ". Войдите, чтобы Pro сохранился на всех устройствах"}.
               </p>
               <div className="mt-3 flex flex-wrap gap-2">
-                {isPro ? (
+                {earlyAccessUntil ? null : isPro ? (
                   <button className="rounded-xl border border-navy-line px-4 py-2.5 text-sm font-bold" disabled={busy} onClick={() => act("cancel")}>Вернуться на Free</button>
                 ) : (
-                  <button className="btn-primary" disabled={busy} onClick={() => act("activate-test")}>{busy ? "Включаем…" : "Включить Pro (тест)"}</button>
+                  <button className="btn-primary" disabled={busy} onClick={() => act("activate-test")}>{busy ? "Включаем…" : "Получить бесплатно"}</button>
                 )}
                 {!user && <Link href="/login?next=/pricing" className="rounded-xl border border-navy-line px-4 py-2.5 text-sm font-bold">Войти</Link>}
               </div>
             </div>
           )}
+          <div className="mt-2 rounded-2xl bg-navy-2 p-4">
+            <p className="text-sm text-navy-text"><b className="text-white">В честь открытия</b> — Pro на 2 месяца за 30 000 сум с ранним доступом к новым функциям.</p>
+            {earlyAccessUntil ? (
+              <p className="mt-3 text-sm font-bold">Ранний доступ до {new Date(earlyAccessUntil).toLocaleDateString("ru-RU", { timeZone: "Asia/Tashkent" })}</p>
+            ) : (
+              <Link className="btn-primary mt-3 inline-flex" href="/pricing/buy">Купить за 30 000 сум</Link>
+            )}
+          </div>
         </div>
       </div>
       {msg && <p className="rounded-2xl bg-green-soft px-5 py-3 text-sm font-semibold text-green">{msg}</p>}

@@ -7,6 +7,7 @@ import { supabaseAdmin } from "./supabase";
 // или вход в аккаунт с Pro в базе). Клиент подделать её не может.
 
 export const PLAN_COOKIE = "uh_plan";
+export const PAID_PLAN_COOKIE = "uh_paid_pro";
 const secret = () => process.env.PLAN_SECRET || process.env.MOCK_SECRET || "unihelper-dev-plan-secret";
 
 export function signPlan(plan: Plan, expiresAt: number): string {
@@ -35,6 +36,7 @@ function cookieFrom(req: Request, name: string): string | undefined {
 }
 
 export function planFromRequest(req: Request): Plan {
+  if (readPlanCookie(cookieFrom(req, PAID_PLAN_COOKIE))?.plan === "pro") return "pro";
   return readPlanCookie(cookieFrom(req, PLAN_COOKIE))?.plan ?? "free";
 }
 

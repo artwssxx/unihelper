@@ -18,6 +18,7 @@ interface AuthCtx {
   user: { id: string; email: string | null; name: string | null; provider: string } | null;
   plan: Plan;
   planExpiresAt: number | null;
+  earlyAccessUntil: number | null;
   testProAllowed: boolean;
   signOut: () => Promise<void>;
   refreshPlan: () => Promise<void>;
@@ -54,17 +55,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [ready, setReady] = useState(!authEnabled);
   const [plan, setPlanState] = useState<Plan>("free");
   const [planExpiresAt, setExp] = useState<number | null>(null);
+  const [earlyAccessUntil, setEarlyAccessUntil] = useState<number | null>(null);
   const [testProAllowed, setTestAllowed] = useState(true);
   const synced = useRef<string | null>(null);
   const [syncedUser, setSyncedUser] = useState<string | null>(null);
   const pushTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const refreshPlan = useCallback(async () => {
-    const r = await fetch("/api/plan", { cache: "no-store" }).catch(() => null);
+    const r = await apiFetch("/api/plan", { cache: "no-store" }).catch(() => null);
     if (r?.ok) {
       const j = await r.json();
       setPlanState(j.plan);
       setExp(j.expiresAt);
+      setEarlyAccessUntil(j.earlyAccessUntil ?? null);
       setTestAllowed(j.testAllowed);
     }
   }, []);
@@ -141,7 +144,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signOut = useCallback(async () => {
     await (await supabaseBrowser())?.auth.signOut();
     setSession(null);
-  }, []);
+    await refreshPlan();
+  }, [refreshPlan]);
 
   const setPlan = useCallback(async (action: "activate-test" | "cancel") => {
     const r = await apiFetch("/api/plan", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ action }) });
@@ -161,7 +165,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     : null;
 
   return (
-    <Ctx.Provider value={{ ready, enabled: authEnabled, session, stateReady: !session || syncedUser === session.user.id, user, plan, planExpiresAt, testProAllowed, signOut, refreshPlan, setPlan }}>
+    <Ctx.Provider value={{ ready, enabled: authEnabled, session, stateReady: !session || syncedUser === session.user.id, user, plan, planExpiresAt, earlyAccessUntil, testProAllowed, signOut, refreshPlan, setPlan }}>
       {children}
     </Ctx.Provider>
   );
