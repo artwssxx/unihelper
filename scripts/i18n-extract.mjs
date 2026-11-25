@@ -21,6 +21,12 @@ function walk(dir, out = []) {
 export function extract(dirs = ["app", "components", "lib", "config", "data"]) {
   const found = new Map(); // текст → файлы
   const add = (raw, file) => {
+    // Многострочный текст (статьи, уроки) — по блокам, как их рисует components/site/Prose.tsx:
+    // абзацы, «## » подзаголовки, «- » пункты; каждый блок — отдельный ключ.
+    if (/\n\s*\n|\n## |\n- /.test(raw)) {
+      for (const line of raw.split("\n")) add(line.trim().replace(/^## |^- /, ""), file);
+      return;
+    }
     const t = raw.replace(/\s+/g, " ").trim();
     if (!t || !CYR.test(t)) return;
     if (!found.has(t)) found.set(t, new Set());
