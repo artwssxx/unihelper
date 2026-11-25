@@ -172,6 +172,8 @@ async function signIn(login: string, password: string, captcha?: { answer: strin
       page = await go(`${LOGIN}login`, jar, { headers: { referer: LOGIN } });
       f = parseLoginForm(page.body, page.url);
     }
+    if (!f && (page.status === 503 || /технические работы|texnik ishlar/i.test(page.body)))
+      return { status: "error", message: "В eMaktab сейчас идут технические работы — сайт временно не пускает. Попробуй позже или загрузи скриншот оценок." };
     if (!f) {
       const title = page.body.match(/<title[^>]*>([^<]{0,80})/i)?.[1]?.trim() ?? "";
       const text = page.body.replace(/<script[\s\S]*?<\/script>|<style[\s\S]*?<\/style>/gi, " ").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim().slice(0, 220);
