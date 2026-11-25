@@ -13,6 +13,7 @@ Next.js 15 App Router, TypeScript strict, Tailwind v4 (токены дизайн
 - `app/api/` — `profile`, `advice`, `chat`, `leads`, `mocks/*` (start, submit, check, event, review, writing), `lessons`, `ai/essay`, `ai/portfolio`
 - `lib/scoring/` — Profile Strength, Admission Fit, Funding Fit, подбор. Пороги — в `config.ts`
 - `lib/mocks/` — банки вопросов (`bank/`), движок (`engine.ts`), подписанный токен попытки (`token.ts`), учёт прерываний (`attemptStore.ts`). Генерация: ID варианта `<база>~<сид base36>` — `getQuestion` восстанавливает вопрос на сервере (Math — шаблон с сидом, RW — `bank/rwGen.ts` или перемешанные варианты). IELTS Reading из пула ИИ — `lib/server/readingPool.ts` (текст → вопросы → независимое решение; сохраняются только совпавшие), перед проверкой — `ensurePoolQuestions`. Калькулятор — `lib/mocks/calc.ts` (без eval)
+- `app/(app)/mocks/report` + `app/api/scores/analyze` + `lib/scores.ts` (Overall, разбор текста и даты, разбор по правилам) + `lib/server/scoreReport.ts` (PDF через `unpdf`, картинки — в `llm()` как `images`) — разбор своего результата IELTS/SAT; результаты — `store.scores`, график — `components/IeltsTrend.tsx`
 - `config/` — структура моков, таблицы пересчёта SAT и IELTS (калибровать вручную)
 - `lib/roadmap.ts` — дорожная карта по шаблонам; `lib/content/` — уроки и ивенты
 - `data/programs.ts` — программы и гранты (источник для `supabase/seed.sql`)
@@ -32,6 +33,7 @@ Next.js 15 App Router, TypeScript strict, Tailwind v4 (токены дизайн
 - Метку ставит код в `lib/scoring`, ИИ только объясняет. Изменение правил — с тестом.
 - Моки: правильные ответы никогда не уходят на клиент до завершения модуля (`toPublic`). Балл — диапазоном с подписью «примерная оценка». Мок-балл идёт в Profile Strength «по моку» и не используется для требований вузов.
 - Хард-режим: только десктоп вне Telegram, полный экран; выход/смена вкладки/blur/закрытие → попытка прервана.
+- Файл с результатом экзамена не сохраняется нигде; ИИ берёт только баллы и дату, без имени, номера кандидата и даты рождения.
 - Вопросы — только свои (код/человек/ИИ + проверка). Не копировать College Board, Cambridge, Engnovate.
 - Партнёрство вуза не влияет на метки и порядок; контакт уходит вузу только по кнопке и с согласием.
 - ИИ не пишет эссе за ученика и не выдумывает дедлайны и суммы. Все вызовы ИИ — только через `llm()`; у каждой ИИ-функции есть запасной вариант без ИИ.

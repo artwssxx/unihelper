@@ -13,10 +13,13 @@ import { z } from "zod";
 export type Tier = "fast" | "smart";
 export type ChatMessage = { role: "user" | "assistant"; content: string };
 
+export type LlmImage = { mime: "image/png" | "image/jpeg" | "image/webp"; data: string };
+
 export interface LLM {
   name: string;
   /** timeoutMs — лимит на один вызов модели (по умолчанию 20/28 с); для длинных ответов, например текста IELTS, больше. */
-  json<T>(o: { system: string; user: string; schema: z.ZodType<T>; tier: Tier; maxTokens?: number; timeoutMs?: number }): Promise<T>;
+  /** images — картинки (base64) для распознавания, например скриншот результата экзамена. */
+  json<T>(o: { system: string; user: string; schema: z.ZodType<T>; tier: Tier; maxTokens?: number; timeoutMs?: number; images?: LlmImage[] }): Promise<T>;
   stream(o: { system: string; messages: ChatMessage[]; tier: Tier; maxTokens?: number }): AsyncGenerator<string>;
 }
 
@@ -53,15 +56,18 @@ function compatProvider(cfg: { name: string; baseUrl: string; key: string; model
   return {
     name: cfg.name,
 
-    async json({ system, user, schema, tier, maxTokens = 4000, timeoutMs }) {
+    async json({ system, user, schema, tier, maxTokens = 4000, timeoutMs, images }) {
       const deadline = Date.now() + 55_000;
+      const content = images?.length
+        ? [{ type: "text", text: user }, ...images.map((i) => ({ type: "image_url", image_url: { url: `data:${i.mime};base64,${i.data}` } }))]
+        : user;
       const jsonSchema = JSON.stringify(z.toJSONSchema(schema));
       const sys = `${system}\n\nОтвечай ТОЛЬКО валидным JSON без пояснений и без markdown, строго по этой JSON Schema:\n${jsonSchema}`;
       const errors: string[] = [];
       for (const model of cfg.models[tier]) {
         try {
           const res = await call(model, {
-            messages: [{ role: "system", content: sys }, { role: "user", content: user }],
+            messages: [{ role: "system", content: sys }, { role: "user", content }],
             response_format: { type: "json_object" },
             max_tokens: maxTokens,
           }, tier, deadline, timeoutMs);
@@ -129,11 +135,14 @@ function anthropicProvider(): LLM {
   const fallback = { betas: ["server-side-fallback-2026-07-01"], fallbacks: "default" as const };
   return {
     name: "anthropic",
-    async json({ system, user, schema, tier, maxTokens = 4000 }) {
+    async json({ system, user, schema, tier, maxTokens = 4000, images }) {
+      const content = images?.length
+        ? [...images.map((i) => ({ type: "image" as const, source: { type: "base64" as const, media_type: i.mime, data: i.data } })), { type: "text" as const, text: user }]
+        : user;
       const res = await client.beta.messages.parse({
         model, max_tokens: maxTokens, ...fallback,
         output_config: { effort: tier === "smart" ? "medium" : "low", format: betaZodOutputFormat(schema) },
-        system, messages: [{ role: "user", content: user }],
+        system, messages: [{ role: "user", content }],
       });
       if (res.stop_reason === "refusal" || res.parsed_output == null) throw new Error("anthropic: no output");
       return res.parsed_output as z.infer<typeof schema>;

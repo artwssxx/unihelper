@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import * as I from "@/components/icons";
+import IeltsTrend from "@/components/IeltsTrend";
 import MockTrend from "@/components/MockTrend";
 import ProLock from "@/components/ProLock";
 import { useCoins } from "@/lib/useCoins";
@@ -111,13 +112,28 @@ export default function MocksHub() {
         })}
       </section>
 
-      <section className="grid gap-5 lg:grid-cols-[1.2fr_1fr]">
+      <section className="flex flex-wrap items-center justify-between gap-4 rounded-[26px] border border-line bg-surface p-6">
+        <div>
+          <h2 className="m-0 text-xl font-extrabold">Уже сдавал IELTS или SAT?</h2>
+          <p className="mt-1 max-w-[620px] text-sm text-body">Загрузи отчёт (PDF или фото) или опиши результат — разберём по секциям, сравним с требованиями твоих вузов и соберём план.</p>
+        </div>
+        <Link href="/mocks/report" className="btn-primary">Разобрать мой результат</Link>
+      </section>
+
+      <section className="grid gap-5 lg:grid-cols-2 2xl:grid-cols-[1fr_1fr_0.9fr]">
         <div className="card">
           <div className="flex items-center justify-between">
             <h2 className="m-0 text-xl font-extrabold">Динамика SAT</h2>
             <span className="pill bg-bg text-muted">примерно</span>
           </div>
           <MockTrend history={store?.mocks ?? []} />
+        </div>
+        <div className="card">
+          <div className="flex items-center justify-between">
+            <h2 className="m-0 text-xl font-extrabold">Динамика IELTS</h2>
+            <Link href="/mocks/report" className="text-sm font-bold text-primary">+ результат</Link>
+          </div>
+          <IeltsTrend mocks={store?.mocks ?? []} scores={store?.scores ?? []} />
         </div>
         <div className="card">
           <h2 className="m-0 text-xl font-extrabold">Официальные пробники</h2>

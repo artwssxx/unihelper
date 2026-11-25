@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { ContactInfo } from "./profileSchema";
+import type { ScoreRecord } from "./scores";
 import type { Profile } from "./types";
 
 // Пока нет входа и базы, личные данные ученика живут в localStorage.
@@ -76,6 +77,8 @@ export interface Stored {
   roadmap?: Record<string, StepStatus>;
   customSteps?: { id: string; title: string; month: string; track: string }[];
   mocks?: MockHistoryItem[];
+  /** Результаты IELTS/SAT ученика (официальные или со слов) с разбором. Файлы не храним — только баллы. */
+  scores?: ScoreRecord[];
   /** История силы профиля 1–100: последнее значение и дата изменения. */
   strengthHistory?: { score: number; at: string }[];
   events?: Record<string, EventRegistration>;
