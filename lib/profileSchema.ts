@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { COUNTRIES, MAJORS } from "./profileConst";
+import { COUNTRIES, MAJORS, MAX_MAJORS } from "./profileConst";
 
 // Единая схема профиля: валидирует ответы анкеты и на клиенте, и в API.
 export { COUNTRIES, MAJORS };
@@ -19,6 +19,9 @@ export const profileSchema = z.object({
   ledSomething: z.boolean(),
   targetCountries: z.array(z.enum(COUNTRIES)).max(COUNTRIES.length),
   major: z.enum(MAJORS),
+  majors: z.array(z.enum(MAJORS)).max(MAX_MAJORS).optional(),
+  majorOther: z.string().trim().max(60).optional(),
+  minor: z.string().trim().max(60).optional(),
   budgetUsd: z.number().min(0).max(200000),
   essays: assessment,
   recommendations: assessment,

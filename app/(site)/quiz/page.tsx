@@ -3,12 +3,13 @@
 import { track } from "@/lib/analytics";
 import { useRouter } from "next/navigation";
 import LoginCard from "@/components/auth/LoginCard";
+import MajorPicker from "@/components/MajorPicker";
 import { useAuth } from "@/lib/auth";
 import { useEffect, useState } from "react";
 import { load, save } from "@/lib/clientStore";
 import { t } from "@/lib/i18n/ru";
-import { COUNTRIES, MAJORS, contactSchema, profileSchema } from "@/lib/profileSchema";
-import type { AchievementLevel, CountryCode, Major, Profile } from "@/lib/types";
+import { COUNTRIES, contactSchema, profileSchema } from "@/lib/profileSchema";
+import type { AchievementLevel, CountryCode, Profile } from "@/lib/types";
 
 const EMPTY: Profile = {
   grade: 10,
@@ -236,14 +237,8 @@ export default function Quiz() {
         )}
 
         {step === 6 && (
-          <Q title="Какая специальность?">
-            <div className="grid gap-2 sm:grid-cols-2">
-              {MAJORS.map((m) => (
-                <button key={m} className="chip" data-on={p.major === m} onClick={() => set({ major: m as Major })}>
-                  {t.majors[m]}
-                </button>
-              ))}
-            </div>
+          <Q title="Какие направления тебе интересны?" hint="Можно несколько — первое станет основным. Минор и своё направление — по желанию.">
+            <MajorPicker value={p} onChange={(v) => set(v)} />
           </Q>
         )}
 

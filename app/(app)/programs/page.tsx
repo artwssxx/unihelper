@@ -47,7 +47,8 @@ export default function ProgramsPage() {
   const activeFilters = countries.length + (major ? 1 : 0) + (maxCost !== "" ? 1 : 0) + (funding !== "any" ? 1 : 0) + (label !== "eligible" ? 1 : 0) + (backupOnly ? 1 : 0);
 
   const custom = useMemo(() => (store?.customUnis ?? []).filter((p) => Number.isFinite(p.tuitionUsd)), [store?.customUnis]);
-  const effProfile = useMemo<Profile | null>(() => (profile ? { ...profile, major: major ?? profile.major } : null), [profile, major]);
+  // Фильтр направления: по умолчанию — все направления ученика, иначе одно выбранное.
+  const effProfile = useMemo<Profile | null>(() => (profile ? (major ? { ...profile, major, majors: [major] } : profile) : null), [profile, major]);
   const all = useMemo(() => {
     if (!effProfile) return [];
     const m = matchPrograms(effProfile, [...programs, ...custom]);
@@ -169,7 +170,8 @@ export default function ProgramsPage() {
         </div>
         <div className={`space-y-4 ${showFilters ? "" : "hidden md:block"}`}>
         <div className="grid gap-3 md:grid-cols-3">
-          <select className="input" aria-label="Специальность" value={major ?? profile.major} onChange={(e) => setMajor(e.target.value as Major)}>
+          <select className="input" aria-label="Специальность" value={major ?? ""} onChange={(e) => setMajor((e.target.value || null) as Major | null)}>
+            <option value="">Все мои направления</option>
             {MAJORS.map((m) => <option key={m} value={m}>{t.majors[m]}</option>)}
           </select>
           <input className="input" type="number" min={0} step={1000} placeholder="Макс. стоимость, $/год" aria-label="Максимальная стоимость в год" value={maxCost} onChange={(e) => setMaxCost(e.target.value === "" ? "" : Number(e.target.value))} />

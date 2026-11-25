@@ -1,4 +1,5 @@
 import type { Confidence, FitLabel, FitResult, FundingLabel, Profile, Program } from "../types";
+import { profileMajors } from "../profileConst";
 import { FIT_RULES, MAJOR_KEYWORDS } from "./config";
 import { gpaTo100 } from "./strength";
 
@@ -32,7 +33,8 @@ export function totalCost(p: Program): number {
 
 export function portfolioRelevant(profile: Profile, program: Program): boolean | null {
   if (program.majors === "any" && !profile.major) return null;
-  const words = MAJOR_KEYWORDS[profile.major] ?? [];
+  // Активности считаются профильными, если связаны с любым из выбранных направлений.
+  const words = profileMajors(profile).flatMap((m) => MAJOR_KEYWORDS[m] ?? []);
   const text = profile.achievementsText.toLowerCase();
   if (!text.trim()) return false;
   return words.some((w) => text.includes(w));

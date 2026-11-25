@@ -1,4 +1,5 @@
 import type { CountryCode, FitResult, Profile, Program } from "../types";
+import { profileMajors } from "../profileConst";
 import { evaluateProgram } from "./fit";
 
 export interface MatchItem {
@@ -15,7 +16,7 @@ export function filterPrograms(profile: Profile, programs: Program[]): Program[]
     // Узбекские вузы показываем всегда: в каждом списке нужен запасной вариант.
     const countryOk =
       p.isLocal || p.isCustom || profile.targetCountries.length === 0 || profile.targetCountries.includes(p.country as CountryCode);
-    const majorOk = p.majors === "any" || p.majors.includes(profile.major);
+    const majorOk = p.majors === "any" || profileMajors(profile).some((m) => (p.majors as string[]).includes(m));
     return countryOk && majorOk;
   });
 }

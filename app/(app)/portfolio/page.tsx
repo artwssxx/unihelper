@@ -1,6 +1,7 @@
 "use client";
 
 import { track } from "@/lib/analytics";
+import { majorsLabel } from "@/components/MajorPicker";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import NeedProfile from "@/components/NeedProfile";
@@ -8,7 +9,6 @@ import PortfolioView from "@/components/portfolio/PortfolioView";
 import ProLock from "@/components/ProLock";
 import { apiFetch, useAuth, usePlan } from "@/lib/auth";
 import { update, type PortfolioBlock, type PortfolioState } from "@/lib/clientStore";
-import { t } from "@/lib/i18n/ru";
 import { BUILTIN_SECTIONS, PRESET_COLORS, TEMPLATES, buildSnapshot, newBlock, normalizePortfolio } from "@/lib/portfolio";
 import { useContent } from "@/lib/useContent";
 import { useProfile } from "@/lib/useProfile";
@@ -70,7 +70,7 @@ export default function PortfolioPage() {
     return buildSnapshot({
       pf,
       name: store?.contact?.fullName || user?.name || "Ученик",
-      majorLabel: t.majors[profile.major],
+      majorLabel: majorsLabel(profile),
       city: profile.city,
       achievementsText: profile.achievementsText ?? "",
       activities: attended,
@@ -226,7 +226,7 @@ export default function PortfolioPage() {
               Подзаголовок
               <input
                 className="input mt-1.5"
-                placeholder={`${t.majors[profile.major]} · ${profile.city}`}
+                placeholder={`${majorsLabel(profile)} · ${profile.city}`}
                 value={p.headline ?? ""}
                 maxLength={140}
                 onChange={(e) => set({ headline: e.target.value })}

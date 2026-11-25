@@ -1,14 +1,15 @@
 "use client";
 
 import { track } from "@/lib/analytics";
+import MajorPicker from "@/components/MajorPicker";
 import { useCallback, useEffect, useState } from "react";
 import NeedProfile from "@/components/NeedProfile";
 import StrengthCard from "@/components/StrengthCard";
 import { reset, update } from "@/lib/clientStore";
 import { t } from "@/lib/i18n/ru";
-import { COUNTRIES, MAJORS, profileSchema } from "@/lib/profileSchema";
+import { COUNTRIES, profileSchema } from "@/lib/profileSchema";
 import { scoreProfile } from "@/lib/scoring/strength";
-import type { CountryCode, Major, Profile } from "@/lib/types";
+import type { CountryCode, Profile } from "@/lib/types";
 import { useProfile } from "@/lib/useProfile";
 import Link from "next/link";
 import { apiFetch, useAuth, usePlan } from "@/lib/auth";
@@ -67,13 +68,11 @@ export default function ProfilePage() {
           </Field>
           <Field label="IELTS (официальный)"><input className="input" type="number" step="0.5" value={p.ielts ?? ""} placeholder="не сдавал" onChange={(e) => set({ ielts: e.target.value === "" ? null : Number(e.target.value) })} /></Field>
           <Field label="SAT (официальный)"><input className="input" type="number" step="10" value={p.sat ?? ""} placeholder="не сдавал" onChange={(e) => set({ sat: e.target.value === "" ? null : Number(e.target.value) })} /></Field>
-          <Field label="Специальность">
-            <select className="input" value={p.major} onChange={(e) => set({ major: e.target.value as Major })}>
-              {MAJORS.map((m) => <option key={m} value={m}>{t.majors[m]}</option>)}
-            </select>
-          </Field>
           <Field label="Бюджет семьи в год, $"><input className="input" type="number" step="500" value={p.budgetUsd} onChange={(e) => set({ budgetUsd: Number(e.target.value) || 0 })} /></Field>
         </div>
+        <Field label="Направления">
+          <MajorPicker value={p} onChange={(v) => set(v)} />
+        </Field>
         <Field label="Достижения и активности">
           <textarea className="input min-h-24" value={p.achievementsText} onChange={(e) => set({ achievementsText: e.target.value })} />
         </Field>
