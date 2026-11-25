@@ -7,6 +7,7 @@ import ThemeToggle from "@/components/ThemeToggle";
 
 const NAV = [
   { href: "/admin", label: "Обзор", icon: I.Home },
+  { href: "/admin/payments", label: "Оплаты Pro", icon: I.ListIcon },
   { href: "/admin/programs", label: "Программы и гранты", icon: I.ListIcon },
   { href: "/admin/suggestions", label: "Предложения вузов", icon: I.Globe },
   { href: "/admin/events", label: "Ивенты", icon: I.Calendar },
