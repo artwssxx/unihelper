@@ -12,6 +12,8 @@ interface AuthCtx {
   ready: boolean;
   enabled: boolean;
   session: Session | null;
+  /** Данные аккаунта уже объединены с браузером (до этого локальный профиль может быть неполным). */
+  stateReady: boolean;
   user: { id: string; email: string | null; name: string | null; provider: string } | null;
   plan: Plan;
   planExpiresAt: number | null;
@@ -40,6 +42,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [planExpiresAt, setExp] = useState<number | null>(null);
   const [testProAllowed, setTestAllowed] = useState(true);
   const synced = useRef<string | null>(null);
+  const [syncedUser, setSyncedUser] = useState<string | null>(null);
   const pushTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const refreshPlan = useCallback(async () => {
@@ -57,10 +60,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (synced.current === s.user.id) return;
     synced.current = s.user.id;
     const r = await apiFetch("/api/me/state", { cache: "no-store" }).catch(() => null);
-    if (!r?.ok) return;
+    if (!r?.ok) return setSyncedUser(s.user.id); // сервер недоступен — дальше решают данные браузера
     const j = await r.json();
     const merged = mergeStates(load(), (j.data ?? {}) as Stored);
     save(merged);
+    setSyncedUser(s.user.id);
     await apiFetch("/api/me/state", { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify({ data: merged }) });
     await refreshPlan();
   }, [refreshPlan]);
@@ -89,6 +93,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
     return () => sub.subscription.unsubscribe();
   }, [sb, syncFromServer, refreshPlan]);
+
+  // Флаг сессии на <html>: экран входа, отрисованный до проверки, прячется CSS (см. AuthGate).
+  useEffect(() => {
+    if (ready) document.documentElement.toggleAttribute("data-auth", Boolean(session));
+  }, [ready, session]);
 
   // Дальнейшие изменения — в аккаунт с задержкой 2 с.
   useEffect(() => {
@@ -124,7 +133,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     : null;
 
   return (
-    <Ctx.Provider value={{ ready, enabled: Boolean(sb), session, user, plan, planExpiresAt, testProAllowed, signOut, refreshPlan, setPlan }}>
+    <Ctx.Provider value={{ ready, enabled: Boolean(sb), session, stateReady: !session || syncedUser === session.user.id, user, plan, planExpiresAt, testProAllowed, signOut, refreshPlan, setPlan }}>
       {children}
     </Ctx.Provider>
   );

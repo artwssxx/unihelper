@@ -253,3 +253,9 @@ button:disabled {
 
 [data-theme="dark"] .theme-sun { display: none; }
 :root:not([data-theme="dark"]) .theme-moon { display: none; }
+
+/* Экран входа, отрисованный до проверки сессии, не мелькает у тех, кто уже вошёл или в демо. */
+html[data-auth] [data-guest="auth"],
+html[data-demo] [data-guest="auth"] {
+  display: none;
+}

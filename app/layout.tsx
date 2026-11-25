@@ -16,14 +16,15 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = { width: "device-width", initialScale: 1, themeColor: "#2F62E8" };
 
-// Тема ставится до первой отрисовки, чтобы не было вспышки светлой темы.
-const THEME_SCRIPT = `try{var t=localStorage.getItem('uh-theme');document.documentElement.dataset.theme=t||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light')}catch(e){document.documentElement.dataset.theme='light'}`;
+// До первой отрисовки: тема (без вспышки светлой) и флаги «есть сессия» / «демо» —
+// по ним CSS прячет экран входа, пока кабинет загружается у тех, кто уже вошёл.
+const HEAD_SCRIPT = `(function(){var d=document.documentElement;try{var t=localStorage.getItem('uh-theme');d.dataset.theme=t||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light')}catch(e){d.dataset.theme='light'}try{for(var i=0;i<localStorage.length;i++){if(/^sb-.+-auth-token$/.test(localStorage.key(i)||'')){d.dataset.auth='1';break}}var s=JSON.parse(localStorage.getItem('unihelper:v1')||'{}');if(s.demo&&s.demo.active)d.dataset.demo='1'}catch(e){}})()`;
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="ru" suppressHydrationWarning>
       <head>
-        <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
+        <script dangerouslySetInnerHTML={{ __html: HEAD_SCRIPT }} />
       </head>
       <body className={`${manrope.variable} ${instrument.variable} antialiased`}>
         <div className="amb" aria-hidden="true"><i /><i /><i /></div>

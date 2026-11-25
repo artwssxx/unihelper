@@ -103,12 +103,19 @@ export function load(): Stored {
   }
 }
 
+/** Флаг демо на <html> — по нему CSS не мигает экраном входа при переходах (см. AuthGate). */
+function markDemo(on: boolean) {
+  document.documentElement.toggleAttribute("data-demo", on);
+}
+
 export function save(patch: Partial<Stored>): void {
+  const next = { ...load(), ...patch };
   try {
-    localStorage.setItem(KEY, JSON.stringify({ ...load(), ...patch }));
+    localStorage.setItem(KEY, JSON.stringify(next));
   } catch {
     /* хранилище недоступно — продолжаем без него */
   }
+  markDemo(Boolean(next.demo?.active));
   listeners.forEach((l) => l());
 }
 
@@ -120,6 +127,7 @@ export function reset(): void {
   try {
     localStorage.removeItem(KEY);
   } catch {}
+  markDemo(false);
   listeners.forEach((l) => l());
 }
 

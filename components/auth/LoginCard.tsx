@@ -22,7 +22,8 @@ export async function finishTelegramLogin(payload: unknown): Promise<boolean> {
   return !error;
 }
 
-export default function LoginCard({ next = "/dashboard" }: { next?: string }) {
+/** register — последний шаг после анкеты; login — вход в существующий аккаунт. */
+export default function LoginCard({ next = "/dashboard", mode = "login", signupHint = true }: { next?: string; mode?: "login" | "register"; signupHint?: boolean }) {
   const router = useRouter();
   const { user, enabled, ready } = useAuth();
   const [email, setEmail] = useState("");
@@ -92,8 +93,12 @@ export default function LoginCard({ next = "/dashboard" }: { next?: string }) {
 
   return (
     <div className="card w-full max-w-md space-y-5 p-7">
-      <div className="flex items-center gap-2.5"><I.Logo /><span className="text-xl font-extrabold">Вход в UniHelper</span></div>
-      <p className="text-sm text-body">Аккаунт сохраняет профиль, моки и план на всех устройствах. Данные из этого браузера перенесутся в аккаунт.</p>
+      <div className="flex items-center gap-2.5"><I.Logo /><span className="text-xl font-extrabold">{mode === "register" ? "Создай аккаунт" : "Вход в UniHelper"}</span></div>
+      <p className="text-sm text-body">
+        {mode === "register"
+          ? "Без пароля: через Telegram, Google или ссылку на почту. Ответы анкеты перенесутся в аккаунт."
+          : "Аккаунт сохраняет профиль, моки и план на всех устройствах. Данные из этого браузера перенесутся в аккаунт."}
+      </p>
 
       <div className="space-y-2.5">
         {BOT && tgHere === false ? (
@@ -131,6 +136,11 @@ export default function LoginCard({ next = "/dashboard" }: { next?: string }) {
         </form>
       )}
       {err && <p className="text-sm font-semibold text-red">{err}</p>}
+      {mode === "login" && signupHint && (
+        <p className="rounded-xl bg-bg px-3 py-2 text-sm text-body">
+          Нет аккаунта? Регистрация начинается с анкеты — <Link href={`/quiz?next=${encodeURIComponent(next)}`} className="font-bold text-primary">пройти за 3 минуты</Link>.
+        </p>
+      )}
       <p className="text-xs leading-relaxed text-muted">
         Продолжая, вы соглашаетесь на обработку данных. Если вам нет 18 лет — согласие должен дать родитель. <Link href="/" className="font-bold text-primary">На главную</Link>
       </p>

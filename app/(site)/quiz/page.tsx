@@ -2,6 +2,8 @@
 
 import { track } from "@/lib/analytics";
 import { useRouter } from "next/navigation";
+import LoginCard from "@/components/auth/LoginCard";
+import { useAuth } from "@/lib/auth";
 import { useEffect, useState } from "react";
 import { load, save } from "@/lib/clientStore";
 import { t } from "@/lib/i18n/ru";
@@ -36,8 +38,12 @@ const LEVELS: { v: AchievementLevel; label: string }[] = [
 
 const STEPS = 9; // 8 вопросов + контакты
 
+// Анкета — первый шаг регистрации: после неё вход (Telegram, Google или почта), и только потом кабинет.
 export default function Quiz() {
   const router = useRouter();
+  const { user, enabled } = useAuth();
+  const [registering, setRegistering] = useState(false);
+  const [next, setNext] = useState("/dashboard");
   const [step, setStep] = useState(0);
   const [p, setP] = useState<Profile>(EMPTY);
   const [contact, setContact] = useState({ fullName: "", phone: "+998 ", email: "" });
@@ -47,7 +53,10 @@ export default function Quiz() {
 
   useEffect(() => {
     const s = load();
-    const country = new URLSearchParams(location.search).get("country") as CountryCode | null;
+    const sp = new URLSearchParams(location.search);
+    const n = sp.get("next");
+    if (n && n.startsWith("/") && !n.startsWith("//") && !n.startsWith("/quiz")) setNext(n);
+    const country = sp.get("country") as CountryCode | null;
     const base = { ...EMPTY, ...(s.draft ?? {}) };
     if (country && (COUNTRIES as readonly string[]).includes(country) && !base.targetCountries.includes(country)) {
       base.targetCountries = [...base.targetCountries, country];
@@ -97,7 +106,12 @@ export default function Quiz() {
       if (!res.ok) throw new Error(json.error);
       save({ profile: prof.data, contact: cont.data, profileId: json.id, step: 0, draft: prof.data });
       track("profile_complete", { grade: prof.data.grade, major: prof.data.major });
-      router.push("/dashboard");
+      // Уже вошёл — сразу в кабинет; иначе последний шаг — регистрация (анкета перенесётся в аккаунт).
+      if (user || !enabled) router.push(next);
+      else {
+        setRegistering(true);
+        window.scrollTo({ top: 0 });
+      }
     } catch {
       setError("Не удалось сохранить. Проверьте интернет и попробуйте ещё раз.");
       setBusy(false);
@@ -106,6 +120,18 @@ export default function Quiz() {
 
   const toggleCountry = (c: CountryCode) =>
     set({ targetCountries: p.targetCountries.includes(c) ? p.targetCountries.filter((x) => x !== c) : [...p.targetCountries, c] });
+
+  if (registering) {
+    return (
+      <div className="space-y-5 pt-2">
+        <div className="rounded-2xl bg-green-soft px-5 py-4 text-green">
+          <div className="font-extrabold">Анкета сохранена</div>
+          <p className="mt-1 text-sm">Последний шаг — регистрация. Профиль, подбор и план сохранятся в аккаунте; кабинет откроется сразу после входа.</p>
+        </div>
+        <div className="flex justify-center"><LoginCard next={next} mode="register" /></div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 pt-2">

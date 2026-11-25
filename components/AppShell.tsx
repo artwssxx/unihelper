@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { useAuth, usePlan } from "@/lib/auth";
 import { useStore } from "@/lib/clientStore";
+import AuthGate from "./auth/AuthGate";
 import CoinPill from "./coins/CoinPill";
 import DemoTour from "./DemoTour";
 import ThemeToggle from "./ThemeToggle";
@@ -123,7 +124,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             Демо-режим: ученик и его история вымышленные, мок-баллы посчитаны движком на смоделированных ответах. ИИ отвечает вживую.
           </p>
         )}
-        <div className={store?.demo?.active ? "mt-6 pb-64 sm:pb-28 xl:pb-0" : "mt-6"}>{children}</div>
+        <div className={store?.demo?.active ? "mt-6 pb-64 sm:pb-28 xl:pb-0" : "mt-6"}><AuthGate>{children}</AuthGate></div>
       </main>
       {store?.demo?.active && <DemoTour demo={store.demo} />}
     </div>
