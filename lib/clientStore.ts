@@ -91,6 +91,8 @@ export interface Stored {
   customUnis?: import("./types").Program[];
   /** Демо для инвесторов: вымышленный ученик и пошаговый тур. */
   demo?: { active: boolean; step: number; tour: boolean };
+  /** Дневник из eMaktab/EMIS (снимок при входе ученика; пароль не хранится). */
+  diary?: import("./diary").Diary;
   /** Метки подбора с прошлого визита — показать, что изменилось после правок профиля. */
   matchSnap?: import("./matchDiff").MatchSnap;
   /** Аккаунт родителя: без своей анкеты, кабинет — /parent. */

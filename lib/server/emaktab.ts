@@ -1,6 +1,7 @@
 import "server-only";
 import { createCipheriv, createDecipheriv, createHash, randomBytes, randomUUID } from "node:crypto";
-import { aggregateMarks, gradeFromGroup, type GradeItem, type GradeScale } from "@/lib/grades";
+import type { Diary, DiaryDay, DiaryLesson, DiaryPerson, DiarySubject } from "@/lib/diary";
+import { aggregateMarks, gradeFromGroup, subjectKey, type GradeItem, type GradeScale } from "@/lib/grades";
 
 // Импорт оценок из eMaktab (электронный дневник школ Узбекистана) по логину и паролю ученика.
 // Официального API для сторонних сервисов нет, поэтому повторяем вход как браузер:
@@ -19,7 +20,7 @@ type Jar = Record<string, string>;
 type Page = { status: number; body: string; url: string };
 
 export type EmaktabResult =
-  | { status: "ok"; items: GradeItem[]; scale: GradeScale; marks: number; period: string; grade: number | null; className: string | null }
+  | { status: "ok"; items: GradeItem[]; scale: GradeScale; marks: number; period: string; grade: number | null; className: string | null; diary: Diary; person: DiaryPerson }
   | { status: "captcha"; image: string | null; state: string; message: string; diag?: string }
   | { status: "invalid"; message: string }
   | { status: "confirm"; message: string }
@@ -209,7 +210,7 @@ export function parseBigJson(text: string): unknown | null {
 const str = (v: unknown) => (typeof v === "string" || typeof v === "number" || typeof v === "bigint" ? String(v) : "");
 
 /** Ученик из контекста: personId, schoolId, класс. Большие ID держим строками. */
-export function personFromContext(raw: unknown): { personId: string; schoolId: string; groupName: string | null } | null {
+export function personFromContext(raw: unknown): { personId: string; schoolId: string; groupName: string | null; schoolName?: string | null } | null {
   if (!raw) return null;
   // JSON.parse теряет точность у 19-значных чисел — поэтому разбираем и текстовое представление, если оно есть.
   const found: Record<string, unknown>[] = [];
@@ -229,6 +230,7 @@ export function personFromContext(raw: unknown): { personId: string; schoolId: s
     personId: str(p.personId ?? p.person_id),
     schoolId: str(p.schoolId ?? p.school_id ?? (p.school as Record<string, unknown> | undefined)?.id ?? (p.schools as Record<string, unknown>[] | undefined)?.[0]?.id),
     groupName,
+    schoolName: str(p.schoolName ?? (p.school as Record<string, unknown> | undefined)?.name ?? (p.schools as Record<string, unknown>[] | undefined)?.[0]?.name) || null,
   };
 }
 
@@ -263,27 +265,125 @@ export function schoolYear(now = new Date()): { year: number; start: Date } {
   return { year: y, start: new Date(Date.UTC(y, 8, 1) - 5 * 3600_000) };
 }
 
+type R = Record<string, unknown>;
+const ABSENT = /^(н|нб|nb|n|б|п|absent)$/i;
+
+/** Дата дня дневника: секунды/миллисекунды или строка → YYYY-MM-DD по Ташкенту (UTC+5). */
+export function dayIso(v: unknown): string | null {
+  if (typeof v === "string" && /^\d{4}-\d{2}-\d{2}/.test(v)) return v.slice(0, 10);
+  const n = Number(v);
+  if (!Number.isFinite(n) || n <= 0) return null;
+  const ms = n > 1e12 ? n : n * 1000;
+  return new Date(ms + 5 * 3600_000).toISOString().slice(0, 10);
+}
+const hhmm = (h: unknown, m: unknown) => {
+  const hs = String(h ?? "").trim();
+  if (/^\d{1,2}:\d{2}/.test(hs)) return hs.slice(0, 5).padStart(5, "0");
+  if (!/^\d{1,2}$/.test(hs)) return null;
+  return `${hs.padStart(2, "0")}:${String(m ?? "0").padStart(2, "0")}`;
+};
+const subjectName = (l: R) => (typeof l.subject === "string" ? l.subject : str((l.subject as R | undefined)?.name)) || str(l.subjectName);
+
+/** Дни из ответов /api/v2/marks/diary: уроки (время, кабинет, тема, домашка, отметки, пропуск). Учителей не берём. */
+export function daysFromEmaktab(responses: unknown[]): { days: DiaryDay[]; marks: { subject: string; date: string; value: number }[]; absences: { date: string; subject: string }[] } {
+  const days = new Map<string, DiaryLesson[]>();
+  const marks: { subject: string; date: string; value: number }[] = [];
+  const absences: { date: string; subject: string }[] = [];
+  for (const raw of responses) {
+    for (const d of (((raw as R | null)?.days ?? []) as R[])) {
+      const date = dayIso(d.date);
+      if (!date) continue;
+      const lessons: DiaryLesson[] = [];
+      for (const l of ((d.lessons ?? []) as R[])) {
+        const subject = subjectName(l).trim();
+        if (!subject || l.isCanceled === true) continue;
+        const values: number[] = [];
+        let absent = l.isAbsent === true || /absent|отсутств/i.test(String(l.attendance ?? ""));
+        for (const wm of ((l.workMarks ?? []) as R[])) for (const m of ((wm.marks ?? []) as R[])) {
+          const v = String(m.value ?? "").trim();
+          if (ABSENT.test(v)) absent = true;
+          const n = Number(v.replace(",", "."));
+          if (Number.isFinite(n) && n > 0 && n <= 10) values.push(n);
+        }
+        const hours = (l.hours ?? {}) as R;
+        const hw = l.homework as R | null | undefined;
+        lessons.push({
+          n: Number(l.number ?? l.lessonNumber) || null,
+          start: hhmm(hours.startHour, hours.startMinute) ?? (typeof l.startTime === "string" ? hhmm(l.startTime, null) : null),
+          end: hhmm(hours.endHour, hours.endMinute) ?? (typeof l.endTime === "string" ? hhmm(l.endTime, null) : null),
+          subject,
+          room: str(l.place ?? l.room) || null,
+          kind: Array.isArray(l.importantWorks) && l.importantWorks.length ? "Контрольная" : null,
+          topic: str(l.theme) || null,
+          homework: typeof hw?.text === "string" ? hw.text.trim().slice(0, 600) || null : null,
+          homeworkUrl: null,
+          marks: values,
+          absent,
+        });
+        for (const v of values) marks.push({ subject, date, value: v });
+        if (absent) absences.push({ date, subject });
+      }
+      lessons.sort((a, b) => (a.n ?? 0) - (b.n ?? 0));
+      days.set(date, lessons);
+    }
+  }
+  return { days: [...days].map(([date, lessons]) => ({ date, lessons })).sort((a, b) => a.date.localeCompare(b.date)), marks, absences };
+}
+
+/** Четверть по дате (ориентировочно для школ Узбекистана): I — сен–окт, II — ноя–дек, III — янв–мар, IV — апр–июн. */
+const quarterOf = (date: string) => { const m = Number(date.slice(5, 7)); return m >= 9 && m <= 10 ? 1 : m >= 11 ? 2 : m <= 3 ? 3 : 4; };
+
+/** Предметы дневника: средняя и отметки по четвертям с датами. */
+export function subjectsFromMarks(marks: { subject: string; date: string; value: number }[], items: GradeItem[]): DiarySubject[] {
+  return items.map((i) => {
+    const mine = marks.filter((m) => m.subject === i.subject).sort((a, b) => a.date.localeCompare(b.date));
+    const parts = [1, 2, 3, 4]
+      .map((q) => ({ q, ms: mine.filter((m) => quarterOf(m.date) === q) }))
+      .filter((x) => x.ms.length)
+      .map((x) => ({ name: `${x.q} четверть`, avg: Math.round((x.ms.reduce((a, b) => a + b.value, 0) / x.ms.length) * 100) / 100, marks: x.ms.map((m) => ({ date: m.date, value: m.value })) }));
+    return { subject: i.subject, key: i.key ?? subjectKey(i.subject), grade: i.grade, parts };
+  });
+}
+
 export async function importEmaktab(login: string, password: string, captcha?: { answer: string; state: string }): Promise<EmaktabResult> {
   try {
     const s = await signIn(login, password, captcha);
     if (!("jar" in s)) return s;
     const jar = s.jar;
-    const person = personFromContext(await api(jar, "/api/v2/users/me/context"));
+    const [ctx, me] = await Promise.all([api(jar, "/api/v2/users/me/context"), api(jar, "/api/v2/users/me")]);
+    const person = personFromContext(ctx);
     if (!person?.personId || !person.schoolId) return { status: "error", message: "Вход удался, но eMaktab не отдал данные ученика. Если это аккаунт родителя — войди аккаунтом ученика." };
 
     const { year: y, start } = schoolYear();
     const now = Date.now();
+    // Отметки — с 1 сентября; расписание и домашка — ещё на 3 недели вперёд.
     const windows: [number, number][] = [];
-    for (let t = start.getTime(); t < now; t += 14 * 86400_000) windows.push([Math.floor(t / 1000), Math.floor(Math.min(now, t + 14 * 86400_000 - 1000) / 1000)]);
-    const marks: { subject: string; value: string | number }[] = [];
+    const until = now + 21 * 86400_000;
+    for (let t = start.getTime(); t < until; t += 14 * 86400_000) windows.push([Math.floor(t / 1000), Math.floor(Math.min(until, t + 14 * 86400_000 - 1000) / 1000)]);
+    const responses: unknown[] = [];
     // По 4 запроса параллельно: укладываемся в лимит функции и не нагружаем eMaktab.
     for (let i = 0; i < windows.length; i += 4) {
-      const part = await Promise.all(windows.slice(i, i + 4).map(([a, b]) => api(jar, "/api/v2/marks/diary", { personId: person.personId, schoolId: person.schoolId, startDate: a, finishDate: b, timestamp: now })));
-      for (const p of part) marks.push(...marksFromDiary(p));
+      responses.push(...(await Promise.all(windows.slice(i, i + 4).map(([a, b]) => api(jar, "/api/v2/marks/diary", { personId: person.personId, schoolId: person.schoolId, startDate: a, finishDate: b, timestamp: now })))));
     }
-    const { items, scale } = aggregateMarks(marks);
-    if (!items.length) return { status: "error", message: "В дневнике eMaktab за этот учебный год пока нет отметок. Можно ввести оценки вручную или загрузить фото табеля." };
-    return { status: "ok", items, scale, marks: marks.length, period: `${y}/${String(y + 1).slice(2)} учебный год`, grade: gradeFromGroup(person.groupName), className: person.groupName };
+    const parsed = daysFromEmaktab(responses);
+    const { items, scale } = aggregateMarks(parsed.marks.length ? parsed.marks : responses.flatMap(marksFromDiary));
+    if (!items.length && !parsed.days.length) return { status: "error", message: "В дневнике eMaktab за этот учебный год пока нет отметок. Можно ввести оценки вручную или загрузить фото табеля." };
+    const u = (((me as R | null)?.user ?? me) ?? {}) as R;
+    const today = new Date(now + 5 * 3600_000).toISOString().slice(0, 10);
+    const from = new Date(now - 14 * 86400_000 + 5 * 3600_000).toISOString().slice(0, 10);
+    const grade = gradeFromGroup(person.groupName);
+    const period = `${y}/${String(y + 1).slice(2)} учебный год`;
+    const diary: Diary = {
+      source: "emaktab", fetchedAt: new Date(now).toISOString(), period, school: person.schoolName ?? null, className: person.groupName,
+      subjects: subjectsFromMarks(parsed.marks, items),
+      // В снимке — две недели назад и три вперёд (с сегодняшним днём): этого хватает для расписания и домашки.
+      days: parsed.days.filter((d) => d.date >= from || d.date === today),
+      absences: { total: parsed.absences.length, items: parsed.absences.sort((a, b) => b.date.localeCompare(a.date)).slice(0, 60) },
+    };
+    return {
+      status: "ok", items, scale, marks: parsed.marks.length, period, grade, className: person.groupName, diary,
+      person: { firstName: str(u.firstName ?? u.first_name) || null, lastName: str(u.lastName ?? u.last_name) || null, region: null, school: person.schoolName ?? null, className: person.groupName, grade },
+    };
   } catch (e) {
     console.error("[emaktab]", (e as Error).message.slice(0, 120));
     return { status: "error", message: "eMaktab сейчас не отвечает. Попробуй позже или загрузи фото табеля." };

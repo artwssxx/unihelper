@@ -95,3 +95,6 @@ export const Lock = ({ size = 18, className, color }: P) => (
 export const Flame = ({ size = 18, className, color }: P) => (
   <svg {...base(size, color, className)}><path d="M12 3c1 3.5 5 5.5 5 10a5 5 0 0 1-10 0c0-2.2 1-3.6 2-4.6.2 1.6.9 2.6 2 3.1-.6-3 0-6 1-8.5z" /></svg>
 );
+export const Book = ({ size = 18, className, color }: P) => (
+  <svg {...base(size, color, className)}><path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z" /><path d="M4 21V5" /><path d="M8 7h7M8 11h5" /></svg>
+);

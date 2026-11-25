@@ -32,6 +32,8 @@ export function mergeStates(local: Stored, remote: Stored, preferLocal = false):
     portfolio: pick("portfolio"),
     role: pick("role"),
     matchSnap: pick("matchSnap"),
+    // Дневник — более свежий снимок.
+    diary: [l.diary, remote.diary].filter(Boolean).sort((a, b) => (b!.fetchedAt).localeCompare(a!.fetchedAt))[0],
     seenQuestions: [...new Set([...(remote.seenQuestions ?? []), ...(l.seenQuestions ?? [])])].slice(-3000),
     customUnis: byKey(remote.customUnis, l.customUnis, (x) => x.id),
     demo: undefined,

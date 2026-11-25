@@ -3,15 +3,16 @@
 import { useState } from "react";
 import { Close } from "@/components/icons";
 import { apiFetch } from "@/lib/auth";
+import type { Diary, DiaryPerson } from "@/lib/diary";
 import { parseGradesText, type GradeItem, type GradeScale, type GradeSource } from "@/lib/grades";
 import { readFile } from "@/lib/readFile";
 
-export type ImportResult = { items: GradeItem[]; scale: GradeScale; source: GradeSource; period?: string; grade?: number | null; note?: string };
+export type ImportResult = { items: GradeItem[]; scale: GradeScale; source: GradeSource; period?: string; grade?: number | null; note?: string; diary?: Diary; person?: DiaryPerson };
 type Mode = "emaktab" | "emis" | "file" | "text";
 
 const TABS: [Mode, string][] = [["emaktab", "eMaktab"], ["emis", "EMIS (лицеи)"], ["file", "Фото или PDF"], ["text", "Вставить таблицу"]];
 
-/** Импорт оценок: вход в eMaktab, скриншот EMIS, фото/PDF табеля или вставленный текст. */
+/** Импорт оценок: вход в eMaktab (школы) или EMIS (лицеи), фото/PDF табеля или вставленный текст. */
 export default function GradesImport({ initial = "emaktab", onResult, onClose }: { initial?: Mode; onResult: (r: ImportResult) => void; onClose: () => void }) {
   const [mode, setMode] = useState<Mode>(initial);
   return (
@@ -30,17 +31,18 @@ export default function GradesImport({ initial = "emaktab", onResult, onClose }:
           ))}
         </div>
         <div className="mt-4">
-          {mode === "emaktab" && <Emaktab onResult={onResult} />}
+          {mode === "emaktab" && <SystemLogin system="emaktab" onResult={onResult} />}
           {mode === "emis" && (
             <div className="space-y-4">
-              <ol className="list-decimal space-y-1 pl-5 text-sm text-body">
-                <li>Войди в EMIS своего лицея (emis.edu.uz).</li>
-                <li>Открой раздел с оценками («Baholar» или «Jurnal»).</li>
-                <li>Сделай скриншот страницы или выдели таблицу и скопируй её.</li>
-              </ol>
-              <p className="rounded-2xl bg-primary-soft px-4 py-3 text-sm text-primary-ink">Прямого входа в EMIS пока нет: системе нужен доступ, который выдаёт лицей. Скриншот или скопированная таблица работают уже сейчас.</p>
-              <FileImport source="emis" onResult={onResult} />
-              <TextImport source="emis" onResult={onResult} />
+              <SystemLogin system="emis" onResult={onResult} />
+              <details className="rounded-2xl border border-line px-4 py-3">
+                <summary className="cursor-pointer text-sm font-semibold">Нет пароля от EMIS? Загрузи скриншот или таблицу</summary>
+                <div className="mt-3 space-y-4">
+                  <p className="text-sm text-body">Открой в EMIS раздел с оценками и сделай скриншот или скопируй таблицу.</p>
+                  <FileImport source="emis" onResult={onResult} />
+                  <TextImport source="emis" onResult={onResult} />
+                </div>
+              </details>
             </div>
           )}
           {mode === "file" && (
@@ -57,7 +59,14 @@ export default function GradesImport({ initial = "emaktab", onResult, onClose }:
   );
 }
 
-function Emaktab({ onResult }: { onResult: (r: ImportResult) => void }) {
+const SYS = {
+  emaktab: { name: "eMaktab", login: "Логин eMaktab", placeholder: "логин ученика", note: "Войди аккаунтом ученика, не родителя. Пароль нужен один раз — чтобы зайти в eMaktab и забрать отметки за учебный год. Мы его не сохраняем." },
+  emis: { name: "EMIS", login: "Логин EMIS", placeholder: "логин лицеиста (как в кабинете студента)", note: "Логин и пароль — те же, что в кабинете студента EMIS (emis.edu.uz). Пароль нужен один раз — чтобы забрать оценки за семестры, углублённые предметы отметятся сами. Мы его не сохраняем." },
+} as const;
+
+/** Вход в eMaktab или EMIS по логину ученика: пароль уходит на сервер один раз и не сохраняется. */
+export function SystemLogin({ system, onResult }: { system: "emaktab" | "emis"; onResult: (r: ImportResult) => void }) {
+  const t = SYS[system];
   const [login, setLogin] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
@@ -71,14 +80,14 @@ function Emaktab({ onResult }: { onResult: (r: ImportResult) => void }) {
     const r = await apiFetch("/api/grades/import", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ source: "emaktab", login, password, ...(captcha && answer ? { captcha: { answer, state: captcha.state } } : {}) }),
+      body: JSON.stringify({ source: system, login, password, ...(captcha && answer ? { captcha: { answer, state: captcha.state } } : {}) }),
     }).catch(() => null);
     const j = r ? await r.json().catch(() => null) : null;
     setBusy(false);
     if (!j) return setErr("Нет связи с сервером. Проверь интернет и попробуй ещё раз.");
     if (j.status === "ok") {
       setPassword("");
-      return onResult({ items: j.items, scale: j.scale, source: "emaktab", period: j.period, grade: j.grade, note: `Из eMaktab: ${j.marks} отметок за ${j.period}.` });
+      return onResult({ items: j.items, scale: j.scale, source: system, period: j.period, grade: j.grade, diary: j.diary, person: j.person, note: system === "emaktab" ? `Из eMaktab: ${j.marks} отметок за ${j.period}.` : `Из EMIS: ${j.items.length} предметов (${j.period}).` });
     }
     if (j.status === "captcha") {
       setCaptcha({ image: j.image, state: j.state, message: j.message });
@@ -92,8 +101,8 @@ function Emaktab({ onResult }: { onResult: (r: ImportResult) => void }) {
   const ready = login.trim().length >= 2 && password.length > 0 && (!captcha || answer.trim().length > 0);
   return (
     <form className="space-y-3" onSubmit={(e) => { e.preventDefault(); if (ready && !busy) go(); }}>
-      <label className="block text-sm font-semibold">Логин eMaktab
-        <input className="input mt-1.5" autoComplete="off" autoCapitalize="none" spellCheck={false} value={login} onChange={(e) => setLogin(e.target.value)} placeholder="логин ученика" />
+      <label className="block text-sm font-semibold">{t.login}
+        <input className="input mt-1.5" autoComplete="off" autoCapitalize="none" spellCheck={false} value={login} onChange={(e) => setLogin(e.target.value)} placeholder={t.placeholder} />
       </label>
       <label className="block text-sm font-semibold">Пароль
         <input className="input mt-1.5" type="password" autoComplete="off" value={password} onChange={(e) => setPassword(e.target.value)} />
@@ -110,9 +119,9 @@ function Emaktab({ onResult }: { onResult: (r: ImportResult) => void }) {
           <input className="input" inputMode="text" autoComplete="off" value={answer} onChange={(e) => setAnswer(e.target.value)} placeholder="Код с картинки" aria-label="Код с картинки" />
         </div>
       )}
-      <p className="text-xs text-muted">Войди аккаунтом ученика, не родителя. Пароль нужен один раз — чтобы зайти в eMaktab и забрать отметки за учебный год. Мы его не сохраняем.</p>
+      <p className="text-xs text-muted">{t.note}</p>
       {err && <p className="text-sm font-semibold text-red">{err}</p>}
-      <button className="btn-primary w-full sm:w-auto" disabled={!ready || busy}>{busy ? "Загружаем отметки… (до минуты)" : captcha ? "Войти с кодом" : "Войти и загрузить оценки"}</button>
+      <button className="btn-primary w-full sm:w-auto" disabled={!ready || busy}>{busy ? (system === "emaktab" ? "Загружаем отметки… (до минуты)" : "Загружаем оценки…") : captcha ? "Войти с кодом" : "Войти и загрузить оценки"}</button>
     </form>
   );
 }

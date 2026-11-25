@@ -14,6 +14,7 @@ import * as I from "./icons";
 
 const MAIN = [
   { href: "/dashboard", label: "Главная", icon: I.Home },
+  { href: "/diary", label: "Дневник", icon: I.Book },
   { href: "/programs", label: "Подбор вузов", icon: I.ListIcon },
   { href: "/roadmap", label: "Дорожная карта", icon: I.MapIcon },
   { href: "/mocks", label: "Моки SAT / IELTS", icon: I.Timer },
@@ -140,6 +141,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
 const TABS = [
   { href: "/dashboard", label: "Главная", icon: I.Home },
+  { href: "/diary", label: "Дневник", icon: I.Book },
   { href: "/programs", label: "Вузы", icon: I.ListIcon },
   { href: "/mocks", label: "Моки", icon: I.Timer },
   { href: "/roadmap", label: "План", icon: I.MapIcon },

@@ -5,7 +5,7 @@ import type { SubjectKey } from "./grades";
 // Порядок важен: более узкие названия раньше общих («ingliz tili» раньше «tili»).
 export const ALIASES: [SubjectKey, string[]][] = [
   ["military", ["чақирувгача", "chaqiruvga", "chaqiruvgacha", "чбт", "chbt", "допризыв", "нвп"]],
-  ["informatics", ["информатик", "информацион", "informatika", "axborot texnolog", "ахборот технолог", "computer science", "informatics", "programming", "программирован", "ict"]],
+  ["informatics", ["информатик", "информацион", "informatika", "axborot texnolog", "ахборот технолог", "computer science", "informatics", "programming", "программирован", "ict", "dasturchi", "dasturlash", "robotlashtirish", "robototexnika", "робототехн", "raqamli texnik", "raqamli texnolog", "цифровые технолог", "avtomatika", "автоматик"]],
   ["math", ["математ", "matemat", "алгебр", "algebra", "геометр", "geometr", "mathematics", "math", "calculus"]],
   ["physics", ["физик", "fizika", "physics", "астроном", "astronom"]],
   ["chemistry", ["хими", "кимё", "kimyo", "chemistry"]],

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo } from "react";
 import CatMascot from "@/components/advisor/CatMascot";
+import GpaCard from "@/components/diary/GpaCard";
 import FitPills from "@/components/FitPills";
 import MockTrend from "@/components/MockTrend";
 import NeedProfile from "@/components/NeedProfile";
@@ -80,6 +81,7 @@ export default function Dashboard() {
             <Link href={top?.link ?? "/mocks"} className="btn-primary">{top?.link === "/mocks" ? "Начать мок" : "Сделать шаг"}</Link>
             <Link href="/roadmap" className="btn-secondary">Открыть карту</Link>
           </div>
+          <GpaCard className="mt-5 max-w-[520px]" />
         </div>
         <StrengthCard s={data.strength} prev={prevStrength} className="flex-[1.4_1_460px]" />
       </section>

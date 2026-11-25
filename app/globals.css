@@ -373,3 +373,22 @@ html[data-lang]:not([data-tr]) body {
 @media (prefers-reduced-motion: reduce) {
   .cat *, .cat, .msg-in, .typing-dot, .tip-in { animation: none !important; }
 }
+
+/* Фирменные цвета школьных систем — кнопки «Войти через eMaktab / EMIS» (components/diary/SchoolConnect.tsx) */
+:root {
+  --brand-emaktab: #1f6fe0;
+  --brand-emaktab-2: #23a455;
+  --brand-emis: #8b0029;
+  --brand-emis-gold: #c9a25a;
+}
+.btn-emaktab { background: linear-gradient(135deg, var(--brand-emaktab), #1a5cc0); color: #fff; }
+.btn-emis { background: var(--brand-emis); color: #fff; box-shadow: inset 0 0 0 2px var(--brand-emis-gold); }
+.btn-emaktab, .btn-emis { transition: transform 0.15s ease, filter 0.15s ease; }
+.btn-emaktab:hover, .btn-emis:hover { filter: brightness(1.08); transform: translateY(-1px); }
+.mark-emaktab { background: #fff; color: var(--brand-emaktab); }
+.mark-emaktab i { background: var(--brand-emaktab-2); }
+.mark-emis { background: #fff; color: var(--brand-emis); box-shadow: 0 0 0 2px var(--brand-emis-gold); }
+.gpa-great { background: var(--color-green-soft); color: var(--color-green); }
+.gpa-good { background: var(--color-primary-soft); color: var(--color-primary-ink); }
+.gpa-ok { background: var(--color-orange-soft); color: var(--color-orange-ink-2); }
+.gpa-weak, .gpa-bad { background: var(--color-red-soft); color: var(--color-red); }

@@ -9,6 +9,10 @@ import { useEffect, useState } from "react";
 import { load, save } from "@/lib/clientStore";
 import { contactSchema, profileSchema } from "@/lib/profileSchema";
 import CountryPicker from "@/components/CountryPicker";
+import SchoolConnect from "@/components/diary/SchoolConnect";
+import type { ImportResult } from "@/components/grades/GradesImport";
+import { SOURCE_NAME } from "@/lib/diary";
+import { gradesFrom } from "@/lib/schoolImport";
 import { isCountry } from "@/lib/countries";
 import type { AchievementLevel, Profile } from "@/lib/types";
 
@@ -52,6 +56,8 @@ export default function Quiz() {
   const [consent, setConsent] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [fillName, setFillName] = useState(true);
+  const [filled, setFilled] = useState<string | null>(null);
 
   useEffect(() => {
     const s = load();
@@ -78,6 +84,27 @@ export default function Quiz() {
     setStep(n);
     save({ step: n });
     window.scrollTo({ top: 0 });
+  };
+
+  // Автозаполнение из eMaktab/EMIS: класс, город, GPA и оценки, по желанию — имя. Дневник сохраняется в браузере
+  // и после регистрации переносится в аккаунт.
+  const fillFrom = (r: ImportResult) => {
+    const grades = r.items.length ? gradesFrom(r) : undefined;
+    const avg = r.items.length ? r.items.reduce((a, b) => a + b.grade, 0) / r.items.length : null;
+    const gpa = avg == null ? null : r.scale === 100 ? Math.round(avg) : Math.round((r.scale === 10 ? avg / 2 : avg) * 100) / 100;
+    const grade = r.person?.grade ?? r.grade ?? null;
+    set({
+      ...(grade && grade >= 8 && grade <= 13 ? { grade } : {}),
+      ...(!p.city.trim() && r.person?.region ? { city: r.person.region } : {}),
+      ...(gpa != null ? { gpa, gpaScale: r.scale === 100 ? 100 : 5, grades } : {}),
+    });
+    const name = [r.person?.firstName, r.person?.lastName].filter(Boolean).join(" ");
+    if (fillName && name) {
+      setContact((c) => ({ ...c, fullName: name }));
+      save({ contact: { fullName: name, phone: contact.phone, email: contact.email } });
+    }
+    if (r.diary) save({ diary: r.diary });
+    setFilled(`Заполнено из ${SOURCE_NAME[r.source as "emis" | "emaktab"] ?? r.source}: ${[grade ? "класс" : null, r.person?.region && !p.city.trim() ? "город" : null, gpa != null ? `GPA ${gpa} и ${r.items.length} предметов` : null, fillName && name ? "имя" : null].filter(Boolean).join(", ")}. Проверь ответы и продолжай.`);
   };
 
   const stepValid = (): boolean => {
@@ -137,7 +164,7 @@ export default function Quiz() {
     <div className="space-y-6 pt-2">
       <div className="space-y-2">
         <div className="flex justify-between text-sm text-muted">
-          <span>Шаг {step + 1} из {STEPS}</span>
+          <span>{`Шаг ${step + 1} из ${STEPS}`}</span>
           <span>{Math.round(((step + 1) / STEPS) * 100)}%</span>
         </div>
         <div className="h-2 overflow-hidden rounded-full bg-line">
@@ -146,6 +173,21 @@ export default function Quiz() {
       </div>
 
       <div className="card space-y-5">
+        {step === 0 && (
+          <div className="space-y-3 rounded-2xl bg-line-3 p-4">
+            <div>
+              <b className="block">Заполни быстрее через электронный дневник</b>
+              <p className="mt-0.5 text-sm text-body">Подставим класс, город, средний балл и оценки по предметам. Пароль не сохраняется.</p>
+            </div>
+            <SchoolConnect onDone={fillFrom}>
+              <label className="mt-3 flex items-center gap-2 text-sm font-semibold">
+                <input type="checkbox" className="h-5 w-5" checked={fillName} onChange={(e) => setFillName(e.target.checked)} />
+                Заполнить имя и фамилию из дневника
+              </label>
+            </SchoolConnect>
+            {filled && <p className="rounded-xl bg-green-soft px-3 py-2 text-sm font-semibold text-green" role="status">{filled}</p>}
+          </div>
+        )}
         {step === 0 && (
           <Q title="В каком ты классе и откуда?">
             <div className="grid grid-cols-3 gap-2">

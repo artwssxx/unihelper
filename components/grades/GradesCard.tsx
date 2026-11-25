@@ -12,7 +12,7 @@ import { useProfile } from "@/lib/useProfile";
 const SOURCE: Record<Grades["source"], string> = { emaktab: "из eMaktab", emis: "из EMIS", photo: "по фото", text: "из таблицы", manual: "вручную" };
 const BASIC: (keyof typeof SUBJECT_RU)[] = ["math", "physics", "chemistry", "biology", "informatics", "english", "native", "literature", "history", "geography"];
 
-type Draft = { items: (Omit<GradeItem, "grade"> & { grade: number | null })[]; scale: GradeScale; source: Grades["source"]; period?: string; grade?: number | null; note?: string };
+type Draft = { items: (Omit<GradeItem, "grade"> & { grade: number | null })[]; scale: GradeScale; source: Grades["source"]; period?: string; grade?: number | null; note?: string; diary?: import("@/lib/diary").Diary };
 
 /** Оценки по предметам в профиле: сводка, импорт (eMaktab, EMIS, фото, таблица), ручная правка. */
 export default function GradesCard() {
@@ -30,7 +30,7 @@ export default function GradesCard() {
     setImporting(false);
     // Отметки «спецпредмет», поставленные раньше, переносим на те же предметы.
     const was = new Map((g?.items ?? []).map((i) => [i.subject.toLowerCase(), i.special]));
-    setDraft({ items: r.items.map((i) => ({ ...i, special: i.special ?? was.get(i.subject.toLowerCase()) })), scale: r.scale, source: r.source, period: r.period, grade: r.grade, note: r.note });
+    setDraft({ items: r.items.map((i) => ({ ...i, special: i.special ?? was.get(i.subject.toLowerCase()) })), scale: r.scale, source: r.source, period: r.period, grade: r.grade, note: r.note, diary: r.diary });
     setUpdGrade(true);
   };
   const manual = () =>
@@ -43,7 +43,11 @@ export default function GradesCard() {
       .map((i) => ({ ...i, subject: i.subject.trim(), key: subjectKey(i.subject), grade: Math.round((i.grade as number) * 100) / 100, ...(i.special ? { special: true } : { special: undefined }) }));
     const next: Grades = { items, scale: draft.scale, source: draft.source, updatedAt: new Date().toISOString(), ...(draft.period ? { period: draft.period } : {}), useForGpa: g?.useForGpa ?? true };
     const newGrade = updGrade && draft.grade && draft.grade !== profile!.grade ? draft.grade : null;
-    update((st) => ({ profile: st.profile ? { ...st.profile, grades: items.length ? next : undefined, ...(newGrade ? { grade: newGrade } : {}) } : st.profile }));
+    update((st) => ({
+      profile: st.profile ? { ...st.profile, grades: items.length ? next : undefined, ...(newGrade ? { grade: newGrade } : {}) } : st.profile,
+      // Вошёл через eMaktab/EMIS — заодно обновляется дневник (расписание, домашка, пропуски).
+      ...(draft.diary ? { diary: draft.diary } : {}),
+    }));
     setDraft(null);
   }
   const remove = () => {
