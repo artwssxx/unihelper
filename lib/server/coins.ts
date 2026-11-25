@@ -2,7 +2,8 @@ import "server-only";
 import { createHash } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
-import { REPEAT, SHOP, SOCIALS, TASKS, type CoinState, type ShopItemId, type TaskId } from "@/lib/coins";
+import { ACHIEVEMENTS, DAILY_BONUS, QUESTS, REPEAT, SHOP, SOCIALS, TASKS, levelOf, type CoinState, type ShopItemId, type TaskId } from "@/lib/coins";
+import { metricsOf, planAwards, type Baselines, type StudentData } from "@/lib/coinProgress";
 import { getUser, type AuthUser } from "./auth";
 import { PLAN_COOKIE, savePlanForUser, signPlan } from "./plan";
 import { supabaseAdmin } from "./supabase";
@@ -111,31 +112,73 @@ export function visibleTasks() {
   });
 }
 
-export async function coinState(db: SupabaseClient, userId: string): Promise<CoinState> {
-  const [{ data: st }, { data: ledger }, { data: unlocks }, balance] = await Promise.all([
-    db.from("user_state").select("data,telegram_id,streak_days,streak_last,ref_code").eq("user_id", userId).maybeSingle(),
-    db.from("coin_ledger").select("delta,reason,ref,created_at").eq("user_id", userId).order("created_at", { ascending: false }).limit(200),
-    db.from("coin_unlocks").select("kind,ref,remaining").eq("user_id", userId).gt("remaining", 0),
-    balanceOf(db, userId),
+type LedgerRow = { delta: number; reason: string; ref: string; created_at: string };
+
+/** Монеты за прогресс и достижения: считаем по данным ученика на сервере и начисляем новое (идемпотентно). */
+async function syncProgress(db: SupabaseClient, userId: string, st: { data?: unknown; streak_days?: number | null; coin_progress?: unknown } | null, ledger: LedgerRow[]) {
+  const today = tashkentToday();
+  const isToday = (r: LedgerRow) => new Date(new Date(r.created_at).getTime() + 5 * 3600_000).toISOString().slice(0, 10) === today;
+  const data = (st?.data ?? {}) as StudentData;
+  const metrics = metricsOf(data, st?.streak_days ?? 0, ledger.filter((r) => r.reason === "invite").length);
+  const base = (st?.coin_progress ?? {}) as Baselines;
+  const plan = planAwards({
+    data,
+    metrics,
+    base,
+    given: new Set(ledger.map((r) => `${r.reason}:${r.ref}`)),
+    todayReasons: new Set(ledger.filter(isToday).map((r) => r.reason)),
+    stepsToday: ledger.filter((r) => r.reason === "step" && isToday(r)).length,
+    xp: ledger.reduce((s, r) => s + Math.max(0, r.delta), 0),
+    today,
+  });
+  // Начисления независимы (каждое идемпотентно по reason+ref) — отправляем параллельно.
+  const [given] = await Promise.all([
+    Promise.all(plan.awards.map((a) => award(db, userId, a.amount, a.reason, a.ref))),
+    JSON.stringify(plan.base) !== JSON.stringify(base) ? db.from("user_state").update({ coin_progress: plan.base }).eq("user_id", userId) : null,
   ]);
-  const claimed = new Set((ledger ?? []).filter((r) => r.reason === "task").map((r) => r.ref));
-  const done = await taskDone(db, userId, st, claimed);
+  const now = new Date().toISOString();
+  const fresh: LedgerRow[] = plan.awards.filter((_, i) => given[i]).map((a) => ({ delta: a.amount, reason: a.reason, ref: a.ref, created_at: now }));
+  return { fresh, metrics };
+}
+
+export async function coinState(db: SupabaseClient, userId: string): Promise<CoinState> {
+  const [{ data: st }, { data: rows }, { data: unlocks }] = await Promise.all([
+    db.from("user_state").select("data,telegram_id,streak_days,streak_last,ref_code,coin_progress").eq("user_id", userId).maybeSingle(),
+    db.from("coin_ledger").select("delta,reason,ref,created_at").eq("user_id", userId).order("created_at", { ascending: false }).limit(5000),
+    db.from("coin_unlocks").select("kind,ref,remaining").eq("user_id", userId).gt("remaining", 0),
+  ]);
+  const claimed = new Set((rows ?? []).filter((r) => r.reason === "task").map((r) => r.ref));
+  const [{ fresh, metrics }, done, refCode] = await Promise.all([
+    syncProgress(db, userId, st, rows ?? []),
+    taskDone(db, userId, st, claimed),
+    ensureRefCode(db, userId, st?.ref_code ?? null),
+  ]);
+  const ledger = [...fresh, ...(rows ?? [])];
+  const balance = ledger.reduce((s, r) => s + r.delta, 0);
+  const xp = ledger.reduce((s, r) => s + Math.max(0, r.delta), 0);
+  const today = tashkentToday();
+  const todayReasons = new Set(ledger.filter((r) => new Date(new Date(r.created_at).getTime() + 5 * 3600_000).toISOString().slice(0, 10) === today).map((r) => r.reason));
+  const gotAch = new Set(ledger.filter((r) => r.reason === "ach").map((r) => r.ref));
   const credits: CoinState["unlocks"]["credits"] = {};
   for (const u of unlocks ?? []) credits[u.kind as ShopItemId] = (credits[u.kind as ShopItemId] ?? 0) + u.remaining;
-  const refCode = await ensureRefCode(db, userId, st?.ref_code ?? null);
   return {
     balance,
     streak: st?.streak_last && st.streak_last >= new Date(Date.now() + 5 * 3600_000 - 86400_000).toISOString().slice(0, 10) ? st.streak_days : 0,
-    checkedInToday: st?.streak_last === tashkentToday(),
+    checkedInToday: st?.streak_last === today,
     tasks: visibleTasks().map((t) => ({ ...t, status: claimed.has(t.id) ? "claimed" : t.kind === "auto" && t.id !== "telegram_channel" && done[t.id] ? "ready" : "todo" })),
     refCode,
-    invited: (ledger ?? []).filter((r) => r.reason === "invite").length,
-    history: (ledger ?? []).slice(0, 30).map((r) => ({ delta: r.delta, reason: r.reason === "task" ? `task:${r.ref}` : r.reason === "spend" ? `spend:${r.ref.split(":")[0]}` : r.reason, at: r.created_at })),
+    invited: ledger.filter((r) => r.reason === "invite").length,
+    history: ledger.slice(0, 30).map((r) => ({ delta: r.delta, reason: r.reason === "task" ? `task:${r.ref}` : r.reason === "spend" ? `spend:${r.ref.split(":")[0]}` : r.reason, at: r.created_at })),
     unlocks: {
       fitReasons: (unlocks ?? []).filter((u) => u.kind === "fit_reasons").map((u) => u.ref),
       portfolioPro: (unlocks ?? []).some((u) => u.kind === "portfolio_pro"),
       credits,
     },
+    level: levelOf(xp),
+    achievements: ACHIEVEMENTS.map((a) => ({ ...a, value: metrics[a.metric] ?? 0, done: gotAch.has(a.id) })),
+    quests: QUESTS.map((q) => ({ id: q.id, title: q.title, done: todayReasons.has(q.id) })),
+    dailyBonus: { reward: DAILY_BONUS, done: ledger.some((r) => r.reason === "daily" && r.ref === today) },
+    fresh: fresh.map((r) => ({ delta: r.delta, reason: r.reason })),
   };
 }
 

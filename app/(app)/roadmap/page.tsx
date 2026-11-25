@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { refreshCoins } from "@/lib/useCoins";
 import { useMemo, useState } from "react";
 import NeedProfile from "@/components/NeedProfile";
 import { update } from "@/lib/clientStore";
@@ -35,7 +36,12 @@ export default function RoadmapPage() {
 
   const months = [...new Set(items.map((i) => i.due))];
   const status = (i: RoadmapItem) => effectiveStatus(i, store?.roadmap?.[i.id]);
-  const toggle = (i: RoadmapItem) => update((s) => ({ roadmap: { ...(s.roadmap ?? {}), [i.id]: NEXT[status(i)] } }));
+  const toggle = (i: RoadmapItem) => {
+    const next = NEXT[status(i)];
+    update((s) => ({ roadmap: { ...(s.roadmap ?? {}), [i.id]: next } }));
+    // Шаг выполнен — монеты начислит сервер, когда состояние уйдёт в аккаунт (~2 с).
+    if (next === "done") setTimeout(() => refreshCoins(), 3500);
+  };
   const doneCount = items.filter((i) => status(i) === "done").length;
 
   function addStep() {

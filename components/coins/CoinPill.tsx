@@ -4,9 +4,11 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import * as I from "@/components/icons";
 import { apiFetch } from "@/lib/auth";
+import { REASON_RU } from "@/lib/coins";
 import { refreshCoins, useCoins } from "@/lib/useCoins";
 
-// Баланс UniCoins в шапке + ежедневный заход (один раз в день: награда и серия).
+// Баланс UniCoins в шапке + ежедневный заход (один раз в день: награда и серия)
+// + поздравление, когда сервер начислил монеты за прогресс, достижение или новый уровень.
 export default function CoinPill() {
   const { enabled, state } = useCoins();
   const [toast, setToast] = useState<string | null>(null);
@@ -29,6 +31,17 @@ export default function CoinPill() {
       .catch(() => {});
   }, [enabled]);
 
+  // Свежие начисления (уровень, достижение, рекорд…) — показываем одним всплывающим «+N».
+  const fresh = state?.fresh;
+  useEffect(() => {
+    if (!fresh?.length) return;
+    const total = fresh.reduce((sum, f) => sum + f.delta, 0);
+    const why = [...new Set(fresh.map((f) => REASON_RU[f.reason] ?? f.reason))].slice(0, 2).join(", ");
+    setToast(`+${total} UniCoins · ${why}`);
+    const t = setTimeout(() => setToast(null), 6000);
+    return () => clearTimeout(t);
+  }, [fresh]);
+
   if (!enabled) return null;
   return (
     <>
@@ -47,7 +60,7 @@ export default function CoinPill() {
         )}
       </Link>
       {toast && (
-        <div role="status" className="fixed right-4 top-4 z-[80] flex items-center gap-2 rounded-2xl border border-line bg-surface-solid px-4 py-3 text-sm font-bold shadow-2xl">
+        <div role="status" className="coin-pop fixed right-4 top-4 z-[80] flex max-w-[calc(100vw-2rem)] items-center gap-2 rounded-2xl border border-line bg-surface-solid px-4 py-3 text-sm font-bold shadow-2xl">
           <I.Coin size={18} className="text-orange" />
           {toast}
         </div>

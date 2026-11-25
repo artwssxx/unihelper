@@ -6,7 +6,7 @@ import ts from "typescript";
 
 const ROOT = new URL("..", import.meta.url).pathname;
 // Админка, тесты, серверные промпты ИИ, бот (пишет в Telegram) и лендинг (свои словари) — не в словарь сайта.
-const SKIP = [/\/\(admin\)\//, /components\/admin\//, /\.test\.tsx?$/, /lib\/server\//, /app\/api\/admin\//, /\/node_modules\//, /lib\/telegram\//, /lib\/i18n\/(landing|translate|dom|lang)\.ts$/, /components\/landing\//];
+const SKIP = [/\/\(admin\)\//, /components\/admin\//, /\.test\.tsx?$/, /lib\/server\//, /app\/api\/admin\//, /\/node_modules\//, /lib\/telegram\//, /lib\/i18n\/(landing|translate|dom|lang)\.ts$/, /components\/landing\//, /lib\/uniProfileSchema\.ts$/];
 const CYR = /[А-Яа-яЁё]/;
 
 function walk(dir, out = []) {

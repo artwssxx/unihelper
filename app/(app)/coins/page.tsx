@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import * as I from "@/components/icons";
+import { Achievements, LevelCard, ProgressRewards, Quests } from "@/components/coins/GameBlocks";
 import { apiFetch, useAuth } from "@/lib/auth";
 import { REASON_RU, REPEAT, SHOP, SOCIALS, TASKS, type ShopItem, type TaskId } from "@/lib/coins";
 import { useStore } from "@/lib/clientStore";
@@ -27,7 +28,15 @@ export default function CoinsPage() {
 
   if (!ready) return null;
   if (!user || store?.demo?.active) return <Intro demo={Boolean(store?.demo?.active)} />;
-  if (!enabled || !state) return <p className="text-muted">Загружаем кошелёк…</p>;
+  if (!enabled || !state) {
+    return (
+      <div className="space-y-5" role="status" aria-label="Загружаем кошелёк">
+        <div className="h-[190px] animate-pulse rounded-[26px] bg-line-3" />
+        <div className="grid gap-5 lg:grid-cols-2"><div className="h-28 animate-pulse rounded-[24px] bg-line-3" /><div className="h-28 animate-pulse rounded-[24px] bg-line-3" /></div>
+        <div className="h-40 animate-pulse rounded-[24px] bg-line-3" />
+      </div>
+    );
+  }
 
   const nextMilestone = MILESTONES.find((m) => m > state.streak);
   const link = `${SITE_URL}/r/${state.refCode}`;
@@ -77,6 +86,13 @@ export default function CoinsPage() {
       </section>
 
       {msg && <p className={`rounded-2xl px-5 py-3 text-sm font-semibold ${msg.ok ? "bg-green-soft text-green" : "bg-orange-soft text-orange-ink-2"}`}>{msg.text}</p>}
+
+      <div className="grid gap-5 lg:grid-cols-2">
+        <LevelCard s={state} />
+        <Quests s={state} />
+      </div>
+      <Achievements s={state} />
+      <ProgressRewards />
 
       <section className="card space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
