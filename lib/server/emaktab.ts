@@ -1,5 +1,5 @@
 import "server-only";
-import { createCipheriv, createDecipheriv, createHash, randomBytes } from "node:crypto";
+import { createCipheriv, createDecipheriv, createHash, randomBytes, randomUUID } from "node:crypto";
 import { aggregateMarks, gradeFromGroup, type GradeItem, type GradeScale } from "@/lib/grades";
 
 // Импорт оценок из eMaktab (электронный дневник школ Узбекистана) по логину и паролю ученика.
@@ -11,6 +11,7 @@ import { aggregateMarks, gradeFromGroup, type GradeItem, type GradeScale } from 
 // Пароль используется один раз и НИГДЕ не сохраняется и не пишется в логи. Имя ученика не возвращаем.
 
 const LOGIN = "https://login.emaktab.uz/";
+const LOGIN_URL = "https://login.emaktab.uz/login";
 const WEB = "https://emaktab.uz";
 const UA = "Mozilla/5.0 (Linux; Android 13; SM-A546E) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Mobile Safari/537.36";
 
@@ -55,66 +56,27 @@ async function go(url: string, jar: Jar, init: { method?: string; body?: string;
   throw new Error("too_many_redirects");
 }
 
-const attr = (tag: string, name: string) => {
-  const m = tag.match(new RegExp(`\\b${name}\\s*=\\s*("([^"]*)"|'([^']*)'|([^\\s>]+))`, "i"));
-  return m ? (m[2] ?? m[3] ?? m[4] ?? "") : null;
-};
-const decode = (s: string) => s.replace(/&amp;/g, "&").replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&lt;/g, "<").replace(/&gt;/g, ">");
 
-interface LoginForm { action: string; hidden: Record<string, string>; captchaUrl: string | null; captcha: boolean }
-
-/** Форма с полем пароля: адрес отправки, скрытые поля, капча. */
 const PASSWORD_INPUT = /<input\b[^>]*(type\s*=\s*["']?password|name\s*=\s*["']?password["'\s>])/i;
 
-/** Фрагменты разметки вокруг «captcha» — для диагностики, если картинку найти не удалось (публичная страница входа). */
-function captchaSnippets(html: string): string {
-  const out: string[] = [];
-  const re = /captcha|smartcaptcha|recaptcha|turnstile|hcaptcha/gi;
-  let m: RegExpExecArray | null;
-  while ((m = re.exec(html)) && out.length < 4) {
-    out.push(html.slice(Math.max(0, m.index - 60), m.index + 90).replace(/\s+/g, " "));
-    re.lastIndex = m.index + 200;
-  }
-  return out.join(" ‖ ").slice(0, 700);
-}
-let lastCaptchaHtml = "";
-
-export function parseLoginForm(html: string, base: string): LoginForm | null {
-  const forms = html.match(/<form\b[\s\S]*?<\/form>/gi) ?? [];
-  // Поле пароля может стоять вне <form>…</form> (разметка собирается частями) — тогда берём всю страницу
-  // и первую форму как адрес отправки (так же делают открытые клиенты eMaktab).
-  const form = forms.find((f) => PASSWORD_INPUT.test(f)) ?? (PASSWORD_INPUT.test(html) ? html : null);
-  if (!form) return null;
-  const open = form.match(/<form\b[^>]*>/i)?.[0] ?? html.match(/<form\b[^>]*>/i)?.[0] ?? "<form>";
-  const hidden: Record<string, string> = {};
-  for (const t of form.match(/<input\b[^>]*>/gi) ?? []) {
-    if ((attr(t, "type") ?? "").toLowerCase() !== "hidden") continue;
-    const name = attr(t, "name");
-    if (name) hidden[name] = decode(attr(t, "value") ?? "");
-  }
-  const img = html.match(/(?:https?:\/\/[^"'\s>]+)?\/captcha\/[^"'\s>]+/i)?.[0] ?? null;
-  // Блок капчи на странице есть всегда, но скрыт классом …_hidden, пока eMaktab её не требует.
-  lastCaptchaHtml = html;
-  const captcha = (html.match(/<div\b[^>]*class\s*=\s*["'][^"']*login__body__captcha[^"']*["']/gi) ?? []).some((t) => !/login__body__captcha_hidden/.test(t));
-  return { action: new URL(decode(attr(open, "action") || base), base).toString(), hidden, captchaUrl: img ? new URL(decode(img), base).toString() : null, captcha };
-}
-
 /** Состояние ошибки входа из модели страницы (JSON.parse('…')) или разметки. */
-export function loginErrors(html: string): { wrong: boolean; captcha: boolean; text: string | null } {
-  let wrong = false, captcha = false, text: string | null = null;
+export function loginErrors(html: string): { wrong: boolean; captcha: boolean; wrongCaptcha: boolean; text: string | null } {
+  let wrong = false, captcha = false, wrongCaptcha = false, text: string | null = null;
   for (const m of html.matchAll(/JSON\.parse\('([^']*)'\)/g)) {
     try {
-      const d = JSON.parse(m[1].replace(/\\x([0-9a-f]{2})/gi, (_, h) => String.fromCharCode(parseInt(h, 16))).replace(/\\'/g, "'"));
+      const d = JSON.parse(decodeJs(m[1]).replace(/\\'/g, "'"));
       if (!d || typeof d !== "object" || !("hasErrors" in d || "exceededAttempts" in d || "isWrongCaptcha" in d)) continue;
-      wrong ||= Boolean(d.hasErrors) && !d.isWrongCaptcha;
+      wrongCaptcha ||= Boolean(d.isWrongCaptcha);
       captcha ||= Boolean(d.exceededAttempts || d.isWrongCaptcha);
+      wrong ||= Boolean(d.hasErrors) && !d.isWrongCaptcha && !d.exceededAttempts;
       text ||= typeof d.firstErrorText === "string" ? d.firstErrorText : null;
     } catch { /* другой JSON */ }
   }
-  if (/exceededAttempts["']?\s*[:=]\s*true|isWrongCaptcha["']?\s*[:=]\s*true/i.test(html)) captcha = true;
+  if (/isWrongCaptcha["']?\s*[:=]\s*true/i.test(html)) wrongCaptcha = captcha = true;
+  if (/exceededAttempts["']?\s*[:=]\s*true/i.test(html)) captcha = true;
   if (!wrong && !captcha && /"hasErrors"\s*:\s*true/.test(html)) wrong = true;
   if (!wrong && !captcha && /class\s*=\s*["'][^"']*(validation-summary-errors|field-validation-error|login__body__error)[^"']*["']/i.test(html)) wrong = true;
-  return { wrong, captcha, text };
+  return { wrong, captcha, wrongCaptcha, text };
 }
 
 // ── Состояние для второго шага (капча): cookie и поля формы, зашифрованы ключом сервера на 10 минут ──
@@ -142,7 +104,7 @@ function unseal<T>(s: string): T | null {
 
 async function fetchImage(url: string, jar: Jar): Promise<{ image: string | null; note: string }> {
   try {
-    const r = await fetch(url, { headers: { "user-agent": UA, cookie: cookieHeader(jar), referer: LOGIN, accept: "image/*,*/*" }, signal: AbortSignal.timeout(10_000) });
+    const r = await fetch(url, { headers: { "user-agent": UA, cookie: cookieHeader(jar), referer: LOGIN_URL, accept: "image/*,*/*" }, signal: AbortSignal.timeout(10_000) });
     keep(jar, r);
     const type = r.headers.get("content-type") || "";
     if (!r.ok || !/image/i.test(type)) return { image: null, note: `img HTTP ${r.status} ${type.slice(0, 20)}` };
@@ -152,84 +114,75 @@ async function fetchImage(url: string, jar: Jar): Promise<{ image: string | null
   }
 }
 
-async function captchaChallenge(form: LoginForm, jar: Jar, message: string): Promise<EmaktabResult> {
-  let f = form;
-  // В ответе на вход картинки может не быть — берём свежую форму входа (у неё своя капча и Captcha.Id).
-  if (!f.captchaUrl) {
-    const page = await go(`${LOGIN}login`, jar, { headers: { referer: LOGIN } }).catch(() => null);
-    const fresh = page ? parseLoginForm(page.body, page.url) : null;
-    if (fresh) f = fresh;
-  }
-  const captchaId = f.hidden["Captcha.Id"] || f.captchaUrl?.match(/\/captcha\/[^/]+\/([^/?#]+)/)?.[1] || "";
-  const urls = [f.captchaUrl, captchaId ? `${LOGIN}captcha/true/${captchaId}` : null].filter((u): u is string => Boolean(u));
-  let image: string | null = null;
-  const notes: string[] = [`url ${f.captchaUrl ? "found" : "none"}`, `id ${captchaId ? "yes" : "no"}`];
-  for (const u of [...new Set(urls)]) {
-    const r = await fetchImage(u, jar);
-    notes.push(r.note);
-    if ((image = r.image)) break;
-  }
-  if (!image) {
-    notes.push(captchaSnippets(lastCaptchaHtml));
-    console.error("[emaktab] капча без картинки:", notes.join(", "));
-  }
-  return { status: "captcha", image, message, state: seal({ jar, action: f.action, hidden: { ...f.hidden, "Captcha.Id": captchaId } }), ...(image ? {} : { diag: notes.join(" · ") }) };
+/** Адрес картинки капчи: «imagePart» из модели страницы, иначе стандартный. Id капчи придумывает клиент (uuid). */
+export function captchaPart(html: string): string {
+  const m = decodeJs(html).match(/"imagePart"\s*:\s*"([^"]+)"/);
+  const part = m?.[1]?.replace(/\\\//g, "/") ?? `${LOGIN}captcha/true/`;
+  return /^https:\/\/[a-z0-9.-]*emaktab\.uz\//i.test(part) ? part : `${LOGIN}captcha/true/`;
 }
 
-async function submit(form: { action: string; hidden: Record<string, string> }, jar: Jar, login: string, password: string, captcha?: string): Promise<Page> {
-  const fields: Record<string, string> = {
-    exceededAttempts: "False", ReturnUrl: "", FingerprintId: "", "Captcha.Input": "", "Captcha.Id": "",
-    ...form.hidden, login, password,
-  };
-  if (captcha) fields["Captcha.Input"] = captcha.trim();
-  if (!fields.FingerprintId) fields.FingerprintId = createHash("sha256").update(`uh|${login}`).digest("hex").slice(0, 32);
-  return go(form.action, jar, {
-    method: "POST",
-    body: new URLSearchParams(fields).toString(),
-    headers: { "content-type": "application/x-www-form-urlencoded", origin: new URL(form.action).origin, referer: LOGIN },
-  });
+/** Скрытое поле exceededAttempts = True — без капчи вход не примут. */
+export function exceededInput(html: string): boolean {
+  const m = html.match(/name="exceededAttempts"[^>]*value="(\w+)"/i) ?? html.match(/value="(\w+)"[^>]*name="exceededAttempts"/i);
+  return Boolean(m) && m![1].toLowerCase() === "true";
+}
+
+const decodeJs = (s: string) => s.replace(/\\x([0-9a-f]{2})/gi, (_, h) => String.fromCharCode(parseInt(h, 16)));
+
+async function newCaptcha(part: string, jar: Jar, message: string): Promise<EmaktabResult> {
+  const id = randomUUID();
+  const r = await fetchImage(part + id, jar);
+  if (!r.image) console.error("[emaktab] капча без картинки:", r.note);
+  return { status: "captcha", image: r.image, message, state: seal({ jar, id }), ...(r.image ? {} : { diag: r.note }) };
 }
 
 const authed = (jar: Jar) => Object.keys(jar).some((k) => /^UZDnevnikAuth_/i.test(k));
+const onLogin = (url: string) => new URL(url).hostname === "login.emaktab.uz";
+const MAINTENANCE = "В eMaktab сейчас идут технические работы — сайт временно не пускает. Попробуй позже или загрузи скриншот оценок.";
 
-/** Вход: ok (cookie в jar) или ответ для ученика. */
+/**
+ * Вход как в браузере: GET формы → POST login/password (+ капча, если её требуют) → удачный вход уводит с login.emaktab.uz
+ * на emaktab.uz с cookie сессии. Ошибки — из модели страницы (hasErrors, isWrongCaptcha, exceededAttempts).
+ */
 async function signIn(login: string, password: string, captcha?: { answer: string; state: string }): Promise<{ jar: Jar } | EmaktabResult> {
   let jar: Jar = {};
-  let form: LoginForm | { action: string; hidden: Record<string, string> };
+  let captchaId: string | null = null;
   if (captcha) {
-    const st = unseal<{ jar: Jar; action: string; hidden: Record<string, string> }>(captcha.state);
+    const st = unseal<{ jar: Jar; id: string }>(captcha.state);
     if (!st) return { status: "error", message: "Код с картинки устарел. Нажми «Войти» ещё раз." };
     jar = st.jar;
-    form = { action: st.action, hidden: st.hidden };
-  } else {
-    let page = await go(LOGIN, jar, { headers: { referer: LOGIN } });
-    let f = parseLoginForm(page.body, page.url);
-    if (!f) {
-      // Главная входа может быть заставкой — форма на /login.
-      page = await go(`${LOGIN}login`, jar, { headers: { referer: LOGIN } });
-      f = parseLoginForm(page.body, page.url);
-    }
-    if (!f && (page.status === 503 || /технические работы|texnik ishlar/i.test(page.body)))
-      return { status: "error", message: "В eMaktab сейчас идут технические работы — сайт временно не пускает. Попробуй позже или загрузи скриншот оценок." };
-    if (!f) {
-      const title = page.body.match(/<title[^>]*>([^<]{0,80})/i)?.[1]?.trim() ?? "";
-      const text = page.body.replace(/<script[\s\S]*?<\/script>|<style[\s\S]*?<\/style>/gi, " ").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim().slice(0, 220);
-      console.error("[emaktab] нет формы входа", page.status, new URL(page.url).host + new URL(page.url).pathname, title);
-      return { status: "error", message: "eMaktab не показал форму входа. Возможно, сайт обновился — попробуй загрузить скриншот оценок.", diag: `HTTP ${page.status} · ${new URL(page.url).host}${new URL(page.url).pathname} · «${title}» · ${text}` };
-    }
-    if (f.captcha) return captchaChallenge(f, jar, "eMaktab просит ввести код с картинки.");
-    form = f;
+    captchaId = st.id;
   }
-  const res = await submit(form, jar, login, password, captcha?.answer);
-  const again = parseLoginForm(res.body, res.url);
-  const err = loginErrors(res.body);
-  if (authed(jar) && !err.wrong && !again) return { jar };
-  if (!authed(jar) && !again && /__2FA__|two.?factor|tasdiqla/i.test(res.body))
+  const page = await go(LOGIN_URL, jar, { headers: { referer: LOGIN } });
+  if (!onLogin(page.url) && authed(jar)) return { jar };
+  if (page.status === 503 || /технические работы|texnik ishlar/i.test(page.body)) return { status: "error", message: MAINTENANCE };
+  if (!PASSWORD_INPUT.test(page.body)) {
+    const title = page.body.match(/<title[^>]*>([^<]{0,80})/i)?.[1]?.trim() ?? "";
+    console.error("[emaktab] нет формы входа", page.status, new URL(page.url).pathname, title);
+    return { status: "error", message: "eMaktab не показал форму входа. Возможно, сайт обновился — попробуй загрузить скриншот оценок.", diag: `HTTP ${page.status} · ${new URL(page.url).pathname} · «${title}»` };
+  }
+  const part = captchaPart(page.body);
+  // Уже нужна капча — не тратим попытку впустую.
+  if (exceededInput(page.body) && !captcha) return newCaptcha(part, jar, "eMaktab просит ввести код с картинки.");
+
+  const fields: Record<string, string> = { exceededAttempts: captcha ? "True" : "False", ReturnUrl: "", FingerprintId: "", login, password };
+  if (captcha) {
+    fields["Captcha.Id"] = captchaId ?? "";
+    fields["Captcha.Input"] = captcha.answer.trim();
+  }
+  const res = await go(LOGIN_URL, jar, {
+    method: "POST",
+    body: new URLSearchParams(fields).toString(),
+    headers: { "content-type": "application/x-www-form-urlencoded", origin: "https://login.emaktab.uz", referer: LOGIN_URL },
+  });
+  if (!onLogin(res.url) || (authed(jar) && !PASSWORD_INPUT.test(res.body))) return { jar };
+  if (/__2FA__/.test(res.body) && !PASSWORD_INPUT.test(res.body))
     return { status: "confirm", message: "eMaktab просит подтвердить вход (телефон, Telegram или контрольный вопрос). Войди один раз на login.emaktab.uz, подтверди и повтори импорт." };
-  if (err.captcha || again?.captcha) return captchaChallenge(again ?? (form as LoginForm), jar, captcha ? "Код с картинки не подошёл, попробуй ещё раз." : "eMaktab просит ввести код с картинки.");
-  if (err.wrong) return { status: "invalid", message: "Неверный логин или пароль eMaktab." };
-  if (!again) return { jar };
-  return { status: "error", message: "eMaktab не принял вход. Проверь логин и пароль на login.emaktab.uz и попробуй ещё раз." };
+  const err = loginErrors(res.body);
+  const part2 = captchaPart(res.body);
+  if (err.wrongCaptcha) return newCaptcha(part2, jar, "Код с картинки не подошёл, попробуй ещё раз.");
+  if (err.captcha || exceededInput(res.body)) return newCaptcha(part2, jar, "eMaktab просит ввести код с картинки.");
+  return { status: "invalid", message: "Неверный логин или пароль eMaktab." };
 }
 
 async function api(jar: Jar, path: string, params?: Record<string, string | number>): Promise<unknown | null> {

@@ -1,28 +1,21 @@
 import { describe, expect, it } from "vitest";
-import { loginErrors, marksFromDiary, parseBigJson, parseLoginForm, personFromContext, schoolYear } from "./emaktab";
-
-const FORM = `<html><body><form action="/" method="post" class="login">
-<input type="hidden" name="exceededAttempts" value="False"><input type="hidden" name="ReturnUrl" value="">
-<input type="hidden" name="FingerprintId" value=""><input type="hidden" name="Captcha.Id" value="ab-12">
-<input type="text" name="login"><input type="password" name="password">
-<div class="login__body__captcha login__body__captcha_hidden"><img src="/captcha/true/ab-12"></div>
-</form></body></html>`;
+import { captchaPart, exceededInput, loginErrors, marksFromDiary, parseBigJson, personFromContext, schoolYear } from "./emaktab";
 
 describe("eMaktab: форма входа и ошибки", () => {
-  it("адрес отправки, скрытые поля, капча скрыта", () => {
-    const f = parseLoginForm(FORM, "https://login.emaktab.uz/login")!;
-    expect(f.action).toBe("https://login.emaktab.uz/");
-    expect(f.hidden).toMatchObject({ exceededAttempts: "False", "Captcha.Id": "ab-12" });
-    expect(f.captcha).toBe(false);
-    expect(f.captchaUrl).toBe("https://login.emaktab.uz/captcha/true/ab-12");
-    expect(parseLoginForm(FORM.replace("login__body__captcha_hidden", ""), "https://login.emaktab.uz/")!.captcha).toBe(true);
-    expect(parseLoginForm("<html>лента</html>", "https://emaktab.uz/")).toBeNull();
+  it("капча: нужна ли (exceededAttempts) и откуда брать картинку (imagePart)", () => {
+    expect(exceededInput(`<input type="hidden" name="exceededAttempts" value="False">`)).toBe(false);
+    expect(exceededInput(`<input value="True" type="hidden" name="exceededAttempts">`)).toBe(true);
+    expect(captchaPart(`JSON.parse('{\\x22imagePart\\x22:\\x22https://login.emaktab.uz/captcha/true/\\x22}')`)).toBe("https://login.emaktab.uz/captcha/true/");
+    expect(captchaPart("<html></html>")).toBe("https://login.emaktab.uz/captcha/true/");
+    // чужой адрес не берём
+    expect(captchaPart(`"imagePart":"https://evil.example/captcha/"`)).toBe("https://login.emaktab.uz/captcha/true/");
   });
   it("модель ошибок из JSON.parse('…')", () => {
     const wrong = `<script>var m = JSON.parse('{\\x22hasErrors\\x22:true,\\x22firstErrorText\\x22:\\x22login.login.error.emailorpassword\\x22}')</script>`;
     expect(loginErrors(wrong)).toMatchObject({ wrong: true, captcha: false });
     const cap = `<script>JSON.parse('{"hasErrors":true,"isWrongCaptcha":true}')</script>`;
-    expect(loginErrors(cap)).toMatchObject({ wrong: false, captcha: true });
+    expect(loginErrors(cap)).toMatchObject({ wrong: false, captcha: true, wrongCaptcha: true });
+    expect(loginErrors(`JSON.parse('{"hasErrors":true,"exceededAttempts":true}')`)).toMatchObject({ wrong: false, captcha: true, wrongCaptcha: false });
     expect(loginErrors("<html>ok</html>")).toMatchObject({ wrong: false, captcha: false });
   });
 });
@@ -48,14 +41,5 @@ describe("eMaktab: данные ученика и дневник", () => {
     expect(schoolYear(new Date("2026-11-25")).year).toBe(2026);
     expect(schoolYear(new Date("2026-09-05")).year).toBe(2025);
     expect(schoolYear(new Date("2027-03-01")).year).toBe(2026);
-  });
-});
-
-describe("eMaktab: поле пароля вне <form>", () => {
-  it("берём скрытые поля со всей страницы и адрес первой формы", () => {
-    const html = `<form action="/login" method="post"><input type="hidden" name="ReturnUrl" value=""></form><div><input type="text" name="login"><input type="password" name="password"></div>`;
-    const f = parseLoginForm(html, "https://login.emaktab.uz/")!;
-    expect(f.action).toBe("https://login.emaktab.uz/login");
-    expect(f.hidden).toEqual({ ReturnUrl: "" });
   });
 });
