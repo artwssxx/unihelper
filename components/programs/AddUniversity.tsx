@@ -94,7 +94,7 @@ export default function AddUniversity(props: {
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-[rgba(10,14,28,.5)] p-3 sm:items-center" onClick={props.onClose}>
       <div role="dialog" aria-modal aria-labelledby="addT" className="max-h-[92vh] w-full max-w-[680px] overflow-y-auto rounded-[24px] bg-surface-solid p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-        <h2 id="addT" className="text-xl font-extrabold">{props.initial ? "Изменить свой вуз" : "Добавить свой вуз"}</h2>
+        <h2 id="addT" className="text-xl font-extrabold">{props.initial && !(props.initial as { fresh?: boolean }).fresh ? "Изменить свой вуз" : "Добавить свой вуз"}</h2>
         {!p ? (
           <div className="mt-4 space-y-3">
             <label className="block text-sm font-semibold">

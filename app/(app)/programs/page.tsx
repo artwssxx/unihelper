@@ -6,7 +6,8 @@ import FitPills from "@/components/FitPills";
 import NeedProfile from "@/components/NeedProfile";
 import { ProGate } from "@/components/ProLock";
 import { useCoins } from "@/lib/useCoins";
-import AddUniversity from "@/components/programs/AddUniversity";
+import AddUniversity, { emptyCustom } from "@/components/programs/AddUniversity";
+import WorldCatalog from "@/components/programs/WorldCatalog";
 import { apiFetch, usePlan } from "@/lib/auth";
 import { update } from "@/lib/clientStore";
 import { countryName } from "@/lib/countries";
@@ -19,7 +20,7 @@ import type { FitLabel, Major, Profile, Program } from "@/lib/types";
 import { useContent } from "@/lib/useContent";
 import { useProfile } from "@/lib/useProfile";
 
-type Tab = "match" | "mine" | "custom";
+type Tab = "match" | "mine" | "custom" | "world";
 type Sort = "fit" | "cost" | "funding";
 const ADM_ORDER: Record<FitLabel, number> = { high: 0, realistic: 1, ambitious: 2, not_eligible: 3 };
 const FUND_ORDER = { self_funded: 0, high: 1, medium: 2, low: 3, none: 4 } as const;
@@ -90,7 +91,9 @@ export default function ProgramsPage() {
     setNote(null);
     update((s) => ({ myPrograms: (s.myPrograms ?? []).includes(id) ? (s.myPrograms ?? []).filter((x) => x !== id) : [...(s.myPrograms ?? []), id] }));
   };
-  const saveCustom = (p: Program) => {
+  const saveCustom = (raw: Program) => {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { fresh: _f, ...p } = raw as Program & { fresh?: boolean };
     const exists = (store?.customUnis ?? []).some((x) => x.id === p.id);
     if (!exists && custom.length >= limits.customUniversities) {
       setNote(`В Free можно добавить до ${limits.customUniversities} своих вузов. В Pro — до 50 и с ИИ-заполнением.`);
@@ -136,12 +139,24 @@ export default function ProgramsPage() {
             ["match", `Подбор (${all.filter((i) => i.fit.admission.label !== "not_eligible").length})`],
             ["mine", `Мой список (${mine.length}${isPro ? "" : `/${limits.myPrograms}`})`],
             ["custom", `Свои вузы (${custom.length})`],
+            ["world", "Все вузы мира (10 000+)"],
           ] as const
         ).map(([k, l]) => (
           <button key={k} role="tab" aria-selected={tab === k} className="chip px-4 py-2.5 text-sm" data-on={tab === k} onClick={() => setTab(k)}>{l}</button>
         ))}
       </div>
 
+      {tab === "world" ? (
+        <WorldCatalog
+          myCountries={profile.targetCountries}
+          onAdd={(h) => setAdding({ ...emptyCustom(h.name, h.country, h.web, major ?? profile.major), fresh: true } as Program)}
+          onOpen={(id) => {
+            if (all.some((i) => i.program.id === id)) setDetailId(id);
+            else setNote("Эта программа есть в каталоге, но не подходит под твои страны или специальность. Поменяй их в профиле, чтобы увидеть оценку.");
+          }}
+        />
+      ) : (
+      <>
       <section className="card space-y-4 p-5" aria-label="Фильтры">
         <div className="grid gap-3 md:grid-cols-[1.4fr_1fr_1fr_1fr]">
           <input className="input" placeholder="Поиск по названию или городу" aria-label="Поиск" value={q} onChange={(e) => setQ(e.target.value)} />
@@ -200,6 +215,8 @@ export default function ProgramsPage() {
           <ProgramCard key={item.program.id} item={item} inList={mine.includes(item.program.id)} onToggle={() => toggleMine(item.program.id)} onOpen={() => setDetailId(item.program.id)} />
         ))}
       </div>
+      </>
+      )}
 
       {detail && (
         <Detail
