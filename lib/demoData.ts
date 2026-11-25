@@ -48,6 +48,65 @@ function satAttempt(id: string, section: "math" | "rw", acc: Record<number, numb
   return buildResult({ attemptId: id, exam: "sat", section, mode: "hard", modules, path });
 }
 
+
+// ── Дневник демо-ученика (вымышленный, как и весь демо-профиль): расписание вокруг сегодняшнего дня ──
+const DEMO_TT: Record<number, string[]> = {
+  1: ["Математика", "Информатика", "Английский язык", "Физика", "История"],
+  2: ["Родной язык", "Математика", "Химия", "Литература", "Физкультура"],
+  3: ["Физика", "Английский язык", "Математика", "Информатика", "История"],
+  4: ["Математика", "Литература", "Родной язык", "Химия", "Английский язык"],
+  5: ["Информатика", "Физика", "Математика", "Физкультура", "Английский язык"],
+  6: ["История", "Родной язык", "Математика", "Информатика"],
+};
+const DEMO_SUBJ: [string, string, number, boolean?][] = [
+  ["Математика", "math", 4.7, true], ["Информатика", "informatics", 5, true], ["Физика", "physics", 4.4], ["Английский язык", "english", 4.8],
+  ["Родной язык", "native", 4.3], ["История", "history", 4.5], ["Литература", "literature", 4.2], ["Химия", "chemistry", 4.0], ["Физкультура", "pe", 5],
+];
+const TIMES = [["08:00", "08:45"], ["08:55", "09:40"], ["09:50", "10:35"], ["10:50", "11:35"], ["11:45", "12:30"], ["12:40", "13:25"]];
+const HW: Record<string, string> = { "Математика": "№ 214–218, повторить производные", "Физика": "§ 23, задачи 3 и 5", "Английский язык": "Essay: 150 words about your hobby", "Информатика": "Доделать программу сортировки", "История": "§ 15, конспект", "Литература": "Прочитать главы 3–4" };
+
+function demoDiary(now: Date) {
+  const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  const monday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - ((now.getDay() + 6) % 7) - 7);
+  const today = iso(now);
+  const days = [];
+  let k = 0;
+  for (let i = 0; i < 28; i++) {
+    const d = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + i);
+    const wd = d.getDay();
+    if (!DEMO_TT[wd]) continue;
+    const date = iso(d);
+    days.push({
+      date,
+      lessons: DEMO_TT[wd].map((subject, n) => {
+        k++;
+        const past = date <= today;
+        return {
+          n: n + 1, start: TIMES[n][0], end: TIMES[n][1], subject, room: String(201 + n), kind: k % 11 === 0 ? "Контрольная" : null,
+          topic: past || date <= iso(new Date(now.getTime() + 7 * 86400000)) ? `Тема урока ${((k * 7) % 40) + 1}` : null,
+          homework: HW[subject] && k % 2 === 0 ? HW[subject] : null, homeworkUrl: null,
+          marks: past && k % 3 === 0 ? [k % 5 === 0 ? 4 : 5] : [], absent: date < today && k % 37 === 0,
+        };
+      }),
+    });
+  }
+  const absItems = days.flatMap((d) => d.lessons.filter((l) => l.absent).map((l) => ({ date: d.date, subject: l.subject })));
+  const subjects = DEMO_SUBJ.map(([subject, key, grade, special], i) => ({
+    subject, key, grade, ...(special ? { special: true } : {}),
+    parts: [
+      { name: "Ответ на уроке", avg: Math.min(5, grade + 0.1), marks: [0, 1, 2, 3].map((j) => ({ date: iso(new Date(now.getTime() - (j * 9 + i + 3) * 86400000)), value: j === 2 && grade < 4.5 ? 4 : 5 })) },
+      { name: "Контрольная работа", avg: Math.max(3, grade - 0.3), marks: [{ date: iso(new Date(now.getTime() - (20 + i) * 86400000)), value: grade >= 4.6 ? 5 : 4 }] },
+    ],
+  }));
+  return {
+    diary: {
+      source: "emaktab" as const, fetchedAt: now.toISOString(), period: "2026/27 учебный год (пример)", school: "[Пример] Школа № 1", className: "11-А",
+      subjects, days, absences: { total: absItems.length + 3, items: [...absItems, { date: iso(new Date(now.getTime() - 30 * 86400000)), subject: "Химия" }, { date: iso(new Date(now.getTime() - 31 * 86400000)), subject: "Химия" }, { date: iso(new Date(now.getTime() - 45 * 86400000)), subject: "Литература" }] },
+    },
+    grades: { items: subjects.map((x) => ({ subject: x.subject, key: x.key, grade: x.grade, ...(x.special ? { special: true } : {}) })), scale: 5 as const, source: "emaktab" as const, updatedAt: now.toISOString(), period: "2026/27 учебный год (пример)", useForGpa: true },
+  };
+}
+
 export function buildDemo() {
   const math = satAttempt("demo-sat-math", "math", { 1: 0.95, 2: 0.82, 3: 0.62 }, 1101);
   const rw = satAttempt("demo-sat-rw", "rw", { 1: 0.92, 2: 0.74, 3: 0.5 }, 2202);
@@ -61,14 +120,17 @@ export function buildDemo() {
   const essayText =
     "С детства мечтал стать программистом. В 9 классе я собрал команду из 4 друзей, и за 3 месяца мы сделали сайт для школы: сейчас им пользуются 600 учеников и учителей.\n\nСамым трудным оказалось не программирование, а договориться с завучем о том, какие данные можно публиковать. Я впервые написал документ с правилами и защитил его на педсовете.\n\nЯ хочу изменить мир с помощью технологий, начиная со своей школы.";
 
+  const dd = demoDiary(new Date());
   const state = {
     demo: { active: true, step: 0, tour: true },
+    diary: dd.diary,
     profile: {
       grade: 11, city: "Ташкент", gpa: 4.6, gpaScale: 5, ielts: 6.5, sat: null,
       achievementsText: "Призёр областной олимпиады по информатике, 2 место на школьном хакатоне, сайт для школы (600 пользователей), волонтёр: уроки английского для младших",
       bestAchievementLevel: "city", activitiesCount: 4, ledSomething: true,
       targetCountries: ["HU", "KR", "US", "UZ"], major: "cs", budgetUsd: 6000,
       essays: "ok", recommendations: "ok",
+      grades: dd.grades,
     },
     contact: { fullName: "Азиз Каримов", phone: "+998 90 000 00 00", email: "" },
     profileId: null,

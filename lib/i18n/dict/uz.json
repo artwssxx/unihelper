@@ -3456,5 +3456,19 @@
  "Начни личное эссе: напиши черновик и попроси ИИ-помощника проверить структуру и клише.": "Shaxsiy esseni boshla: qoralama yoz va SI-yordamchidan tuzilish va klishelarni tekshirishni so‘ra.",
  "Распознавание сейчас перегружено и не прочитало файл. Попробуй через минуту или введи балл вручную.": "Tanib olish hozir band va faylni o‘qimadi. Bir daqiqadan so‘ng urinib ko‘r yoki ballni qo‘lda kirit.",
  "Показать все (#)": "Hammasini ko‘rsatish (#)",
- "рус. язык": "rus tili"
+ "рус. язык": "rus tili",
+ "Тема урока #": "#-dars mavzusi",
+ "№ #–#, повторить производные": "№ #–#, hosilalarni takrorlash",
+ "§ #, задачи # и #": "§ #, # va #-masalalar",
+ "Доделать программу сортировки": "Saralash dasturini tugatish",
+ "§ #, конспект": "§ #, konspekt",
+ "Прочитать главы #–#": "#–#-boblarni o‘qish",
+ "Ответ на уроке": "Darsdagi javob",
+ "Контрольная работа": "Nazorat ishi",
+ "Самостоятельная работа": "Mustaqil ish",
+ "Контрольная": "Nazorat ishi",
+ "Математический диктант": "Matematik diktant",
+ "# четверть": "#-chorak",
+ "#/# учебный год (пример)": "#/# o‘quv yili (namuna)",
+ "[Пример] Школа № #": "[Namuna] #-maktab"
 }

@@ -3456,5 +3456,19 @@
  "Начни личное эссе: напиши черновик и попроси ИИ-помощника проверить структуру и клише.": "Start your personal essay: write a draft and ask the AI helper to check structure and clichés.",
  "Распознавание сейчас перегружено и не прочитало файл. Попробуй через минуту или введи балл вручную.": "Recognition is overloaded right now and couldn’t read the file. Try again in a minute or enter the score manually.",
  "Показать все (#)": "Show all (#)",
- "рус. язык": "Russian"
+ "рус. язык": "Russian",
+ "Тема урока #": "Lesson topic #",
+ "№ #–#, повторить производные": "No. #–#, review derivatives",
+ "§ #, задачи # и #": "§ #, problems # and #",
+ "Доделать программу сортировки": "Finish the sorting program",
+ "§ #, конспект": "§ #, notes",
+ "Прочитать главы #–#": "Read chapters #–#",
+ "Ответ на уроке": "Answer in class",
+ "Контрольная работа": "Test",
+ "Самостоятельная работа": "Independent work",
+ "Контрольная": "Test",
+ "Математический диктант": "Math dictation",
+ "# четверть": "Quarter #",
+ "#/# учебный год (пример)": "#/# school year (sample)",
+ "[Пример] Школа № #": "[Sample] School No. #"
 }
