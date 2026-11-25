@@ -22,7 +22,7 @@ export type EmaktabResult =
   | { status: "captcha"; image: string | null; state: string; message: string }
   | { status: "invalid"; message: string }
   | { status: "confirm"; message: string }
-  | { status: "error"; message: string };
+  | { status: "error"; message: string; diag?: string };
 
 const cookieHeader = (jar: Jar) => Object.entries(jar).map(([k, v]) => `${k}=${v}`).join("; ");
 
@@ -64,11 +64,15 @@ const decode = (s: string) => s.replace(/&amp;/g, "&").replace(/&quot;/g, '"').r
 interface LoginForm { action: string; hidden: Record<string, string>; captchaUrl: string | null; captcha: boolean }
 
 /** Форма с полем пароля: адрес отправки, скрытые поля, капча. */
+const PASSWORD_INPUT = /<input\b[^>]*(type\s*=\s*["']?password|name\s*=\s*["']?password["'\s>])/i;
+
 export function parseLoginForm(html: string, base: string): LoginForm | null {
   const forms = html.match(/<form\b[\s\S]*?<\/form>/gi) ?? [];
-  const form = forms.find((f) => /<input\b[^>]*type\s*=\s*["']?password/i.test(f) || /name\s*=\s*["']?password["'\s>]/i.test(f));
+  // Поле пароля может стоять вне <form>…</form> (разметка собирается частями) — тогда берём всю страницу
+  // и первую форму как адрес отправки (так же делают открытые клиенты eMaktab).
+  const form = forms.find((f) => PASSWORD_INPUT.test(f)) ?? (PASSWORD_INPUT.test(html) ? html : null);
   if (!form) return null;
-  const open = form.match(/<form\b[^>]*>/i)![0];
+  const open = form.match(/<form\b[^>]*>/i)?.[0] ?? html.match(/<form\b[^>]*>/i)?.[0] ?? "<form>";
   const hidden: Record<string, string> = {};
   for (const t of form.match(/<input\b[^>]*>/gi) ?? []) {
     if ((attr(t, "type") ?? "").toLowerCase() !== "hidden") continue;
@@ -161,9 +165,18 @@ async function signIn(login: string, password: string, captcha?: { answer: strin
     jar = st.jar;
     form = { action: st.action, hidden: st.hidden };
   } else {
-    const page = await go(LOGIN, jar, { headers: { referer: LOGIN } });
-    const f = parseLoginForm(page.body, page.url);
-    if (!f) return { status: "error", message: "eMaktab не показал форму входа. Возможно, сайт обновился — попробуй загрузить скриншот оценок." };
+    let page = await go(LOGIN, jar, { headers: { referer: LOGIN } });
+    let f = parseLoginForm(page.body, page.url);
+    if (!f) {
+      // Главная входа может быть заставкой — форма на /login.
+      page = await go(`${LOGIN}login`, jar, { headers: { referer: LOGIN } });
+      f = parseLoginForm(page.body, page.url);
+    }
+    if (!f) {
+      const title = page.body.match(/<title[^>]*>([^<]{0,80})/i)?.[1]?.trim() ?? "";
+      console.error("[emaktab] нет формы входа", page.status, new URL(page.url).host + new URL(page.url).pathname, title);
+      return { status: "error", message: "eMaktab не показал форму входа. Возможно, сайт обновился — попробуй загрузить скриншот оценок.", diag: `HTTP ${page.status} · ${new URL(page.url).host}${new URL(page.url).pathname} · «${title}» · ${page.body.length} байт` };
+    }
     if (f.captcha) return captchaChallenge(f, jar, "eMaktab просит ввести код с картинки.");
     form = f;
   }

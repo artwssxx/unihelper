@@ -86,7 +86,7 @@ function Emaktab({ onResult }: { onResult: (r: ImportResult) => void }) {
       return;
     }
     setCaptcha(null);
-    setErr(j.message ?? "Не получилось загрузить оценки.");
+    setErr(`${j.message ?? "Не получилось загрузить оценки."}${j.diag ? ` [${j.diag}]` : ""}`);
   }
 
   const ready = login.trim().length >= 2 && password.length > 0 && (!captcha || answer.trim().length > 0);

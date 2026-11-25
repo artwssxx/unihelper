@@ -50,3 +50,12 @@ describe("eMaktab: данные ученика и дневник", () => {
     expect(schoolYear(new Date("2027-03-01")).year).toBe(2026);
   });
 });
+
+describe("eMaktab: поле пароля вне <form>", () => {
+  it("берём скрытые поля со всей страницы и адрес первой формы", () => {
+    const html = `<form action="/login" method="post"><input type="hidden" name="ReturnUrl" value=""></form><div><input type="text" name="login"><input type="password" name="password"></div>`;
+    const f = parseLoginForm(html, "https://login.emaktab.uz/")!;
+    expect(f.action).toBe("https://login.emaktab.uz/login");
+    expect(f.hidden).toEqual({ ReturnUrl: "" });
+  });
+});
