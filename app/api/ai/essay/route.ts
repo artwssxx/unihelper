@@ -4,6 +4,7 @@ import { ruleCheck } from "@/lib/essayRules";
 import { aiEnabled, checkEssay } from "@/lib/server/ai";
 import { clientKey, takeQuota } from "@/lib/server/rateLimit";
 import { limitsFor } from "@/lib/server/plan";
+import { consumeUnlock } from "@/lib/server/coins";
 
 export const maxDuration = 60;
 
@@ -16,7 +17,7 @@ export async function POST(req: Request) {
   // Free: 3 ИИ-проверки (лимит в памяти сервера; строгий учёт — таблица usage).
   // Лимит по тарифу (в памяти сервера; строгий учёт по аккаунту — таблица usage).
   const limit = limitsFor(req).essayAiPerMonth;
-  if (!aiEnabled() || !takeQuota(clientKey(req) + ":essay:" + limit, limit).ok) {
+  if (!aiEnabled() || (!takeQuota(clientKey(req) + ":essay:" + limit, limit).ok && !(await consumeUnlock(req, "essay_check")))) {
     return NextResponse.json({ ...ruleCheck(text), limited: aiEnabled() });
   }
   try {

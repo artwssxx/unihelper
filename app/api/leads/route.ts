@@ -52,7 +52,7 @@ export async function POST(req: Request) {
       `Телефон: ${contact.phone}`,
       contact.email ? `Email: ${contact.email}` : null,
       `Класс: ${profile.grade}, город: ${profile.city}`,
-      `Profile Strength: ${LEVEL_NAMES[strength.overall]}`,
+      `Profile Strength: ${strength.score}/100 (${LEVEL_NAMES[strength.overall]})`,
     ]
       .filter(Boolean)
       .join("\n"),

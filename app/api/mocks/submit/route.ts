@@ -6,6 +6,7 @@ import { isClosed, recordFinish } from "@/lib/mocks/attemptStore";
 import { buildResult, buildSatModule2, getQuestion, gradeIds, module2Path, toPublic } from "@/lib/mocks/engine";
 import { sign, verify } from "@/lib/mocks/token";
 import { ensurePoolQuestions } from "@/lib/server/readingPool";
+import { awardMock } from "@/lib/server/coins";
 
 const body = z.object({
   token: z.string().max(200_000),
@@ -55,6 +56,7 @@ export async function POST(req: Request) {
   }
 
   const result = buildResult({ attemptId: st.id, exam: st.exam, section: st.section, mode: st.mode, modules: done, path: st.path });
+  await awardMock(req, st.id).catch(() => {});
   await recordFinish({ ...st, done }, result);
   return NextResponse.json({ result, late });
 }

@@ -4,7 +4,8 @@ import { track } from "@/lib/analytics";
 import { useMemo, useState } from "react";
 import FitPills from "@/components/FitPills";
 import NeedProfile from "@/components/NeedProfile";
-import ProLock from "@/components/ProLock";
+import { ProGate } from "@/components/ProLock";
+import { useCoins } from "@/lib/useCoins";
 import AddUniversity from "@/components/programs/AddUniversity";
 import { apiFetch, usePlan } from "@/lib/auth";
 import { update } from "@/lib/clientStore";
@@ -27,6 +28,7 @@ export default function ProgramsPage() {
   const { profile, store } = useProfile();
   const { programs } = useContent();
   const { limits, isPro } = usePlan();
+  const coins = useCoins();
   const [tab, setTab] = useState<Tab>("match");
   const [q, setQ] = useState("");
   const [countries, setCountries] = useState<string[]>([]);
@@ -202,7 +204,7 @@ export default function ProgramsPage() {
       {detail && (
         <Detail
           item={detail}
-          canSeeReasons={limits.fitReasons}
+          canSeeReasons={limits.fitReasons || Boolean(coins.state?.unlocks.fitReasons.includes(detail.program.id))}
           inList={mine.includes(detail.program.id)}
           onToggle={() => toggleMine(detail.program.id)}
           onClose={() => setDetailId(null)}
@@ -307,7 +309,21 @@ function Detail(props: {
             {[...fit.admission.reasons, ...fit.funding.reasons].map((r, i) => <li key={i}>{r}</li>)}
           </ul>
         ) : (
-          <div className="mt-2"><ProLock title="Причины оценок" text="Видно, что именно мешает поступлению и финансированию и что усилить в первую очередь." /></div>
+          <ProGate
+            className="mt-2"
+            title="Причины оценок — в Pro"
+            text="Что именно мешает поступлению и финансированию и что усилить в первую очередь. Можно открыть для этой программы за UniCoins."
+            coins="fit_reasons"
+            refId={p.id}
+            preview={
+              <ul className="list-disc space-y-1.5 pl-5 text-[15px]">
+                <li>IELTS на уровне типичного профиля поступивших, но ниже желательного для гранта</li>
+                <li>GPA выше минимального порога программы</li>
+                <li>Финансирование: грант покрывает обучение, проживание — частично</li>
+                <li>Сильнее всего заявку поднимут эссе и рекомендации</li>
+              </ul>
+            }
+          />
         )}
         {fit.admission.unknown.length > 0 && <p className="mt-2 text-sm text-muted">Не оценено: {fit.admission.unknown.join(", ")}</p>}
 

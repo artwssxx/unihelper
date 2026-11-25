@@ -3,7 +3,7 @@ import { PROGRAMS, getProgram } from "../../data/programs";
 import type { Profile, Program } from "../types";
 import { admissionFit, evaluateProgram, fundingFit } from "./fit";
 import { filterPrograms, matchPrograms } from "./match";
-import { gpaTo100, scoreProfile } from "./strength";
+import { gpaTo100, levelOfPoints, nextBand, piecewise, scoreProfile } from "./strength";
 
 const base: Profile = {
   grade: 11,
@@ -43,6 +43,48 @@ describe("scoreProfile", () => {
     expect(r.axes.find((a) => a.axis === "tests")!.level).toBe(0);
     expect(r.tips.some((t) => t.includes("IELTS"))).toBe(true);
     expect(r.tips).toHaveLength(3);
+  });
+});
+
+describe("сила профиля 1–100", () => {
+  it("итог в пределах 1–100 и согласован с уровнем", () => {
+    for (const p of [base, { ...base, gpa: 2, ielts: null, sat: null, bestAchievementLevel: "none" as const, activitiesCount: 0, ledSomething: false }]) {
+      const r = scoreProfile(p);
+      expect(r.score).toBeGreaterThanOrEqual(1);
+      expect(r.score).toBeLessThanOrEqual(100);
+      expect(r.overall).toBe(levelOfPoints(r.score));
+    }
+  });
+
+  it("рост виден плавно: +0.5 IELTS и +1 активность поднимают итог", () => {
+    const a = scoreProfile({ ...base, sat: null, ielts: 6.0, activitiesCount: 1 }).score;
+    const b = scoreProfile({ ...base, sat: null, ielts: 6.5, activitiesCount: 1 }).score;
+    const c = scoreProfile({ ...base, sat: null, ielts: 6.5, activitiesCount: 2 }).score;
+    expect(b).toBeGreaterThan(a);
+    expect(c).toBeGreaterThan(b);
+  });
+
+  it("очки оси совпадают с прежними уровнями на порогах", () => {
+    const axis = (p: Partial<Profile>, name: string) => scoreProfile({ ...base, ...p }).axes.find((x) => x.axis === name)!;
+    for (const [ielts, lvl] of [[5.0, 0], [5.5, 1], [6.5, 2], [7.5, 3]] as const) {
+      const t = axis({ ielts, sat: null }, "tests");
+      expect(levelOfPoints(t.points!), String(ielts)).toBe(lvl);
+      expect(t.level).toBe(lvl);
+    }
+  });
+
+  it("неоценённые эссе не тянут итог вниз", () => {
+    const none = scoreProfile(base).score;
+    const strong = scoreProfile({ ...base, essays: "strong", recommendations: "strong" }).score;
+    const weak = scoreProfile({ ...base, essays: "weak", recommendations: "weak" }).score;
+    expect(strong).toBeGreaterThan(none);
+    expect(weak).toBeLessThan(none);
+  });
+
+  it("интерполяция и подсказка до следующего уровня", () => {
+    expect(piecewise(6, [4, 5.5, 6.5], [10, 30, 55])).toBeCloseTo(42.5);
+    expect(nextBand(60)).toEqual({ name: "очень сильный", left: 15 });
+    expect(nextBand(90)).toBeNull();
   });
 });
 

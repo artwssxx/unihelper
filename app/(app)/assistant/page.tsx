@@ -5,6 +5,8 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import NeedProfile from "@/components/NeedProfile";
 import { useProfile } from "@/lib/useProfile";
+import { apiFetch } from "@/lib/auth";
+import { CoinUnlockButton } from "@/components/ProLock";
 
 type Msg = { role: "user" | "assistant"; content: string };
 
@@ -32,14 +34,14 @@ export default function Assistant() {
     setNotice(null);
     track("ai_question");
     try {
-      const res = await fetch("/api/chat", {
+      const res = await apiFetch("/api/chat", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ profile, profileId: store?.profileId ?? null, messages: history.slice(-20) }),
       });
       if (res.status === 429) {
         setMessages(history);
-        setNotice("Лимит 20 сообщений в день исчерпан. В Pro лимит больше — или возвращайся завтра.");
+        setNotice("Дневной лимит сообщений исчерпан. В Pro лимит больше — или возьми +20 сообщений за UniCoins.");
         return;
       }
       if (!res.ok || !res.body) throw new Error();
@@ -101,7 +103,12 @@ export default function Assistant() {
         <div ref={bottom} />
       </div>
 
-      {notice && <p className="rounded-2xl bg-orange-soft px-4 py-3 text-sm font-semibold text-orange-ink-2">{notice}</p>}
+      {notice && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-orange-soft px-4 py-3 text-sm font-semibold text-orange-ink-2">
+          <span>{notice}</span>
+          {notice.includes("UniCoins") && <CoinUnlockButton item="chat_pack" onUnlocked={() => setNotice("Готово: +20 сообщений. Отправь вопрос ещё раз.")} className="py-2 text-sm" />}
+        </div>
+      )}
 
       <form className="sticky bottom-3 flex gap-2" onSubmit={(e) => { e.preventDefault(); send(input); }}>
         <label htmlFor="ask" className="sr-only">Вопрос</label>

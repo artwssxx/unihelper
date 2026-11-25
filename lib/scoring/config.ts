@@ -15,6 +15,25 @@ export const STRENGTH_RULES = {
   },
 } as const;
 
+/**
+ * Сила профиля 1–100: очки каждой оси по плавной шкале (линейно между опорными точками).
+ * Опорные точки совпадают с порогами уровней выше: 30 → «развивающийся», 55 → «сильный», 80 → «очень сильный».
+ * Итог — взвешенное среднее оценённых осей. Это не шанс поступления.
+ */
+export const STRENGTH_POINTS = {
+  /** Границы уровней на шкале 1–100. */
+  bands: [25, 50, 75] as const,
+  weights: { academics: 0.28, tests: 0.26, activities: 0.2, leadership: 0.1, essays: 0.16 },
+  gpa100: { x: [50, 75, 88, 95, 100], y: [5, 30, 55, 80, 100] },
+  ielts: { x: [4, 5.5, 6.5, 7.5, 9], y: [10, 30, 55, 80, 100] },
+  sat: { x: [800, 1150, 1300, 1450, 1600], y: [10, 30, 55, 80, 100] },
+  activityBase: { none: 0, school: 30, city: 45, national: 70, international: 88 } as const,
+  perActivity: 3,
+  perActivityMax: 12,
+  leadership: { none: 35, school: 35, city: 60, national: 82, international: 92 } as const,
+  qualitative: { weak: 25, ok: 60, strong: 90 } as const,
+} as const;
+
 export const FIT_RULES = {
   /** Разница с типичным профилем, которую считаем «на уровне». */
   tolerance: { gpa100: 3, ielts: 0.5, sat: 60 },

@@ -4,6 +4,7 @@ import type { Lesson } from "@/lib/content/lessons";
 import { getContent } from "@/lib/server/contentStore";
 import { limitsFor } from "@/lib/server/plan";
 import { getQuestion, isCorrect, toPublic } from "@/lib/mocks/engine";
+import { awardLesson } from "@/lib/server/coins";
 
 // Мини-тест урока: вопросы без ответов, проверка — на сервере.
 export async function GET(req: Request) {
@@ -26,5 +27,6 @@ export async function POST(req: Request) {
     return { id: qid, correct: isCorrect(q, parsed.data.answers[qid]), answer: q.answer, explanation: q.explanation };
   });
   const score = results.length ? results.filter((r) => r.correct).length / results.length : 1;
+  if (score >= 0.6) await awardLesson(req, l.id).catch(() => {});
   return NextResponse.json({ results, score });
 }

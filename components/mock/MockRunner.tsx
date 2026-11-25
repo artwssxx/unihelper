@@ -15,6 +15,8 @@ import { clearMarks } from "./PassageMarker";
 import ReadingView from "./ReadingView";
 import SatView from "./SatView";
 import WritingView from "./WritingView";
+import { apiFetch } from "@/lib/auth";
+import { CoinUnlockButton } from "@/components/ProLock";
 
 type Phase = "rules" | "starting" | "running" | "submitting" | "interrupted" | "error";
 type Violation = "fullscreen_exit" | "tab_hidden" | "blur" | "unload";
@@ -34,6 +36,7 @@ export default function MockRunner({ exam, section, mode }: { exam: Exam; sectio
   const [paused, setPaused] = useState(false);
   const [violation, setViolation] = useState<Violation | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [coinOffer, setCoinOffer] = useState<"hard_mock" | "writing_ai" | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [canHard, setCanHard] = useState(true);
   const [ask, setAsk] = useState<string | null>(null);
@@ -156,13 +159,15 @@ export default function MockRunner({ exam, section, mode }: { exam: Exam; sectio
     }
     setPhase("starting");
     try {
-      const res = await fetch("/api/mocks/start", {
+      const res = await apiFetch("/api/mocks/start", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ exam, section, mode, seen: seenQuestions(), device: deviceInfo(), profileId: load().profileId ?? null }),
       });
       const json = await res.json();
-      if (!res.ok) throw new Error(json.error === "hard_desktop_only" ? "Хард-режим доступен только в браузере на компьютере." : json.error === "pro_required" ? "Этот режим доступен в Pro. Откройте раздел «Тарифы» — в тестовой версии Pro включается бесплатно." : "Не удалось начать мок.");
+      if (res.status === 402 && (json.coins === "hard_mock" || json.coins === "writing_ai")) setCoinOffer(json.coins);
+      if (!res.ok) throw new Error(json.error === "hard_desktop_only" ? "Хард-режим доступен только в браузере на компьютере." : json.error === "pro_required" ? "Этот режим доступен в Pro — или откройте одну попытку за UniCoins." : "Не удалось начать мок.");
+      setCoinOffer(null);
       const att = json as AttemptPayload;
       const act: ActiveAttempt = {
         exam, section, mode, att, receivedAt: Date.now(), answers: {}, times: {}, flags: [], cur: 0,
@@ -189,7 +194,7 @@ export default function MockRunner({ exam, section, mode }: { exam: Exam; sectio
     try {
       if (cur.section === "writing") {
         finishing.current = true;
-        const res = await fetch("/api/mocks/writing", {
+        const res = await apiFetch("/api/mocks/writing", {
           method: "POST",
           headers: { "content-type": "application/json" },
           body: JSON.stringify({ token: cur.att.token, ...cur.essays }),
@@ -205,7 +210,7 @@ export default function MockRunner({ exam, section, mode }: { exam: Exam; sectio
         }, cur.att.taskIds ?? []);
         return done(cur.att.attemptId);
       }
-      const res = await fetch("/api/mocks/submit", {
+      const res = await apiFetch("/api/mocks/submit", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ token: cur.att.token, answers: cur.answers, times: cur.times, seen: seenQuestions() }),
@@ -308,7 +313,7 @@ export default function MockRunner({ exam, section, mode }: { exam: Exam; sectio
 
   // ───── Экраны ─────
   if (phase === "rules" || phase === "starting") {
-    return <Rules exam={exam} section={section} mode={mode} canHard={canHard} error={error} busy={phase === "starting"} onStart={start} />;
+    return <Rules exam={exam} section={section} mode={mode} canHard={canHard} error={error} busy={phase === "starting"} onStart={start} coinOffer={coinOffer} />;
   }
 
   if (phase === "interrupted") {
@@ -433,7 +438,7 @@ export default function MockRunner({ exam, section, mode }: { exam: Exam; sectio
   );
 }
 
-function Rules(props: { exam: Exam; section: Section; mode: Mode; canHard: boolean; error: string | null; busy: boolean; onStart: () => void }) {
+function Rules(props: { exam: Exam; section: Section; mode: Mode; canHard: boolean; error: string | null; busy: boolean; onStart: () => void; coinOffer: "hard_mock" | "writing_ai" | null }) {
   const { section, mode } = props;
   const spec =
     section === "math" ? "2 адаптивных модуля по 22 вопроса, 35 минут на модуль." :
@@ -483,6 +488,7 @@ function Rules(props: { exam: Exam; section: Section; mode: Mode; canHard: boole
           )}
           <p className="text-sm text-muted">Балл мока — примерная оценка диапазоном, а не официальный результат.</p>
           {props.error && <p className="rounded-xl bg-red-soft px-4 py-3 text-sm font-semibold text-red">{props.error}</p>}
+          {props.coinOffer && <div className="flex justify-center"><CoinUnlockButton item={props.coinOffer} onUnlocked={props.onStart} /></div>}
           <div className="flex flex-wrap gap-2.5">
             <button className="btn-primary" disabled={props.busy || (mode === "hard" && !props.canHard)} onClick={props.onStart}>
               {props.busy ? "Готовим вопросы…" : mode === "hard" ? "Войти в полный экран и начать" : "Начать мок"}

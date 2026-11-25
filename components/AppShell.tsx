@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { useAuth, usePlan } from "@/lib/auth";
 import { useStore } from "@/lib/clientStore";
+import CoinPill from "./coins/CoinPill";
 import DemoTour from "./DemoTour";
 import ThemeToggle from "./ThemeToggle";
 import * as I from "./icons";
@@ -22,6 +23,7 @@ const TOOLS = [
   { href: "/assistant", label: "AI Advisor", icon: I.Spark },
   { href: "/essays", label: "Эссе", icon: I.Pen },
   { href: "/portfolio", label: "Сайт-портфолио", icon: I.Globe },
+  { href: "/coins", label: "UniCoins", icon: I.Coin },
   { href: "/profile", label: "Профиль", icon: I.User },
   { href: "/pricing", label: "Тарифы", icon: I.Card },
 ];
@@ -94,6 +96,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             </div>
           </div>
           <div className="flex items-center gap-2.5">
+            <CoinPill />
             <ThemeToggle />
             <Link
               href="/roadmap"

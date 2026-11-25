@@ -4,6 +4,7 @@ import { MAJORS } from "@/lib/profileSchema";
 import { aiEnabled, draftUniversity } from "@/lib/server/ai";
 import { limitsFor } from "@/lib/server/plan";
 import { clientKey, takeQuota } from "@/lib/server/rateLimit";
+import { consumeUnlock } from "@/lib/server/coins";
 
 export const maxDuration = 60;
 
@@ -16,7 +17,7 @@ const body = z.object({
 
 // ИИ-черновик требований для своего вуза. Pro. Всё помечается «черновик ИИ, не проверено».
 export async function POST(req: Request) {
-  if (!limitsFor(req).aiUniversityFill) return NextResponse.json({ error: "pro_required" }, { status: 402 });
+  if (!limitsFor(req).aiUniversityFill && !(await consumeUnlock(req, "ai_uni_fill"))) return NextResponse.json({ error: "pro_required", coins: "ai_uni_fill" }, { status: 402 });
   if (!aiEnabled()) return NextResponse.json({ error: "ai_disabled" }, { status: 503 });
   if (!takeQuota(clientKey(req) + ":unifill", 20).ok) return NextResponse.json({ error: "rate_limited" }, { status: 429 });
   const parsed = body.safeParse(await req.json().catch(() => null));

@@ -47,7 +47,7 @@ export function testProAllowed(): boolean {
   return process.env.TEST_PRO !== "off";
 }
 
-export async function savePlanForUser(userId: string, plan: Plan, expiresAt: number | null, source: "test" | "paid" | null) {
+export async function savePlanForUser(userId: string, plan: Plan, expiresAt: number | null, source: "test" | "paid" | "coins" | null) {
   const db = supabaseAdmin();
   if (!db) return;
   await db.from("user_state").upsert({ user_id: userId, plan, plan_expires_at: expiresAt ? new Date(expiresAt).toISOString() : null, plan_source: source, updated_at: new Date().toISOString() });

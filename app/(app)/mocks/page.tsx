@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import * as I from "@/components/icons";
 import MockTrend from "@/components/MockTrend";
 import ProLock from "@/components/ProLock";
+import { useCoins } from "@/lib/useCoins";
 import { usePlan } from "@/lib/auth";
 import { useStore } from "@/lib/clientStore";
 import { SECTION_TITLE, hardModeAvailable, loadResult } from "@/lib/mocks/client";
@@ -24,12 +25,17 @@ export default function MocksHub() {
   useEffect(() => setCanHard(hardModeAvailable()), []);
   const history = [...(store?.mocks ?? [])].sort((a, b) => b.finishedAt.localeCompare(a.finishedAt));
   const { limits, isPro } = usePlan();
+  const coins = useCoins();
+  const credits = coins.state?.unlocks.credits ?? {};
+  // Хард-режим и Writing открываются Pro или купленными за UniCoins попытками.
+  const hardOk = limits.hardMode || (credits.hard_mock ?? 0) > 0;
+  const writingOk = limits.writingAi || (credits.writing_ai ?? 0) > 0;
   // Лимит Free считается по попыткам этого месяца.
   const month = new Date().toISOString().slice(0, 7);
   const thisMonth = history.filter((h) => h.finishedAt.startsWith(month));
   const used = { sat: thisMonth.filter((h) => h.exam === "sat").length, reading: thisMonth.filter((h) => h.section === "reading").length };
   const blocked = (s: Section): string | null => {
-    if (s === "writing" && !limits.writingAi) return "IELTS Writing с ИИ-оценкой доступен в Pro.";
+    if (s === "writing" && !writingOk) return "IELTS Writing с ИИ-оценкой — в Pro или за UniCoins.";
     if ((s === "math" || s === "rw") && used.sat >= limits.satMocksPerMonth) return `В Free — ${limits.satMocksPerMonth} SAT-мок в месяц. Этот месяц уже использован.`;
     if (s === "reading" && used.reading >= limits.ieltsReadingPerMonth) return `В Free — ${limits.ieltsReadingPerMonth} IELTS Reading в месяц. Этот месяц уже использован.`;
     return null;
@@ -72,17 +78,17 @@ export default function MocksHub() {
                       role="radio"
                       aria-checked={mode === m}
                       disabled={m === "hard" && hardOff}
-                      onClick={() => (m === "hard" && !limits.hardMode ? setModes({ ...modes, [key]: "light", [`${key}-lock`]: "hard" } as typeof modes) : setModes({ ...modes, [key]: m }))}
+                      onClick={() => (m === "hard" && !hardOk ? setModes({ ...modes, [key]: "light", [`${key}-lock`]: "hard" } as typeof modes) : setModes({ ...modes, [key]: m }))}
                       className={`rounded-lg px-3.5 py-2 text-sm font-bold transition disabled:opacity-40 ${
                         mode === m ? (m === "hard" ? "bg-orange text-white" : "bg-primary text-white") : c.section === "math" ? "text-navy-text" : "text-muted"
                       }`}
                     >
-                      {m === "light" ? "Лёгкий" : isPro ? "Хард" : "Хард · Pro"}
+                      {m === "light" ? "Лёгкий" : isPro ? "Хард" : hardOk ? `Хард · ${credits.hard_mock}` : <span className="inline-flex items-center gap-1"><I.Lock size={13} />Хард · Pro</span>}
                     </button>
                   ))}
                 </div>
-                {lock ? (
-                  <Link href="/pricing" className="btn-primary">Открыть в Pro</Link>
+                {lock && c.section === "writing" && !writingOk ? null : lock ? (
+                  <Link href="/pricing" className="btn-primary"><I.Lock size={16} /> Открыть в Pro</Link>
                 ) : (
                 <Link
                   href={`/mocks/run?exam=${c.exam}&section=${c.section}&mode=${mode}`}
@@ -92,9 +98,13 @@ export default function MocksHub() {
                 </Link>
                 )}
               </div>
-              {lock && <p className={`mt-3 text-sm ${c.section === "math" ? "text-navy-text" : "text-body"}`}>{lock}</p>}
-              {(modes as Record<string, string>)[`${key}-lock`] && !limits.hardMode && (
-                <div className="mt-3"><ProLock compact title="хард-режим" /></div>
+              {lock && c.section === "writing" && !writingOk ? (
+                <div className="mt-4"><ProLock title="IELTS Writing с ИИ-оценкой" text="Band по 4 критериям с цитатами из твоего текста. Одна проверка — за UniCoins." coins="writing_ai" /></div>
+              ) : lock ? (
+                <p className={`mt-3 text-sm ${c.section === "math" ? "text-navy-text" : "text-body"}`}>{lock}</p>
+              ) : null}
+              {(modes as Record<string, string>)[`${key}-lock`] && !hardOk && (
+                <div className="mt-4"><ProLock title="Хард-режим — как на экзамене" text="Жёсткий таймер, полный экран, уход со вкладки прерывает попытку. Одну хард-попытку можно открыть за UniCoins." coins="hard_mock" onUnlocked={() => setModes({ ...modes, [key]: "hard" })} /></div>
               )}
             </div>
           );

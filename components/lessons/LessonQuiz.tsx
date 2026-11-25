@@ -3,6 +3,7 @@
 import { track } from "@/lib/analytics";
 import { useEffect, useState } from "react";
 import type { PublicQuestion } from "@/lib/mocks/types";
+import { apiFetch } from "@/lib/auth";
 
 const L = "ABCDEFGH";
 type Res = { id: string; correct: boolean; answer: string; explanation: string };
@@ -23,7 +24,7 @@ export default function LessonQuiz({ lessonId, onScore }: { lessonId: string; on
 
   async function check() {
     setBusy(true);
-    const res = await fetch("/api/lessons", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ id: lessonId, answers }) }).catch(() => null);
+    const res = await apiFetch("/api/lessons", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ id: lessonId, answers }) }).catch(() => null);
     setBusy(false);
     if (!res?.ok) return;
     const j = await res.json();

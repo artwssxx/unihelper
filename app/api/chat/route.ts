@@ -4,6 +4,7 @@ import { profileSchema } from "@/lib/profileSchema";
 import { aiEnabled, streamChat } from "@/lib/server/ai";
 import { clientKey, takeQuota } from "@/lib/server/rateLimit";
 import { limitsFor } from "@/lib/server/plan";
+import { consumeUnlock } from "@/lib/server/coins";
 
 const DAILY_LIMIT = 20;
 
@@ -26,7 +27,8 @@ export async function POST(req: Request) {
 
   const daily = limitsFor(req).chatPerDay ?? DAILY_LIMIT;
   const quota = takeQuota(clientKey(req, profileId) + ":chat:" + daily, daily);
-  if (!quota.ok) return NextResponse.json({ error: "limit", limit: daily }, { status: 429 });
+  // Лимит исчерпан — пакет сообщений за UniCoins (каждое сообщение тратит одно).
+  if (!quota.ok && !(await consumeUnlock(req, "chat_pack"))) return NextResponse.json({ error: "limit", limit: daily, coins: "chat_pack" }, { status: 429 });
 
   const headers = { "content-type": "text/plain; charset=utf-8", "x-remaining": String(quota.remaining) };
   if (!aiEnabled()) {

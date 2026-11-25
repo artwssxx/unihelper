@@ -1,5 +1,5 @@
 import type { AxisResult, Profile, StrengthLevel, StrengthResult } from "../types";
-import { STRENGTH_RULES } from "./config";
+import { STRENGTH_POINTS as SP, STRENGTH_RULES } from "./config";
 
 export const LEVEL_NAMES = ["начальный", "развивающийся", "сильный", "очень сильный"] as const;
 
@@ -8,6 +8,26 @@ export function gpaTo100(gpa: number | null, scale: 5 | 100): number | null {
   if (scale === 100) return Math.max(0, Math.min(100, gpa));
   // 5-балльная: 5.0 → 100, 4.0 → 80, 3.0 → 60
   return Math.max(0, Math.min(100, (gpa / 5) * 100));
+}
+
+/** Линейная интерполяция между опорными точками (с обрезкой по краям). */
+export function piecewise(v: number, xs: readonly number[], ys: readonly number[]): number {
+  if (v <= xs[0]) return ys[0];
+  for (let i = 1; i < xs.length; i++) {
+    if (v <= xs[i]) return ys[i - 1] + ((ys[i] - ys[i - 1]) * (v - xs[i - 1])) / (xs[i] - xs[i - 1]);
+  }
+  return ys[ys.length - 1];
+}
+
+/** Уровень (0–3) по очкам 0–100: те же границы, что у общего итога. */
+export function levelOfPoints(points: number): StrengthLevel {
+  return SP.bands.filter((b) => points >= b).length as StrengthLevel;
+}
+
+/** Сколько очков до следующего уровня и как он называется (null — уже максимум). */
+export function nextBand(score: number): { name: string; left: number } | null {
+  const b = SP.bands.find((x) => score < x);
+  return b == null ? null : { name: LEVEL_NAMES[SP.bands.indexOf(b) + 1], left: b - score };
 }
 
 function levelByThresholds(value: number, thresholds: readonly number[]): StrengthLevel {
@@ -20,26 +40,28 @@ function levelByThresholds(value: number, thresholds: readonly number[]): Streng
 
 function academics(p: Profile): AxisResult {
   const g = gpaTo100(p.gpa, p.gpaScale);
-  if (g == null) return { axis: "academics", level: null, note: "GPA не указан" };
+  if (g == null) return { axis: "academics", level: null, points: null, note: "GPA не указан" };
   const level = levelByThresholds(g, STRENGTH_RULES.academics.gpa100);
-  return { axis: "academics", level, note: `GPA ≈ ${Math.round(g)}/100` };
+  return { axis: "academics", level, points: Math.round(piecewise(g, SP.gpa100.x, SP.gpa100.y)), note: `GPA ≈ ${Math.round(g)}/100` };
 }
 
 function tests(p: Profile): AxisResult {
   const parts: string[] = [];
   let best: StrengthLevel = 0;
-  const take = (v: number | null | undefined, th: readonly number[], label: string) => {
+  let pts = 0;
+  const take = (v: number | null | undefined, th: readonly number[], curve: { x: readonly number[]; y: readonly number[] }, label: string) => {
     if (v == null) return;
     best = Math.max(best, levelByThresholds(v, th)) as StrengthLevel;
+    pts = Math.max(pts, piecewise(v, curve.x, curve.y));
     parts.push(label);
   };
-  take(p.ielts, STRENGTH_RULES.tests.ielts, `IELTS ${p.ielts}`);
-  take(p.sat, STRENGTH_RULES.tests.sat, `SAT ${p.sat}`);
+  take(p.ielts, STRENGTH_RULES.tests.ielts, SP.ielts, `IELTS ${p.ielts}`);
+  take(p.sat, STRENGTH_RULES.tests.sat, SP.sat, `SAT ${p.sat}`);
   // Моки учитываются в силе профиля с пометкой, но не заменяют реальный балл.
-  if (p.mockSat != null && (p.sat == null || p.mockSat > p.sat)) take(p.mockSat, STRENGTH_RULES.tests.sat, `SAT ≈ ${p.mockSat} по моку`);
-  if (p.mockIelts != null && (p.ielts == null || p.mockIelts > p.ielts)) take(p.mockIelts, STRENGTH_RULES.tests.ielts, `IELTS Reading ≈ ${p.mockIelts} по моку`);
-  if (!parts.length) return { axis: "tests", level: 0, note: "тесты ещё не сданы" };
-  return { axis: "tests", level: best, note: parts.join(", ") };
+  if (p.mockSat != null && (p.sat == null || p.mockSat > p.sat)) take(p.mockSat, STRENGTH_RULES.tests.sat, SP.sat, `SAT ≈ ${p.mockSat} по моку`);
+  if (p.mockIelts != null && (p.ielts == null || p.mockIelts > p.ielts)) take(p.mockIelts, STRENGTH_RULES.tests.ielts, SP.ielts, `IELTS Reading ≈ ${p.mockIelts} по моку`);
+  if (!parts.length) return { axis: "tests", level: 0, points: 0, note: "тесты ещё не сданы" };
+  return { axis: "tests", level: best, points: Math.round(pts), note: parts.join(", ") };
 }
 
 function activities(p: Profile): AxisResult {
@@ -49,7 +71,8 @@ function activities(p: Profile): AxisResult {
     p.bestAchievementLevel === "none"
       ? "пока нет активностей и проектов"
       : `${p.activitiesCount} активн., высший уровень: ${levelWord(p.bestAchievementLevel)}`;
-  return { axis: "activities", level: lvl as StrengthLevel, note };
+  const pts = Math.min(100, SP.activityBase[p.bestAchievementLevel] + Math.min(SP.perActivityMax, p.activitiesCount * SP.perActivity));
+  return { axis: "activities", level: lvl as StrengthLevel, points: pts, note };
 }
 
 function levelWord(l: Profile["bestAchievementLevel"]): string {
@@ -57,21 +80,22 @@ function levelWord(l: Profile["bestAchievementLevel"]): string {
 }
 
 function leadership(p: Profile): AxisResult {
-  if (!p.ledSomething) return { axis: "leadership", level: 0, note: "нет инициатив, которые вы вели сами" };
+  if (!p.ledSomething) return { axis: "leadership", level: 0, points: 0, note: "нет инициатив, которые вы вели сами" };
   // Лидерство сильнее, если за ним есть результат уровня города и выше.
   const lvl: StrengthLevel =
     p.bestAchievementLevel === "international" || p.bestAchievementLevel === "national" ? 3 : p.bestAchievementLevel === "city" ? 2 : 1;
-  return { axis: "leadership", level: lvl, note: "есть собственная инициатива" };
+  return { axis: "leadership", level: lvl, points: SP.leadership[p.bestAchievementLevel], note: "есть собственная инициатива" };
 }
 
 function essays(p: Profile): AxisResult {
   const states = [p.essays, p.recommendations];
   if (states.every((s) => s === "not_assessed"))
-    return { axis: "essays", level: null, note: "не оценено: эссе и рекомендации" };
+    return { axis: "essays", level: null, points: null, note: "не оценено: эссе и рекомендации" };
   const map = { not_assessed: null, weak: 1, ok: 2, strong: 3 } as const;
   const vals = states.map((s) => map[s]).filter((v): v is 1 | 2 | 3 => v != null);
   const lvl = Math.round(vals.reduce((a, b) => a + b, 0) / vals.length) as StrengthLevel;
-  return { axis: "essays", level: lvl, note: p.essays === "not_assessed" ? "эссе не оценено" : "оценено" };
+  const q = states.filter((s): s is "weak" | "ok" | "strong" => s !== "not_assessed").map((s) => SP.qualitative[s]);
+  return { axis: "essays", level: lvl, points: Math.round(q.reduce((a, b) => a + b, 0) / q.length), note: p.essays === "not_assessed" ? "эссе не оценено" : "оценено" };
 }
 
 const TIP_BY_AXIS: Record<AxisResult["axis"], string> = {
@@ -84,10 +108,14 @@ const TIP_BY_AXIS: Record<AxisResult["axis"], string> = {
 
 export function scoreProfile(p: Profile): StrengthResult {
   const axes = [academics(p), tests(p), activities(p), leadership(p), essays(p)];
-  const assessed = axes.filter((a) => a.level != null).map((a) => a.level as number);
-  const overall = (assessed.length ? Math.floor(assessed.reduce((a, b) => a + b, 0) / assessed.length) : 0) as StrengthLevel;
+  // Итог 1–100: взвешенное среднее оценённых осей. Неоценённые оси не тянут вниз, но показаны как «не оценено».
+  const scored = axes.filter((a) => a.points != null);
+  const wsum = scored.reduce((s, a) => s + SP.weights[a.axis], 0);
+  const raw = wsum ? scored.reduce((s, a) => s + (a.points as number) * SP.weights[a.axis], 0) / wsum : 0;
+  const score = Math.max(1, Math.min(100, Math.round(raw)));
+  const overall = levelOfPoints(score);
   // 3 совета по самым слабым осям (не оценённые эссе — в конце, но учитываются).
   const ranked = [...axes].sort((a, b) => (a.level ?? 1.5) - (b.level ?? 1.5));
   const tips = ranked.slice(0, 3).map((a) => TIP_BY_AXIS[a.axis]);
-  return { axes, overall, tips };
+  return { axes, overall, score, tips };
 }

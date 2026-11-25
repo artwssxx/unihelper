@@ -45,7 +45,7 @@ export async function buildContext(profile: Profile): Promise<string> {
       )
       .join("\n");
   return `ПРОФИЛЬ (ответы анкеты, JSON): ${JSON.stringify(profile)}
-PROFILE STRENGTH: итог — ${LEVEL_NAMES[strength.overall]}
+PROFILE STRENGTH: итог — ${strength.score}/100, уровень «${LEVEL_NAMES[strength.overall]}» (это сила профиля, а не шанс поступления)
 ${axes}
 ПОДБОРКА ЗА РУБЕЖОМ:
 ${fmt(abroad) || "- нет программ под фильтр"}

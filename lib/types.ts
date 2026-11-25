@@ -101,12 +101,16 @@ export type StrengthLevel = 0 | 1 | 2 | 3; // начальный / развив�
 export interface AxisResult {
   axis: "academics" | "tests" | "activities" | "leadership" | "essays";
   level: StrengthLevel | null; // null — не оценено
+  /** Очки оси 0–100 (плавная шкала внутри уровней). null — не оценено. */
+  points: number | null;
   note: string;
 }
 
 export interface StrengthResult {
   axes: AxisResult[];
   overall: StrengthLevel;
+  /** Сила профиля 1–100. Это не шанс поступления. */
+  score: number;
   tips: string[];
 }
 

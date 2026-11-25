@@ -6,9 +6,9 @@ import * as I from "@/components/icons";
 import { update, useStore } from "@/lib/clientStore";
 import { COURSES } from "@/lib/content/lessons";
 import { useContent } from "@/lib/useContent";
-import ProLock from "@/components/ProLock";
-import { usePlan } from "@/lib/auth";
+import { usePlan, apiFetch } from "@/lib/auth";
 import type { PublicQuestion } from "@/lib/mocks/types";
+import { ProGate } from "@/components/ProLock";
 
 const L = "ABCDEFGH";
 type Res = { id: string; correct: boolean; answer: string; explanation: string };
@@ -41,7 +41,7 @@ export default function LessonPage({ params }: { params: Promise<{ id: string }>
     update((s) => ({ lessons: { ...(s.lessons ?? {}), [lesson.id]: { watched: false, ...(s.lessons?.[lesson.id] ?? {}), ...patch } } }));
 
   async function check() {
-    const res = await fetch("/api/lessons", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ id: lesson!.id, answers }) });
+    const res = await apiFetch("/api/lessons", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ id: lesson!.id, answers }) });
     const j = await res.json();
     setResults(j);
     setProgress({ quizScore: j.score });
@@ -64,7 +64,17 @@ export default function LessonPage({ params }: { params: Promise<{ id: string }>
       </div>
 
       {lesson.isPro && !limits.proLessons ? (
-        <ProLock title="Полный курс" text="Этот урок входит в Pro. Вводные уроки каждого курса — бесплатно." />
+        <ProGate
+          title="Урок из полного курса — в Pro"
+          text="Вводные уроки каждого курса бесплатны. Этот откроется в Pro — или возьми Pro на день за UniCoins."
+          coins="pro_day"
+          onUnlocked={() => location.reload()}
+          preview={
+            <ul className="space-y-3">
+              {lesson.summary.map((s, i) => <li key={i} className="flex gap-3 text-[15px]"><span className="font-extrabold text-primary">{i + 1}.</span>{s}</li>)}
+            </ul>
+          }
+        />
       ) : (
       <>
       <section className="card">

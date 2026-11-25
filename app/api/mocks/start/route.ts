@@ -11,6 +11,7 @@ import { sign, type AttemptState } from "@/lib/mocks/token";
 import { clientKey, takeQuota } from "@/lib/server/rateLimit";
 import { pickPoolTest } from "@/lib/server/readingPool";
 import { limitsFor } from "@/lib/server/plan";
+import { hasUnlockFromRequest, consumeUnlock } from "@/lib/server/coins";
 
 const body = z.object({
   exam: z.enum(["sat", "ielts"]),
@@ -32,12 +33,17 @@ export async function POST(req: Request) {
 
   // Тариф: хард-режим и IELTS Writing — в Pro.
   const limits = limitsFor(req);
-  if (mode === "hard" && !limits.hardMode) return NextResponse.json({ error: "pro_required" }, { status: 402 });
-  if (section === "writing" && !limits.writingAi) return NextResponse.json({ error: "pro_required" }, { status: 402 });
+  // Без Pro — можно открыть за UniCoins (купленное открытие тратится здесь).
+  if (section === "writing" && !limits.writingAi && !(await hasUnlockFromRequest(req, "writing_ai"))) {
+    return NextResponse.json({ error: "pro_required", coins: "writing_ai" }, { status: 402 });
+  }
 
   // Хард-режим: только браузер на компьютере, вне Telegram (на телефоне уведомления дают ложные срабатывания).
   if (mode === "hard" && (isMobileUA(req.headers.get("user-agent") ?? "") || device?.telegram || device?.coarse)) {
     return NextResponse.json({ error: "hard_desktop_only" }, { status: 403 });
+  }
+  if (mode === "hard" && !limits.hardMode && !(await consumeUnlock(req, "hard_mock"))) {
+    return NextResponse.json({ error: "pro_required", coins: "hard_mock" }, { status: 402 });
   }
 
   const now = Date.now();

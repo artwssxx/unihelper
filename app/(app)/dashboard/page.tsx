@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import FitPills from "@/components/FitPills";
 import MockTrend from "@/components/MockTrend";
 import NeedProfile from "@/components/NeedProfile";
@@ -41,6 +41,16 @@ export default function Dashboard() {
     return { strength, picks, steps, weekCount, upcoming, myEventIds: new Set(myEvents.map((e) => e!.id)), weak, lessons: weak ? lessonsForDomainsIn(LESSONS, [weak], 1) : [] };
   }, [profile, store, PROGRAMS, EVENTS, LESSONS]);
 
+  // История силы профиля: запоминаем новое значение, чтобы показать рост «+N с даты».
+  const hist = store?.strengthHistory ?? [];
+  const cur = data?.strength.score;
+  const lastSaved = hist[hist.length - 1];
+  const prevStrength = lastSaved && cur != null && lastSaved.score !== cur ? lastSaved : hist.length > 1 ? hist[hist.length - 2] : null;
+  useEffect(() => {
+    if (cur == null || store?.demo?.active || lastSaved?.score === cur) return;
+    update((st) => ({ strengthHistory: [...(st.strengthHistory ?? []), { score: cur, at: new Date().toISOString() }].slice(-30) }));
+  }, [cur, lastSaved?.score, store?.demo?.active]);
+
   if (profile === undefined) return null;
   if (profile === null || !data) return <NeedProfile />;
 
@@ -65,7 +75,7 @@ export default function Dashboard() {
             <Link href="/roadmap" className="btn-secondary">Открыть карту</Link>
           </div>
         </div>
-        <StrengthCard s={data.strength} className="flex-[1.4_1_460px]" />
+        <StrengthCard s={data.strength} prev={prevStrength} className="flex-[1.4_1_460px]" />
       </section>
 
       <section className="mt-6 grid items-start gap-5 [grid-template-columns:repeat(auto-fit,minmax(min(320px,100%),1fr))]">

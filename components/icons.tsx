@@ -86,3 +86,12 @@ export const Chat = ({ size = 18, className, color }: P) => (
 export const Send = ({ size = 18, className, color }: P) => (
   <svg {...base(size, color, className)}><path d="M21 3 10 14" /><path d="m21 3-7 18-4-7-7-4z" /></svg>
 );
+export const Coin = ({ size = 18, className, color }: P) => (
+  <svg {...base(size, color, className)}><circle cx="12" cy="12" r="9" /><circle cx="12" cy="12" r="5.5" /><path d="M10.5 10v2.6a1.5 1.5 0 0 0 3 0V10" /></svg>
+);
+export const Lock = ({ size = 18, className, color }: P) => (
+  <svg {...base(size, color, className)}><rect x="5" y="11" width="14" height="10" rx="2.5" /><path d="M8 11V8a4 4 0 0 1 8 0v3" /><path d="M12 15v2" /></svg>
+);
+export const Flame = ({ size = 18, className, color }: P) => (
+  <svg {...base(size, color, className)}><path d="M12 3c1 3.5 5 5.5 5 10a5 5 0 0 1-10 0c0-2.2 1-3.6 2-4.6.2 1.6.9 2.6 2 3.1-.6-3 0-6 1-8.5z" /></svg>
+);

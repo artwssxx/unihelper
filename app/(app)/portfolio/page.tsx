@@ -12,6 +12,8 @@ import { t } from "@/lib/i18n/ru";
 import { BUILTIN_SECTIONS, PRESET_COLORS, TEMPLATES, buildSnapshot, newBlock, normalizePortfolio } from "@/lib/portfolio";
 import { useContent } from "@/lib/useContent";
 import { useProfile } from "@/lib/useProfile";
+import { useCoins } from "@/lib/useCoins";
+import * as I from "@/components/icons";
 
 const SHOW = [
   { id: "phone", label: "телефон" },
@@ -30,6 +32,9 @@ export default function PortfolioPage() {
   const { profile, store } = useProfile();
   const { user } = useAuth();
   const { limits } = usePlan();
+  const coins = useCoins();
+  const portfolioPro = limits.portfolioTemplates === "all" || Boolean(coins.state?.unlocks.portfolioPro);
+  const canHideBadge = limits.portfolioHideBadge || Boolean(coins.state?.unlocks.portfolioPro);
   const { events } = useContent();
   const [pf, setPf] = useState<PortfolioState | null>(null);
   const [busy, setBusy] = useState(false);
@@ -70,9 +75,9 @@ export default function PortfolioPage() {
       activities: attended,
       tests,
       contact: store?.contact ?? null,
-      canHideBadge: limits.portfolioHideBadge,
+      canHideBadge,
     });
-  }, [pf, profile, store, events, user, limits.portfolioHideBadge]);
+  }, [pf, profile, store, events, user, canHideBadge]);
 
   if (profile === undefined) return null;
   if (profile === null) return <NeedProfile text="Сайт-портфолио собирается из данных профиля." />;
@@ -86,7 +91,7 @@ export default function PortfolioPage() {
   };
   const minor = profile.grade <= 11;
   const isDemo = Boolean(store?.demo?.active);
-  const allTemplates = limits.portfolioTemplates === "all";
+  const allTemplates = portfolioPro;
   const labelOf = (id: string) => BUILTIN_SECTIONS.find((s) => s.id === id)?.label ?? p.blocks.find((b) => b.id === id)?.title ?? id;
   const move = (id: string, dir: -1 | 1) => {
     const o = [...p.order];
@@ -179,12 +184,15 @@ export default function PortfolioPage() {
                     title={locked ? "Шаблон доступен в Pro" : undefined}
                     onClick={() => set({ template: tp.id })}
                   >
+                    {locked && <I.Lock size={13} className="mr-1 inline" />}
                     {tp.label}
-                    {locked ? " · Pro" : ""}
                   </button>
                 );
               })}
             </div>
+            {!allTemplates && (
+              <ProLock title="Pro-шаблоны, свой цвет и без значка" text="Академический, Яркий и Ночной шаблоны. В Pro — или навсегда за UniCoins." coins="portfolio_pro" />
+            )}
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-sm font-semibold">Цвет:</span>
               {PRESET_COLORS.map((c) => (
@@ -203,7 +211,7 @@ export default function PortfolioPage() {
                   <input type="color" aria-label="Свой цвет" value={p.accent} onChange={(e) => set({ accent: e.target.value })} className="h-8 w-10 cursor-pointer rounded border-0 bg-transparent" />
                 </label>
               ) : (
-                <ProLock compact title="свой цвет" />
+                <ProLock compact title="свой цвет" coins="portfolio_pro" />
               )}
             </div>
             <div className="flex flex-wrap gap-2 text-sm" role="radiogroup" aria-label="Шрифт заголовка">
@@ -339,7 +347,7 @@ export default function PortfolioPage() {
             ))}
             <div className="flex items-center justify-between gap-3 text-sm font-semibold">
               Скрыть «Сделано в UniHelper»
-              {limits.portfolioHideBadge ? <Toggle label="Скрыть значок UniHelper" on={Boolean(p.hideBadge)} onChange={(v) => set({ hideBadge: v })} /> : <ProLock compact title="без значка" />}
+              {canHideBadge ? <Toggle label="Скрыть значок UniHelper" on={Boolean(p.hideBadge)} onChange={(v) => set({ hideBadge: v })} /> : <ProLock compact title="без значка" coins="portfolio_pro" />}
             </div>
             <p className="text-xs text-muted">Точный адрес не публикуется никогда.</p>
           </Card>

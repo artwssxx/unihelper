@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { update, useStore } from "@/lib/clientStore";
 import type { EssayFeedback } from "@/lib/essayRules";
+import { apiFetch } from "@/lib/auth";
+import { CoinUnlockButton } from "@/components/ProLock";
 
 const PROMPTS = [
   "Личное эссе (Common App): расскажите историю, без которой ваша заявка была бы неполной.",
@@ -37,7 +39,7 @@ export default function EssaysPage() {
     setError(null);
     const p = prompt === "Своя тема" ? custom : prompt;
     try {
-      const res = await fetch("/api/ai/essay", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ prompt: p, text }) });
+      const res = await apiFetch("/api/ai/essay", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ prompt: p, text }) });
       if (!res.ok) throw new Error();
       const j = (await res.json()) as EssayFeedback;
       setFb(j);
@@ -92,7 +94,12 @@ export default function EssaysPage() {
                   <h2 className="m-0 text-xl font-extrabold">Оценка</h2>
                   <span className="pill bg-bg text-muted">{fb.source === "ai" ? "ИИ" : "по правилам"}</span>
                 </div>
-                {fb.limited && <p className="text-xs text-orange-ink">Лимит ИИ-проверок исчерпан — показана проверка по правилам.</p>}
+                {fb.limited && (
+                  <div className="flex flex-wrap items-center gap-2 text-xs text-orange-ink">
+                    Лимит ИИ-проверок исчерпан — показана проверка по правилам.
+                    <CoinUnlockButton item="essay_check" onUnlocked={check} className="px-3 py-1.5 text-xs" />
+                  </div>
+                )}
                 {(Object.keys(LABELS) as (keyof typeof LABELS)[]).map((k) => (
                   <div key={k}>
                     <div className="flex justify-between text-sm font-semibold"><span>{LABELS[k]}</span><span>{fb.scores[k]}/10</span></div>

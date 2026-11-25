@@ -7,6 +7,8 @@ import { countryName } from "@/lib/countries";
 import { t } from "@/lib/i18n/ru";
 import { MAJORS } from "@/lib/profileSchema";
 import type { Major, Program } from "@/lib/types";
+import { CoinUnlockButton } from "@/components/ProLock";
+import { useCoins } from "@/lib/useCoins";
 
 type Hit = { name: string; country: string; web: string | null; programId: string | null; programName?: string };
 
@@ -35,6 +37,8 @@ export default function AddUniversity(props: {
   onClose: () => void;
 }) {
   const { limits } = usePlan();
+  const coins = useCoins();
+  const canFill = limits.aiUniversityFill || (coins.state?.unlocks.credits.ai_uni_fill ?? 0) > 0;
   const [q, setQ] = useState(props.initial?.university ?? "");
   const [hits, setHits] = useState<Hit[]>([]);
   const [p, setP] = useState<Program | null>(props.initial ?? null);
@@ -129,10 +133,13 @@ export default function AddUniversity(props: {
                 <div className="font-extrabold">{p.university}</div>
                 <div className="text-xs text-muted">{countryName(p.country)}{p.url ? ` · ${p.url}` : ""}</div>
               </div>
-              {limits.aiUniversityFill ? (
+              {canFill ? (
                 <button className="btn-primary py-2.5 text-sm" onClick={aiFill} disabled={busy}>{busy ? "ИИ заполняет…" : "Заполнить с ИИ"}</button>
               ) : (
-                <ProLock compact title="заполнить с ИИ" />
+                <span className="flex flex-wrap items-start gap-2">
+                  <CoinUnlockButton item="ai_uni_fill" onUnlocked={aiFill} className="py-2.5 text-sm" />
+                  <ProLock compact title="заполнить с ИИ" />
+                </span>
               )}
             </div>
             {p.aiDraft && (

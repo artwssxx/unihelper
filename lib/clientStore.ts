@@ -76,6 +76,8 @@ export interface Stored {
   roadmap?: Record<string, StepStatus>;
   customSteps?: { id: string; title: string; month: string; track: string }[];
   mocks?: MockHistoryItem[];
+  /** История силы профиля 1–100: последнее значение и дата изменения. */
+  strengthHistory?: { score: number; at: string }[];
   events?: Record<string, EventRegistration>;
   lessons?: Record<string, { watched: boolean; quizScore?: number }>;
   portfolio?: PortfolioState;
