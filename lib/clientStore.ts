@@ -91,6 +91,8 @@ export interface Stored {
   customUnis?: import("./types").Program[];
   /** Демо для инвесторов: вымышленный ученик и пошаговый тур. */
   demo?: { active: boolean; step: number; tour: boolean };
+  /** Аккаунт родителя: без своей анкеты, кабинет — /parent. */
+  role?: "parent";
 }
 
 const listeners = new Set<() => void>();

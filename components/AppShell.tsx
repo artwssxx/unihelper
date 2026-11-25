@@ -27,6 +27,7 @@ const TOOLS = [
   { href: "/portfolio", label: "Сайт-портфолио", icon: I.Globe },
   { href: "/coins", label: "UniCoins", icon: I.Coin },
   { href: "/profile", label: "Профиль", icon: I.User },
+  { href: "/parent", label: "Родителям", icon: I.Users },
   { href: "/pricing", label: "Тарифы", icon: I.Card },
 ];
 const ALL = [...MAIN, ...TOOLS];

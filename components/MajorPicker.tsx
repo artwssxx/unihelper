@@ -56,8 +56,4 @@ export default function MajorPicker({ value, onChange }: { value: Value; onChang
   );
 }
 
-/** Подпись направлений: «IT и Computer Science, Бизнес · минор: экономика». */
-export function majorsLabel(p: Value): string {
-  const list = [...profileMajors(p).map((m) => t.majors[m]), p.majorOther].filter(Boolean).join(", ");
-  return p.minor ? `${list} · минор: ${p.minor}` : list;
-}
+export { majorsLabel } from "@/lib/majorsLabel";

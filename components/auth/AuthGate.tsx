@@ -15,6 +15,8 @@ import { useStore } from "@/lib/clientStore";
 // нет ни сессии, ни демо: флаги data-auth / data-demo ставит скрипт в <head>, прячет CSS.
 
 const PUBLIC = ["/pricing"];
+/** Для вошедших без анкеты: кабинет родителя. */
+const PARENT = "/parent";
 
 const ABOUT: { prefix: string; title: string; text: string }[] = [
   { prefix: "/dashboard", title: "Главная", text: "Сила профиля из 100, ближайшие шаги плана, подборка вузов и ивенты — на одном экране." },
@@ -30,6 +32,7 @@ const ABOUT: { prefix: string; title: string; text: string }[] = [
   { prefix: "/portfolio", title: "Сайт-портфолио", text: "Страница для приёмной комиссии: шаблоны, свои блоки, публикация по ссылке." },
   { prefix: "/coins", title: "UniCoins", text: "Монеты за серию заходов и задания — на Pro-функции и разовые открытия." },
   { prefix: "/profile", title: "Профиль", text: "Анкета, аккаунт, Telegram-уведомления и данные." },
+  { prefix: "/parent", title: "Для родителей", text: "Прогресс ребёнка: сила профиля, моки, план поступления, уроки и подобранные вузы. Ребёнок сам решает, кого подключить." },
 ];
 
 /** framed — для страниц без оболочки кабинета (мок): экран входа с полями. */
@@ -39,14 +42,17 @@ export default function AuthGate({ children, framed = false }: { children: React
   const { ready, enabled, user, stateReady } = useAuth();
   const store = useStore();
   const open = !enabled || Boolean(store?.demo?.active) || PUBLIC.some((p) => path === p || path.startsWith(p + "/"));
-  const needQuiz = !open && Boolean(user) && stateReady && Boolean(store) && !store?.profile;
+  const parentPage = path === PARENT || path.startsWith(PARENT + "/");
+  const needQuiz = !open && !parentPage && Boolean(user) && stateReady && Boolean(store) && !store?.profile;
+  // Родителю анкета ученика не нужна — его кабинет /parent.
+  const target = store?.role === "parent" ? PARENT : `/quiz?next=${encodeURIComponent(path)}`;
 
   useEffect(() => {
-    if (needQuiz) router.replace(`/quiz?next=${encodeURIComponent(path)}`);
-  }, [needQuiz, path, router]);
+    if (needQuiz) router.replace(target);
+  }, [needQuiz, target, router]);
 
-  if (open || (user && store?.profile)) return <>{children}</>;
-  if (user) return <Waiting text={needQuiz ? "Сначала анкета — открываем…" : "Загружаем твой профиль…"} />;
+  if (open || (user && (store?.profile || parentPage))) return <>{children}</>;
+  if (user) return <Waiting text={needQuiz ? (store?.role === "parent" ? "Открываем кабинет родителя…" : "Сначала анкета — открываем…") : "Загружаем твой профиль…"} />;
   const screen = framed ? <div className="px-4 py-8 sm:px-8 sm:py-14"><LoginScreen path={path} /></div> : <LoginScreen path={path} />;
   if (!ready || !store) return <div data-guest="auth">{screen}</div>;
   return screen;
@@ -91,6 +97,11 @@ function LoginScreen({ path }: { path: string }) {
             <div className="font-extrabold">Нет аккаунта?</div>
             <p className="mt-1 text-sm text-body">Регистрация начинается с анкеты: 8 вопросов, 3 минуты. Потом — вход через Telegram, Google или почту.</p>
             <Link href={`/quiz?next=${encodeURIComponent(path)}`} className="btn-primary mt-3">Начать с анкеты</Link>
+          </div>
+          <div className="rounded-2xl border border-line bg-surface p-4 sm:col-span-2">
+            <div className="font-extrabold">Я родитель</div>
+            <p className="mt-1 text-sm text-body">Зарегистрируйте ребёнка или подключите его аккаунт и следите за прогрессом. Анкета родителю не нужна.</p>
+            <Link href="/parent" className="btn-secondary mt-3">Кабинет родителя</Link>
           </div>
           <div className="rounded-2xl border border-dashed border-line-2 bg-surface p-4">
             <div className="font-extrabold">Просто посмотреть</div>

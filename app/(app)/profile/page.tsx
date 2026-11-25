@@ -1,6 +1,7 @@
 "use client";
 
 import { track } from "@/lib/analytics";
+import ParentsCard from "@/components/family/ParentsCard";
 import MajorPicker from "@/components/MajorPicker";
 import { useCallback, useEffect, useState } from "react";
 import NeedProfile from "@/components/NeedProfile";
@@ -117,6 +118,7 @@ export default function ProfilePage() {
 
       <AccountCard />
       <TelegramCard />
+      <ParentsCard />
 
       <section className="card flex flex-wrap items-center justify-between gap-3">
         <div>
