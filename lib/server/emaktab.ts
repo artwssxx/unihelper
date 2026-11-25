@@ -19,7 +19,7 @@ type Page = { status: number; body: string; url: string };
 
 export type EmaktabResult =
   | { status: "ok"; items: GradeItem[]; scale: GradeScale; marks: number; period: string; grade: number | null; className: string | null }
-  | { status: "captcha"; image: string | null; state: string; message: string }
+  | { status: "captcha"; image: string | null; state: string; message: string; diag?: string }
   | { status: "invalid"; message: string }
   | { status: "confirm"; message: string }
   | { status: "error"; message: string; diag?: string };
@@ -126,17 +126,37 @@ function unseal<T>(s: string): T | null {
   }
 }
 
-async function captchaChallenge(form: LoginForm, jar: Jar, message: string): Promise<EmaktabResult> {
-  let image: string | null = null;
-  if (form.captchaUrl) {
-    try {
-      const r = await fetch(form.captchaUrl, { headers: { "user-agent": UA, cookie: cookieHeader(jar), referer: LOGIN }, signal: AbortSignal.timeout(10_000) });
-      keep(jar, r);
-      if (r.ok) image = `data:${r.headers.get("content-type") || "image/png"};base64,${Buffer.from(await r.arrayBuffer()).toString("base64")}`;
-    } catch { /* без картинки — попросим попробовать позже */ }
+async function fetchImage(url: string, jar: Jar): Promise<{ image: string | null; note: string }> {
+  try {
+    const r = await fetch(url, { headers: { "user-agent": UA, cookie: cookieHeader(jar), referer: LOGIN, accept: "image/*,*/*" }, signal: AbortSignal.timeout(10_000) });
+    keep(jar, r);
+    const type = r.headers.get("content-type") || "";
+    if (!r.ok || !/image/i.test(type)) return { image: null, note: `img HTTP ${r.status} ${type.slice(0, 20)}` };
+    return { image: `data:${type};base64,${Buffer.from(await r.arrayBuffer()).toString("base64")}`, note: "img ok" };
+  } catch (e) {
+    return { image: null, note: `img ${(e as Error).name}` };
   }
-  const captchaId = form.hidden["Captcha.Id"] || form.captchaUrl?.match(/\/captcha\/[^/]+\/([^/?#]+)/)?.[1] || "";
-  return { status: "captcha", image, message, state: seal({ jar, action: form.action, hidden: { ...form.hidden, "Captcha.Id": captchaId } }) };
+}
+
+async function captchaChallenge(form: LoginForm, jar: Jar, message: string): Promise<EmaktabResult> {
+  let f = form;
+  // В ответе на вход картинки может не быть — берём свежую форму входа (у неё своя капча и Captcha.Id).
+  if (!f.captchaUrl) {
+    const page = await go(`${LOGIN}login`, jar, { headers: { referer: LOGIN } }).catch(() => null);
+    const fresh = page ? parseLoginForm(page.body, page.url) : null;
+    if (fresh) f = fresh;
+  }
+  const captchaId = f.hidden["Captcha.Id"] || f.captchaUrl?.match(/\/captcha\/[^/]+\/([^/?#]+)/)?.[1] || "";
+  const urls = [f.captchaUrl, captchaId ? `${LOGIN}captcha/true/${captchaId}` : null].filter((u): u is string => Boolean(u));
+  let image: string | null = null;
+  const notes: string[] = [`url ${f.captchaUrl ? "found" : "none"}`, `id ${captchaId ? "yes" : "no"}`];
+  for (const u of [...new Set(urls)]) {
+    const r = await fetchImage(u, jar);
+    notes.push(r.note);
+    if ((image = r.image)) break;
+  }
+  if (!image) console.error("[emaktab] капча без картинки:", notes.join(", "));
+  return { status: "captcha", image, message, state: seal({ jar, action: f.action, hidden: { ...f.hidden, "Captcha.Id": captchaId } }), ...(image ? {} : { diag: notes.join(" · ") }) };
 }
 
 async function submit(form: { action: string; hidden: Record<string, string> }, jar: Jar, login: string, password: string, captcha?: string): Promise<Page> {
