@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { langOf } from "@/lib/server/replyLang";
 import { z } from "zod";
 import { ruleCheck } from "@/lib/essayRules";
 import { aiEnabled, checkEssay } from "@/lib/server/ai";
@@ -21,7 +22,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ ...ruleCheck(text), limited: aiEnabled() });
   }
   try {
-    return NextResponse.json(await checkEssay(prompt, text));
+    return NextResponse.json(await checkEssay(prompt, text, langOf(req)));
   } catch (err) {
     console.error("[essay]", err);
     return NextResponse.json(ruleCheck(text));

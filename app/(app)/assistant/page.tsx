@@ -96,7 +96,7 @@ export default function Assistant() {
 
       <div className="flex-1 space-y-3" aria-live="polite">
         {messages.map((m, i) => (
-          <div key={i} className={`max-w-[85%] whitespace-pre-wrap rounded-2xl px-4 py-3 text-[15px] leading-relaxed ${m.role === "user" ? "ml-auto bg-primary text-white" : "border border-line bg-surface"}`}>
+          <div key={i} translate="no" className={`max-w-[85%] whitespace-pre-wrap rounded-2xl px-4 py-3 text-[15px] leading-relaxed ${m.role === "user" ? "ml-auto bg-primary text-white" : "border border-line bg-surface"}`}>
             {m.content || <span className="text-muted">Думаю…</span>}
           </div>
         ))}

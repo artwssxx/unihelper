@@ -22,7 +22,7 @@ export default function DemoTour({ demo }: { demo: NonNullable<Stored["demo"]> }
     return (
       <button
         onClick={() => setTourVisible(true)}
-        className="fixed bottom-5 left-5 z-40 rounded-full bg-inv px-5 py-3 text-sm font-extrabold text-white shadow-[0_16px_40px_rgba(14,26,58,.3)] xl:left-auto xl:right-5"
+        className="fixed bottom-20 left-4 z-40 rounded-full lg:bottom-5 lg:left-5 bg-inv px-5 py-3 text-sm font-extrabold text-white shadow-[0_16px_40px_rgba(14,26,58,.3)] xl:left-auto xl:right-5"
       >
         Демо-тур · {demo.step + 1}/{TOUR.length}
       </button>
@@ -32,7 +32,7 @@ export default function DemoTour({ demo }: { demo: NonNullable<Stored["demo"]> }
   return (
     <aside
       aria-label="Демо-тур для инвесторов"
-      className="fixed inset-x-3 bottom-3 z-40 rounded-[22px] bg-inv p-5 text-white shadow-[0_24px_60px_rgba(14,26,58,.35)] sm:inset-x-auto sm:right-5 sm:bottom-5 sm:w-[400px] xl:bottom-auto xl:top-24 xl:w-[360px]"
+      className="fixed inset-x-3 bottom-[72px] z-40 rounded-[22px] bg-inv p-5 text-white shadow-[0_24px_60px_rgba(14,26,58,.35)] sm:inset-x-auto sm:right-5 sm:bottom-20 lg:bottom-5 sm:w-[400px] xl:bottom-auto xl:top-24 xl:w-[360px]"
     >
       <div className="flex items-center justify-between gap-3">
         <span className="rounded-lg bg-orange px-2.5 py-1 text-xs font-extrabold">ДЕМО · {demo.step + 1} из {TOUR.length}</span>

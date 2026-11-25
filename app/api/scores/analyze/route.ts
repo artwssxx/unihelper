@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { langOf } from "@/lib/server/replyLang";
 import { z } from "zod";
 import { clientKey, takeQuota } from "@/lib/server/rateLimit";
 import { analyzeScore } from "@/lib/server/scoreReport";
@@ -25,5 +26,5 @@ export async function POST(req: Request) {
   if (!p.success) return NextResponse.json({ error: "invalid", message: "Проверьте файл (PDF или картинка до 3 МБ) и баллы." }, { status: 400 });
   const d = p.data;
   if (!d.text.trim() && !d.file && !d.manual) return NextResponse.json({ error: "empty", message: "Загрузите файл, опишите результат или введите баллы." }, { status: 400 });
-  return NextResponse.json(await analyzeScore(d));
+  return NextResponse.json(await analyzeScore({ ...d, lang: langOf(req) }));
 }

@@ -1,8 +1,9 @@
 import Link from "next/link";
 import ConsentLink from "@/components/ConsentLink";
 import * as I from "@/components/icons";
+import LangSwitch from "@/components/LangSwitch";
 
-// Шапка и подвал публичных страниц (блог, курсы). Без хуков — рендерится на сервере.
+// Шапка и подвал публичных страниц (блог, курсы). Рендерится на сервере; переключатель языка — клиентский.
 
 const NAV = [
   { href: "/blog", label: "Блог" },
@@ -28,6 +29,7 @@ export function SiteHeader({ active }: { active?: "/blog" | "/courses" }) {
             {n.label}
           </Link>
         ))}
+        <LangSwitch className="ml-1" />
         <Link href="/quiz" className="btn-primary ml-1 hidden px-4 py-2 text-sm sm:inline-flex">
           Оценить профиль
         </Link>

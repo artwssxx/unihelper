@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { langOf } from "@/lib/server/replyLang";
 import { z } from "zod";
 import cfg from "@/config/mocks.json";
 import { isClosed, markInterrupted } from "@/lib/mocks/attemptStore";
@@ -39,8 +40,8 @@ export async function POST(req: Request) {
   if (!takeQuota(clientKey(req) + ":writing", 5).ok) return NextResponse.json({ ...base, ai: false, limit: true });
   try {
     const [e1, e2] = await Promise.all([
-      task1.trim() ? evaluateWriting(1, TASK1.prompt, task1) : null,
-      task2.trim() ? evaluateWriting(2, TASK2.prompt, task2) : null,
+      task1.trim() ? evaluateWriting(1, TASK1.prompt, task1, langOf(req)) : null,
+      task2.trim() ? evaluateWriting(2, TASK2.prompt, task2, langOf(req)) : null,
     ]);
     return NextResponse.json({ ...base, ai: true, task1: e1, task2: e2 });
   } catch (err) {

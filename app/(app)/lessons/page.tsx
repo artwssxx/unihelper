@@ -20,7 +20,7 @@ export default function LessonsPage() {
     <div className="space-y-6">
       <section>
         <div className="eyebrow">УРОКИ</div>
-        <h1 className="mt-3 text-[34px] font-extrabold tracking-tight sm:text-[42px]">Короткие уроки по слабым темам</h1>
+        <h1 className="mt-3 text-[28px] font-extrabold leading-tight tracking-tight sm:text-[42px]">Короткие уроки по слабым темам</h1>
         <p className="mt-2 max-w-[680px] text-body">
           5–15 минут на урок и мини-тест из того же банка, что и моки. Урок засчитан, когда конспект прочитан и тест сдан от 60%. Видео записывают менторы, поступившие на грант, — они появятся постепенно.
         </p>

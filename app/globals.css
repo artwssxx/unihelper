@@ -134,24 +134,18 @@ button:disabled {
 }
 
 /* Мягкий фоновый свет — как в макете v4 */
+/* Мягкие пятна света на фоне — статичные радиальные градиенты. Раньше были размытые (blur 110px)
+   анимированные круги: из-за них браузер на каждом кадре пересчитывал размытие под всеми карточками. */
 .amb {
   position: fixed;
   inset: 0;
   z-index: -1;
   pointer-events: none;
-  overflow: hidden;
+  background:
+    radial-gradient(600px 600px at 6% 48%, var(--glow1), transparent 70%),
+    radial-gradient(560px 560px at 96% 4%, var(--glow1), transparent 70%),
+    radial-gradient(540px 540px at 58% 104%, var(--glow2), transparent 70%);
 }
-.amb i {
-  position: absolute;
-  border-radius: 50%;
-  filter: blur(110px);
-  animation: amb-float 24s ease-in-out infinite alternate;
-}
-.amb i:nth-child(1) { width: 560px; height: 560px; left: -160px; top: 20%; background: var(--glow1); }
-.amb i:nth-child(2) { width: 520px; height: 520px; right: -160px; top: -80px; background: var(--glow1); animation-delay: -8s; }
-.amb i:nth-child(3) { width: 500px; height: 500px; left: 40%; bottom: -200px; background: var(--glow2); animation-delay: -14s; }
-@keyframes amb-float { to { transform: translate(50px, -40px) scale(1.1); } }
-@media (prefers-reduced-motion: reduce) { .amb i { animation: none; } }
 
 .serif-accent {
   font-family: var(--font-serif);
@@ -167,17 +161,15 @@ button:disabled {
 }
 @utility btn-secondary {
   @apply inline-flex items-center justify-center gap-2 rounded-[14px] border border-line bg-surface px-[18px] py-[13px] text-[15px] font-bold text-ink transition hover:-translate-y-0.5 hover:border-primary-mid disabled:opacity-50 disabled:hover:translate-y-0;
-  -webkit-backdrop-filter: blur(14px);
-  backdrop-filter: blur(14px);
 }
 @utility btn-dark {
   @apply inline-flex items-center justify-center gap-2 rounded-[10px] bg-inv px-[14px] py-[10px] text-[13px] font-bold text-white disabled:opacity-50;
 }
+/* Карточки без backdrop-filter: фон под ними плавный, размытие почти не видно, а стоит дорого
+   (десятки карточек на странице). Стекло с размытием — только у редких панелей (glass). */
 @utility card {
   @apply rounded-[24px] p-6;
   background: var(--surface);
-  -webkit-backdrop-filter: blur(22px) saturate(160%);
-  backdrop-filter: blur(22px) saturate(160%);
   border: 1px solid var(--surface-border);
   box-shadow: var(--shadow);
 }
@@ -258,4 +250,31 @@ button:disabled {
 html[data-auth] [data-guest="auth"],
 html[data-demo] [data-guest="auth"] {
   display: none;
+}
+
+/* uz/en: страница видна после применения словаря (components/I18n.tsx), без вспышки русского. */
+html[data-lang]:not([data-tr]) body {
+  visibility: hidden;
+}
+
+/* Ряд вкладок: на телефоне листается вбок одной строкой, на широком экране переносится. */
+@utility tabs-row {
+  display: flex;
+  gap: 0.5rem;
+  overflow-x: auto;
+  scrollbar-width: none;
+  margin-inline: -1rem;
+  padding-inline: 1rem;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+  & > * {
+    flex: none;
+  }
+  @media (width >= 40rem) {
+    flex-wrap: wrap;
+    overflow: visible;
+    margin-inline: 0;
+    padding-inline: 0;
+  }
 }

@@ -1,8 +1,9 @@
 import { z } from "zod";
 
+import { COUNTRIES, MAJORS } from "./profileConst";
+
 // Единая схема профиля: валидирует ответы анкеты и на клиенте, и в API.
-export const MAJORS = ["cs", "engineering", "business", "economics", "medicine", "ir", "design", "natural_sciences"] as const;
-export const COUNTRIES = ["US", "AE", "HU", "TR", "KR", "DE", "IT", "JP", "UZ"] as const;
+export { COUNTRIES, MAJORS };
 const assessment = z.enum(["not_assessed", "weak", "ok", "strong"]);
 
 export const profileSchema = z.object({

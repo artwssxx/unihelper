@@ -13,7 +13,7 @@ import { update } from "@/lib/clientStore";
 import { countryName } from "@/lib/countries";
 import { t } from "@/lib/i18n/ru";
 import type { ContactInfo } from "@/lib/profileSchema";
-import { MAJORS } from "@/lib/profileSchema";
+import { MAJORS } from "@/lib/profileConst";
 import { FIT_LABEL_NAMES, FUNDING_LABEL_NAMES, totalCost } from "@/lib/scoring/fit";
 import { matchPrograms, type MatchItem } from "@/lib/scoring/match";
 import type { FitLabel, Major, Profile, Program } from "@/lib/types";
@@ -43,6 +43,8 @@ export default function ProgramsPage() {
   const [adding, setAdding] = useState<Program | true | null>(null);
   const [leadFor, setLeadFor] = useState<MatchItem | null>(null);
   const [note, setNote] = useState<string | null>(null);
+  const [showFilters, setShowFilters] = useState(false);
+  const activeFilters = countries.length + (major ? 1 : 0) + (maxCost !== "" ? 1 : 0) + (funding !== "any" ? 1 : 0) + (label !== "eligible" ? 1 : 0) + (backupOnly ? 1 : 0);
 
   const custom = useMemo(() => (store?.customUnis ?? []).filter((p) => Number.isFinite(p.tuitionUsd)), [store?.customUnis]);
   const effProfile = useMemo<Profile | null>(() => (profile ? { ...profile, major: major ?? profile.major } : null), [profile, major]);
@@ -118,7 +120,7 @@ export default function ProgramsPage() {
       <section className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <div className="eyebrow">ПОДБОР ВУЗОВ</div>
-          <h1 className="mt-3 text-[34px] font-extrabold tracking-tight sm:text-[42px]">Программы и <span className="serif-accent text-primary">гранты</span></h1>
+          <h1 className="mt-3 text-[28px] font-extrabold leading-tight tracking-tight sm:text-[42px]">Программы и <span className="serif-accent text-primary">гранты</span></h1>
           <p className="mt-2 max-w-[700px] text-body">
             Две отдельные оценки — поступление и финансирование — по каждой программе, без процентов. Каталог обновляет эксперт; свои вузы ты можешь добавить сам.
           </p>
@@ -133,7 +135,7 @@ export default function ProgramsPage() {
       )}
       {note && <p className="rounded-2xl bg-primary-soft px-5 py-3 text-sm font-semibold text-primary-ink">{note}</p>}
 
-      <div className="flex flex-wrap gap-2" role="tablist">
+      <div className="tabs-row" role="tablist">
         {(
           [
             ["match", `Подбор (${all.filter((i) => i.fit.admission.label !== "not_eligible").length})`],
@@ -157,9 +159,16 @@ export default function ProgramsPage() {
         />
       ) : (
       <>
-      <section className="card space-y-4 p-5" aria-label="Фильтры">
-        <div className="grid gap-3 md:grid-cols-[1.4fr_1fr_1fr_1fr]">
-          <input className="input" placeholder="Поиск по названию или городу" aria-label="Поиск" value={q} onChange={(e) => setQ(e.target.value)} />
+      <section className="card space-y-4 p-4 sm:p-5" aria-label="Фильтры">
+        {/* На телефоне виден поиск, остальные фильтры — по кнопке */}
+        <div className="flex gap-2">
+          <input className="input min-w-0 flex-1" placeholder="Поиск по названию или городу" aria-label="Поиск" value={q} onChange={(e) => setQ(e.target.value)} />
+          <button className="btn-secondary flex-none px-4 md:hidden" aria-expanded={showFilters} onClick={() => setShowFilters(!showFilters)}>
+            Фильтры{activeFilters ? ` · ${activeFilters}` : ""}
+          </button>
+        </div>
+        <div className={`space-y-4 ${showFilters ? "" : "hidden md:block"}`}>
+        <div className="grid gap-3 md:grid-cols-3">
           <select className="input" aria-label="Специальность" value={major ?? profile.major} onChange={(e) => setMajor(e.target.value as Major)}>
             {MAJORS.map((m) => <option key={m} value={m}>{t.majors[m]}</option>)}
           </select>
@@ -196,6 +205,7 @@ export default function ProgramsPage() {
             Только запасные варианты
           </label>
           <button className="ml-auto font-bold text-primary" onClick={resetFilters}>Сбросить</button>
+        </div>
         </div>
       </section>
 

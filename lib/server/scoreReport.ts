@@ -2,6 +2,8 @@ import "server-only";
 import { z } from "zod";
 import { cleanIelts, cleanSat, parseScoreDate, parseScoreText, ruleAnalysis, type IeltsScores, type SatScores, type ScoreAnalysis, type ScoreExam } from "@/lib/scores";
 import { llm, type LlmImage } from "./llm";
+import { LANG_RULE } from "./replyLang";
+import type { Lang } from "@/lib/i18n/translate";
 
 // Разбор результата IELTS/SAT: из файла (PDF → текст, картинка → распознавание ИИ) или описания.
 // ИИ берёт только баллы, которые видит, и не возвращает личные данные. Без ИИ — разбор по правилам.
@@ -13,10 +15,10 @@ const Out = z.object({
   testDate: z.string().nullable().describe("Дата экзамена YYYY-MM-DD, если видна; иначе null"),
   ielts: z.object({ listening: n, reading: n, writing: n, speaking: n, overall: n }).nullable(),
   sat: z.object({ math: n, rw: n, total: n }).nullable(),
-  summary: z.string().describe("2–3 предложения на русском: что видно по результату"),
-  strengths: z.array(z.string()).describe("1–3 сильные стороны, на русском"),
-  weaknesses: z.array(z.string()).describe("1–3 слабых места, на русском"),
-  plan: z.array(z.object({ title: z.string(), weeks: z.number(), actions: z.array(z.string()) })).describe("2–4 шага плана на 4–12 недель, на русском"),
+  summary: z.string().describe("2–3 предложения: что видно по результату"),
+  strengths: z.array(z.string()).describe("1–3 сильные стороны"),
+  weaknesses: z.array(z.string()).describe("1–3 слабых места"),
+  plan: z.array(z.object({ title: z.string(), weeks: z.number(), actions: z.array(z.string()) })).describe("2–4 шага плана на 4–12 недель"),
   targetNote: z.string().describe("Сравнение с целью ученика, если она дана; иначе совет поставить цель"),
 });
 
@@ -26,7 +28,7 @@ const SYSTEM = `Ты разбираешь результат экзамена IE
 - НЕ возвращай личные данные: имя, номер кандидата, дату рождения, номер паспорта, адрес — даже если они видны.
 - IELTS: секции 0–9 с шагом 0.5. SAT: Math и Reading and Writing по 200–800, сумма 400–1600.
 - Если ученик описал, где ошибался (типы вопросов, критерии Writing, время), используй это в разборе.
-- План — конкретные действия по неделям: моки, типы заданий, упражнения. Пиши по-русски, коротко.
+- План — конкретные действия по неделям: моки, типы заданий, упражнения. Коротко.
 - Не обещай поступление и не называй процентов шансов.`;
 
 export interface AnalyzeInput {
@@ -35,6 +37,7 @@ export interface AnalyzeInput {
   manual?: { ielts?: IeltsScores; sat?: SatScores };
   file?: { mime: string; base64: string };
   target?: { ielts?: number | null; sat?: number | null };
+  lang?: Lang;
 }
 
 export interface AnalyzeResult {
@@ -86,7 +89,7 @@ export async function analyzeScore(i: AnalyzeInput): Promise<AnalyzeResult> {
         images,
         timeoutMs: 40_000,
         maxTokens: 2500,
-        system: SYSTEM,
+        system: `${SYSTEM}\n- ${LANG_RULE[i.lang ?? "ru"]}`,
         user: `Экзамен, который выбрал ученик: ${i.exam.toUpperCase()}.
 Цель ученика: ${i.exam === "ielts" ? (i.target?.ielts ? `IELTS ${i.target.ielts}` : "не задана") : i.target?.sat ? `SAT ${i.target.sat}` : "не задана"}.
 Баллы, введённые вручную (точные, если есть): ${JSON.stringify(i.manual ?? {})}.

@@ -234,7 +234,7 @@ function Intro({ demo }: { demo: boolean }) {
     <div className="space-y-5">
       <section>
         <div className="eyebrow">UNICOINS</div>
-        <h1 className="mt-3 text-[34px] font-extrabold tracking-tight sm:text-[42px]">Копи монеты — <span className="serif-accent text-primary">открывай Pro</span></h1>
+        <h1 className="mt-3 text-[28px] font-extrabold leading-tight tracking-tight sm:text-[42px]">Копи монеты — <span className="serif-accent text-primary">открывай Pro</span></h1>
         <p className="mt-2 max-w-[620px] text-body">Заходи каждый день, проходи моки и уроки, приглашай друзей и подписывайся на UniHelper. Монеты тратятся на Pro и на действия сверх лимита Free.</p>
       </section>
       {demo ? (

@@ -186,7 +186,7 @@ function Conversation({ chatId, summary, onBack, onSent }: { chatId: string; sum
             <div key={m.id} className={`flex ${m.mine ? "justify-end" : "justify-start"}`}>
               <div className={`group max-w-[82%] rounded-2xl px-3.5 py-2 ${m.mine ? "rounded-br-md bg-primary text-white" : "rounded-bl-md bg-line-3"}`}>
                 {!m.mine && summary?.kind === "org" && <div className="text-xs font-bold text-primary">{m.author}</div>}
-                <p className="whitespace-pre-line break-words text-[15px]">{m.body}</p>
+                <p translate="no" className="whitespace-pre-line break-words text-[15px]">{m.body}</p>
                 <div className={`mt-0.5 flex items-center gap-2 text-[11px] ${m.mine ? "text-white/75" : "text-muted"}`}>
                   {new Date(m.createdAt).toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" })}
                   {!m.mine && <ReportButton type="message" id={m.id} className="opacity-0 group-hover:opacity-100 focus:opacity-100" />}

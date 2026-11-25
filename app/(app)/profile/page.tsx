@@ -34,7 +34,7 @@ export default function ProfilePage() {
       <section className="flex flex-wrap gap-6">
         <div className="min-w-0 flex-[1_1_300px] pt-2">
           <div className="eyebrow">ПРОФИЛЬ</div>
-          <h1 className="mt-3 text-[34px] font-extrabold tracking-tight sm:text-[42px]">{store?.contact?.fullName ?? "Мой профиль"}</h1>
+          <h1 className="mt-3 text-[28px] font-extrabold leading-tight tracking-tight sm:text-[42px]">{store?.contact?.fullName ?? "Мой профиль"}</h1>
           <p className="mt-2 text-body">Изменения пересчитывают Profile Strength, подборку программ и дорожную карту.</p>
           <ol className="mt-5 space-y-2.5">
             {s.tips.map((tip, i) => (

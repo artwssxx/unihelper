@@ -9,18 +9,19 @@ export default function AuthCallback() {
   const router = useRouter();
   const [err, setErr] = useState<string | null>(null);
   useEffect(() => {
-    const sb = supabaseBrowser();
-    const sp = new URLSearchParams(location.search);
-    const next = sp.get("next");
-    const dest = next && next.startsWith("/") && !next.startsWith("//") ? next : "/dashboard";
-    const code = sp.get("code");
-    const errDesc = sp.get("error_description");
-    if (errDesc) return setErr(errDesc);
-    if (!sb || !code) return setErr("Ссылка для входа неполная или устарела.");
-    sb.auth.exchangeCodeForSession(code).then(({ error }) => {
+    (async () => {
+      const sb = await supabaseBrowser();
+      const sp = new URLSearchParams(location.search);
+      const next = sp.get("next");
+      const dest = next && next.startsWith("/") && !next.startsWith("//") ? next : "/dashboard";
+      const code = sp.get("code");
+      const errDesc = sp.get("error_description");
+      if (errDesc) return setErr(errDesc);
+      if (!sb || !code) return setErr("Ссылка для входа неполная или устарела.");
+      const { error } = await sb.auth.exchangeCodeForSession(code);
       if (error) setErr("Ссылка устарела или открыта в другом браузере. Запросите новую.");
       else router.replace(dest);
-    });
+    })();
   }, [router]);
   return (
     <div className="flex min-h-screen items-center justify-center p-6">

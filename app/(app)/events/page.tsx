@@ -34,7 +34,7 @@ export default function EventsPage() {
     <div className="space-y-6">
       <section>
         <div className="eyebrow">ИВЕНТЫ</div>
-        <h1 className="mt-3 text-[34px] font-extrabold tracking-tight sm:text-[42px]">Олимпиады, волонтёрство, летние школы</h1>
+        <h1 className="mt-3 text-[28px] font-extrabold leading-tight tracking-tight sm:text-[42px]">Олимпиады, волонтёрство, летние школы</h1>
         <p className="mt-2 max-w-[680px] text-body">
           Подобраны под твою специальность и город. Запись в один клик — если организатор подключён к Unihelper. Участие, подтверждённое организатором, само попадает в портфолио.
         </p>

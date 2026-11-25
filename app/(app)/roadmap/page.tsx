@@ -49,7 +49,7 @@ export default function RoadmapPage() {
       <section className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <div className="eyebrow">ДОРОЖНАЯ КАРТА</div>
-          <h1 className="mt-3 text-[34px] font-extrabold tracking-tight sm:text-[42px]">План до поступления</h1>
+          <h1 className="mt-3 text-[28px] font-extrabold leading-tight tracking-tight sm:text-[42px]">План до поступления</h1>
           <p className="mt-2 max-w-[640px] text-body">
             Строится из твоего класса, целей и Profile Strength по шаблонам эксперта. Сроки заявок — ориентировочно, по прошлому году: сверяйте на официальных сайтах.
           </p>
@@ -126,7 +126,7 @@ function StepCard({ i, st, toggle, showTrack }: { i: RoadmapItem; st: StepStatus
     <div className={`rounded-2xl border p-3 ${st === "done" ? "border-line bg-bg" : st === "overdue" ? "border-orange/40 bg-surface" : "border-line bg-surface"}`}>
       <p className={`text-sm font-bold leading-snug ${st === "done" ? "text-muted line-through" : ""}`}>{i.title}</p>
       <div className="mt-2 flex flex-wrap items-center gap-1.5">
-        <button onClick={() => toggle(i)} className={`pill ${STATUS[st].cls}`} aria-label={`Статус: ${STATUS[st].label}. Нажмите, чтобы изменить`}>
+        <button onClick={() => toggle(i)} className={`pill min-h-8 px-3 ${STATUS[st].cls}`} aria-label={`Статус: ${STATUS[st].label}. Нажмите, чтобы изменить`}>
           {STATUS[st].label}
         </button>
         {i.estimated && <span className="pill bg-bg text-muted">ориентировочно</span>}

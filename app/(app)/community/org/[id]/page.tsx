@@ -63,7 +63,7 @@ export default function OrgPage() {
           <span className="pill bg-line-3 text-body">{ORG_KINDS.find((k) => k.id === o.kind)?.label}</span>
           {o.verified ? <span className="pill bg-green-soft text-green"><I.Check size={12} /> проверена модератором</span> : <span className="pill bg-line-3 text-muted">не проверена</span>}
         </div>
-        <h1 className="text-[30px] font-extrabold tracking-tight">{o.name}</h1>
+        <h1 translate="no" className="text-[30px] font-extrabold tracking-tight">{o.name}</h1>
         <p className="text-sm text-muted">{[o.city, `${o.members} ${plural(o.members)}`].filter(Boolean).join(" · ")}</p>
         <p className="whitespace-pre-line text-body">{o.description}</p>
         {msg && <p className="text-sm font-semibold text-red">{msg}</p>}

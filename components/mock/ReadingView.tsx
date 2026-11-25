@@ -21,7 +21,7 @@ export default function ReadingView(props: {
 
   return (
     <main className="mx-auto max-w-[1400px] px-4 pb-10 pt-5 sm:px-6">
-      <div className="mb-4 flex flex-wrap gap-2" role="tablist" aria-label="Тексты">
+      <div className="tabs-row mb-4" role="tablist" aria-label="Тексты">
         {passages.map((p, idx) => {
           const first = a.att.questions.findIndex((q) => q.passageId === p.id);
           const on = p.id === passage?.id;

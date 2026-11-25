@@ -18,7 +18,7 @@ let cache: SiteContent | null = null;
 let pending: Promise<SiteContent> | null = null;
 
 function fetchContent(): Promise<SiteContent> {
-  pending ??= fetch("/api/content", { cache: "no-store" })
+  pending ??= fetch("/api/content")
     .then((r) => (r.ok ? r.json() : DEFAULT))
     .then((j: SiteContent) => (cache = { programs: j.programs ?? PROGRAMS, events: j.events ?? EVENTS, lessons: j.lessons ?? LESSONS }))
     .catch(() => DEFAULT);

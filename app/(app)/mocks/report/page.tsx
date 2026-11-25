@@ -115,7 +115,7 @@ export default function ScoreReportPage() {
       <section>
         <Link href="/mocks" className="text-sm font-bold text-primary">← Моки</Link>
         <div className="eyebrow mt-3">МОЙ РЕЗУЛЬТАТ</div>
-        <h1 className="mt-3 text-[32px] font-extrabold tracking-tight sm:text-[40px]">Разбор результата <span className="serif-accent text-primary">IELTS или SAT</span></h1>
+        <h1 className="mt-3 text-[28px] font-extrabold leading-tight tracking-tight sm:text-[40px]">Разбор результата <span className="serif-accent text-primary">IELTS или SAT</span></h1>
         <p className="mt-2 max-w-[720px] text-body">Загрузи отчёт о результатах (PDF, скриншот или фото), опиши, где терял баллы, или просто впиши баллы. UniHelper сравнит с требованиями твоих вузов и соберёт план по неделям.</p>
       </section>
 

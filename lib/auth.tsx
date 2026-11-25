@@ -1,12 +1,13 @@
 "use client";
 
 import { track } from "@/lib/analytics";
+import { getLang } from "./i18n/lang";
 import type { Session } from "@supabase/supabase-js";
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { load, save, subscribe, type Stored } from "./clientStore";
 import { LIMITS, type Plan } from "./plans";
 import { mergeStates } from "./stateMerge";
-import { supabaseBrowser } from "./supabaseClient";
+import { authEnabled, supabaseBrowser } from "./supabaseClient";
 
 interface AuthCtx {
   ready: boolean;
@@ -27,17 +28,30 @@ const Ctx = createContext<AuthCtx | null>(null);
 
 /** fetch с токеном сессии (для API, которым нужен аккаунт). */
 export async function apiFetch(input: string, init: RequestInit = {}): Promise<Response> {
-  const sb = supabaseBrowser();
+  const sb = await supabaseBrowser();
   const token = sb ? (await sb.auth.getSession()).data.session?.access_token : undefined;
   const headers = new Headers(init.headers);
   if (token) headers.set("authorization", `Bearer ${token}`);
+  headers.set("x-uh-lang", getLang()); // язык ответов ИИ
   return fetch(input, { ...init, headers });
 }
 
+/** Сессия из localStorage без загрузки supabase-js: кабинет открывается сразу, библиотека потом подтвердит. */
+function storedSession(): Session | null {
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i) ?? "";
+      if (!/^sb-.+-auth-token$/.test(k)) continue;
+      const s = JSON.parse(localStorage.getItem(k) ?? "null") as Session | null;
+      if (s?.access_token && s.user?.id) return s;
+    }
+  } catch {}
+  return null;
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const sb = supabaseBrowser();
   const [session, setSession] = useState<Session | null>(null);
-  const [ready, setReady] = useState(!sb);
+  const [ready, setReady] = useState(!authEnabled);
   const [plan, setPlanState] = useState<Plan>("free");
   const [planExpiresAt, setExp] = useState<number | null>(null);
   const [testProAllowed, setTestAllowed] = useState(true);
@@ -71,28 +85,42 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     refreshPlan();
-    if (!sb) return;
-    sb.auth.getSession().then(({ data }) => {
-      setSession(data.session);
+    if (!authEnabled) return;
+    const cached = storedSession();
+    if (cached) {
+      setSession(cached);
       setReady(true);
-      if (data.session) syncFromServer(data.session);
+    }
+    let unsub = () => {};
+    let off = false;
+    supabaseBrowser().then((sb) => {
+      if (!sb || off) return;
+      sb.auth.getSession().then(({ data }) => {
+        setSession(data.session);
+        setReady(true);
+        if (data.session) syncFromServer(data.session);
+      });
+      const { data: sub } = sb.auth.onAuthStateChange((e, s) => {
+        setSession(s);
+        if (e === "SIGNED_IN" && s) {
+          const k = `uh-login-tracked:${s.user.id}`;
+          try {
+            if (!sessionStorage.getItem(k)) {
+              sessionStorage.setItem(k, "1");
+              track("login", { method: String(s.user.user_metadata?.provider || s.user.app_metadata?.provider || "email") });
+            }
+          } catch {}
+        }
+        if (s) syncFromServer(s);
+        else synced.current = null;
+      });
+      unsub = () => sub.subscription.unsubscribe();
     });
-    const { data: sub } = sb.auth.onAuthStateChange((e, s) => {
-      setSession(s);
-      if (e === "SIGNED_IN" && s) {
-        const k = `uh-login-tracked:${s.user.id}`;
-        try {
-          if (!sessionStorage.getItem(k)) {
-            sessionStorage.setItem(k, "1");
-            track("login", { method: String(s.user.user_metadata?.provider || s.user.app_metadata?.provider || "email") });
-          }
-        } catch {}
-      }
-      if (s) syncFromServer(s);
-      else synced.current = null;
-    });
-    return () => sub.subscription.unsubscribe();
-  }, [sb, syncFromServer, refreshPlan]);
+    return () => {
+      off = true;
+      unsub();
+    };
+  }, [syncFromServer, refreshPlan]);
 
   // Флаг сессии на <html>: экран входа, отрисованный до проверки, прячется CSS (см. AuthGate).
   useEffect(() => {
@@ -111,9 +139,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [session]);
 
   const signOut = useCallback(async () => {
-    await sb?.auth.signOut();
+    await (await supabaseBrowser())?.auth.signOut();
     setSession(null);
-  }, [sb]);
+  }, []);
 
   const setPlan = useCallback(async (action: "activate-test" | "cancel") => {
     const r = await apiFetch("/api/plan", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ action }) });
@@ -133,7 +161,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     : null;
 
   return (
-    <Ctx.Provider value={{ ready, enabled: Boolean(sb), session, stateReady: !session || syncedUser === session.user.id, user, plan, planExpiresAt, testProAllowed, signOut, refreshPlan, setPlan }}>
+    <Ctx.Provider value={{ ready, enabled: authEnabled, session, stateReady: !session || syncedUser === session.user.id, user, plan, planExpiresAt, testProAllowed, signOut, refreshPlan, setPlan }}>
       {children}
     </Ctx.Provider>
   );

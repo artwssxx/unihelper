@@ -5,7 +5,7 @@ import ProLock from "@/components/ProLock";
 import { apiFetch, usePlan } from "@/lib/auth";
 import { countryName } from "@/lib/countries";
 import { t } from "@/lib/i18n/ru";
-import { MAJORS } from "@/lib/profileSchema";
+import { MAJORS } from "@/lib/profileConst";
 import type { Major, Program } from "@/lib/types";
 import { CoinUnlockButton } from "@/components/ProLock";
 import { useCoins } from "@/lib/useCoins";

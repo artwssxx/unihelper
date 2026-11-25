@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { langOf } from "@/lib/server/replyLang";
 import { z } from "zod";
 import { t } from "@/lib/i18n/ru";
 import { profileSchema } from "@/lib/profileSchema";
@@ -26,7 +27,7 @@ export async function POST(req: Request) {
   };
   if (!aiEnabled() || !takeQuota(clientKey(req) + ":portfolio", 10).ok) return NextResponse.json(fallback);
   try {
-    return NextResponse.json({ ...(await draftPortfolio(p)), source: "ai" });
+    return NextResponse.json({ ...(await draftPortfolio(p, langOf(req))), source: "ai" });
   } catch (err) {
     console.error("[portfolio]", err);
     return NextResponse.json(fallback);

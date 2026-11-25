@@ -60,7 +60,7 @@ export default function EssaysPage() {
     <div className="space-y-6">
       <section>
         <div className="eyebrow">ЭССЕ</div>
-        <h1 className="mt-3 text-[34px] font-extrabold tracking-tight sm:text-[42px]">Проверка эссе</h1>
+        <h1 className="mt-3 text-[28px] font-extrabold leading-tight tracking-tight sm:text-[42px]">Проверка эссе</h1>
         <p className="mt-2 max-w-[680px] text-body">ИИ оценивает структуру, личный голос, конкретику и язык, находит клише и задаёт вопросы. Но не пишет текст за тебя — это должен быть твой голос.</p>
       </section>
 

@@ -8,7 +8,7 @@ import { api, Avatar, Chips, personMeta, ReportButton, SafetyNote, timeAgo } fro
 import * as I from "@/components/icons";
 import { useAuth, usePlan } from "@/lib/auth";
 import { ORG_KINDS, plural, POST_KINDS, type ChatSummary, type Org, type Post, type PostKind, type PublicProfile } from "@/lib/community";
-import { MAJORS } from "@/lib/profileSchema";
+import { MAJORS } from "@/lib/profileConst";
 import { t } from "@/lib/i18n/ru";
 import { useProfile } from "@/lib/useProfile";
 
@@ -44,7 +44,7 @@ export default function CommunityPage() {
       <section className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <div className="eyebrow">КОМЬЮНИТИ</div>
-          <h1 className="mt-3 text-[34px] font-extrabold tracking-tight sm:text-[42px]">
+          <h1 className="mt-3 text-[28px] font-extrabold leading-tight tracking-tight sm:text-[42px]">
             Найди <span className="serif-accent text-primary">команду</span> для проекта
           </h1>
           <p className="mt-2 max-w-[640px] text-body">Школьники и студенты, которые тоже поступают за рубеж: проекты, олимпиадные команды, клубы и волонтёрство.</p>
@@ -62,7 +62,7 @@ export default function CommunityPage() {
         <div className="card flex flex-wrap items-center gap-4">
           <Avatar name={me.profile.name} size={48} />
           <div className="min-w-0 flex-1">
-            <div className="font-extrabold">{me.profile.name}</div>
+            <div translate="no" className="font-extrabold">{me.profile.name}</div>
             <div className="text-sm text-muted">{personMeta(me.profile) || "Карточка участника"}</div>
             {me.profile.hiddenByAdmin && <div className="mt-1 text-sm font-semibold text-red">Карточка скрыта модератором.</div>}
           </div>
@@ -73,7 +73,7 @@ export default function CommunityPage() {
 
       <SafetyNote />
 
-      <div className="flex gap-2 overflow-x-auto" role="tablist" aria-label="Разделы комьюнити">
+      <div className="tabs-row" role="tablist" aria-label="Разделы комьюнити">
         {([["posts", "Проекты и вопросы"], ["people", "Люди"], ["orgs", "Организации"]] as const).map(([id, label]) => (
           <button key={id} role="tab" aria-selected={tab === id} className="chip whitespace-nowrap px-4 py-2" data-on={tab === id} onClick={() => setTab(id)}>
             {label}
@@ -91,7 +91,7 @@ function Intro({ demo }: { demo: boolean }) {
     <div className="space-y-6">
       <section>
         <div className="eyebrow">КОМЬЮНИТИ</div>
-        <h1 className="mt-3 text-[34px] font-extrabold tracking-tight sm:text-[42px]">
+        <h1 className="mt-3 text-[28px] font-extrabold leading-tight tracking-tight sm:text-[42px]">
           Найди <span className="serif-accent text-primary">команду</span> для проекта
         </h1>
         <p className="mt-2 max-w-[640px] text-body">Проекты для портфолио, олимпиадные команды, клубы и волонтёрство — с теми, кто тоже поступает за рубеж.</p>
@@ -286,8 +286,8 @@ function Posts({ hasProfile }: { hasProfile: boolean }) {
                 {p.status === "closed" && <span className="pill bg-line-3 text-muted">набор закрыт</span>}
                 <span className="text-xs text-muted">{timeAgo(p.createdAt)}</span>
               </div>
-              <h3 className="text-lg font-extrabold leading-snug">{p.title}</h3>
-              <p className="whitespace-pre-line text-sm text-body">{p.body}</p>
+              <h3 translate="no" className="text-lg font-extrabold leading-snug">{p.title}</h3>
+              <p translate="no" className="whitespace-pre-line text-sm text-body">{p.body}</p>
               {p.roles.length > 0 && (
                 <div className="space-y-1.5">
                   <div className="text-xs font-bold text-muted">ИЩЕМ</div>
@@ -453,7 +453,7 @@ function Orgs({ hasProfile }: { hasProfile: boolean }) {
                 {o.verified && <span className="pill bg-green-soft text-green"><I.Check size={12} /> проверена</span>}
                 {o.isMember && <span className="pill bg-primary-soft text-primary-ink">ты участник</span>}
               </div>
-              <h3 className="text-lg font-extrabold">{o.name}</h3>
+              <h3 translate="no" className="text-lg font-extrabold">{o.name}</h3>
               <p className="line-clamp-3 text-sm text-body">{o.description}</p>
               <div className="mt-auto text-xs text-muted">{[o.city, `${o.members} ${plural(o.members)}`].filter(Boolean).join(" · ")}</div>
             </Link>

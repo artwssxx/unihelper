@@ -13,7 +13,7 @@ const BOT = process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME;
 const TG_HOST = new URL(SITE_URL).host;
 
 export async function finishTelegramLogin(payload: unknown): Promise<boolean> {
-  const sb = supabaseBrowser();
+  const sb = await supabaseBrowser();
   if (!sb) return false;
   const r = await fetch("/api/auth/telegram", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(payload) });
   if (!r.ok) return false;
@@ -64,7 +64,7 @@ export default function LoginCard({ next = "/dashboard", mode = "login", signupH
 
   async function sendLink(e: React.FormEvent) {
     e.preventDefault();
-    const sb = supabaseBrowser();
+    const sb = await supabaseBrowser();
     if (!sb) return;
     setState("sending");
     setErr(null);
@@ -76,7 +76,7 @@ export default function LoginCard({ next = "/dashboard", mode = "login", signupH
   }
 
   async function google() {
-    const sb = supabaseBrowser();
+    const sb = await supabaseBrowser();
     if (!sb) return;
     setErr(null);
     const { data, error } = await sb.auth.signInWithOAuth({ provider: "google", options: { redirectTo: redirect(), skipBrowserRedirect: true } });

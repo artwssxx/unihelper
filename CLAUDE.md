@@ -20,7 +20,8 @@ Next.js 15 App Router, TypeScript strict, Tailwind v4 (токены дизайн
 - `data/programs.ts` — программы и гранты (источник для `supabase/seed.sql`)
 - `components/` — оболочка, карточки, компоненты мока, тур демо
 - `app/(admin)/admin` + `app/api/admin/*` + `components/admin/*` — админка; контент = код + правки (`lib/server/contentStore.ts`), сайт читает итог через `/api/content` и `useContent()`
-- `components/landing/LandingV4.tsx` + `lib/i18n/landing.ts` — лендинг на 3 языках; тема — `data-theme` на <html>, токены v4 в `app/globals.css`
+- Перевод сайта на uz/en: `lib/i18n/dict/{uz,en}.json` (ключ — русский текст с нормализованными пробелами, числа → «#»), `lib/i18n/translate.ts` (поиск, составные строки по частям), `lib/i18n/dom.ts` (перевод отрисованной страницы: текст и placeholder/title/aria-label/alt, наблюдатель за изменениями), `lib/i18n/lang.ts` (язык в `uh-lang`, общий с лендингом), `components/I18n.tsx` (словарь грузится чанком только для uz/en; до применения страница скрыта, не дольше 3 с), `components/LangSwitch.tsx`. Пополнение: `npm run i18n:translate` (строки из кода + `scripts/i18n-extra.json` → ИИ; даты — через Intl, `scripts/i18n-dates.mjs`), `node scripts/i18n-crawl.mjs <url>` — собрать строки с живых страниц. Язык ответов ИИ — заголовок `x-uh-lang` (ставит `apiFetch`) → `langOf(req)` + `LANG_RULE` в `lib/server/replyLang.ts`
+- `components/landing/LandingV4.tsx` + `lib/i18n/landing.ts` — лендинг на 3 языках (свои словари); тема — `data-theme` на <html>, токены v4 в `app/globals.css`
 - `lib/telegram/bot.ts` (логика, тесты) + `lib/server/tgBot.ts` (вызовы API) + `app/api/telegram/{webhook,link,cron}` + `app/(site)/tg` + `components/TelegramBridge.tsx` — бот и мини-приложение. Вебхук проверяет секрет, обработка — через `after()`. Мини-апп помечает вкладку `sessionStorage uh-tg`; хард-режим моков в Telegram запрещён (`inTelegram()`)
 - `app/(site)/blog`, `app/(site)/courses` + `lib/content/posts.ts` + `components/site/*` — публичный блог (контент-тип `posts`, правится в `/admin/blog`) и бесплатные уроки без регистрации; текст статей — простой формат без HTML (`components/site/Prose.tsx`)
 - `app/(app)/community` + `app/api/community/*` + `lib/community.ts` + `lib/server/community.ts` — комьюнити: карточки участников, проекты «ищу команду», организации с общим чатом, личные чаты (опрос раз в 4 с), жалобы → `/admin/community`, блокировки. Только для вошедших; таблицы `community_*` закрыты RLS, доступ через service role
@@ -47,7 +48,9 @@ Next.js 15 App Router, TypeScript strict, Tailwind v4 (токены дизайн
 - Ключи только в `.env.local` и настройках Vercel. Service role — только в `lib/server`.
 - Новые страницы берут программы/ивенты/уроки только через `useContent()` (клиент) или `getContent()` (сервер), не из констант напрямую.
 - Цвета — только токены из `globals.css` (работают в обеих темах); тёмные карточки — `bg-inv`/`inv-card`, не `bg-ink`.
-- Мобайл-first (375px). Без эмодзи в интерфейсе, иконки — штриховые SVG из `components/icons.tsx`.
+- Мобайл-first (375px): в кабинете нижняя панель `TabBar` (AppShell) и шапка в одну строку, ряды вкладок — утилита `tabs-row`, кнопки не меньше ~36px. Без эмодзи в интерфейсе, иконки — штриховые SVG из `components/icons.tsx`.
+- Новый русский текст в интерфейсе — перед коммитом `npm run i18n:translate`. Пользовательский текст (имена, сообщения, посты, ответы ИИ) — с `translate="no"`, чтобы словарь его не трогал.
+- Скорость: никаких `backdrop-filter` у карточек и движущихся элементов (только редкие панели `glass`), фон — статичные градиенты; тяжёлые библиотеки — динамическим `import()` (`supabase-js` грузится после отрисовки, сессия сначала берётся из localStorage); `useStore()` — общий снимок через `useSyncExternalStore`.
 
 ## Команды
 - `npm run dev`, `npm test`, `npm run build`

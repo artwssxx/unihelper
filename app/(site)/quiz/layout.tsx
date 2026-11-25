@@ -1,5 +1,6 @@
 import Link from "next/link";
 import * as I from "@/components/icons";
+import LangSwitch from "@/components/LangSwitch";
 
 export default function QuizLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -9,7 +10,10 @@ export default function QuizLayout({ children }: { children: React.ReactNode }) 
           <I.Logo />
           <span className="text-lg font-extrabold">UniHelper</span>
         </Link>
-        <Link href="/login" className="text-sm font-bold text-muted">У меня уже есть аккаунт</Link>
+        <div className="flex items-center gap-3">
+          <Link href="/login" className="text-sm font-bold text-muted">У меня уже есть аккаунт</Link>
+          <LangSwitch />
+        </div>
       </header>
       <main className="mx-auto max-w-[720px] px-4 pb-16">{children}</main>
     </div>

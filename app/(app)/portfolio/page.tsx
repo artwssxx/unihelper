@@ -120,7 +120,7 @@ export default function PortfolioPage() {
   async function draft() {
     setBusy(true);
     try {
-      const res = await fetch("/api/ai/portfolio", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ profile }) });
+      const res = await apiFetch("/api/ai/portfolio", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ profile }) });
       const j = await res.json();
       set({ about: j.about ?? p.about, projects: j.projects?.length ? j.projects : p.projects });
     } catch {
@@ -162,7 +162,7 @@ export default function PortfolioPage() {
     <div className="space-y-6">
       <section>
         <div className="eyebrow">САЙТ-ПОРТФОЛИО</div>
-        <h1 className="mt-3 text-[34px] font-extrabold tracking-tight sm:text-[42px]">
+        <h1 className="mt-3 text-[28px] font-extrabold leading-tight tracking-tight sm:text-[42px]">
           Твоя страница для <span className="serif-accent text-primary">приёмной комиссии</span>
         </h1>
         <p className="mt-2 max-w-[680px] text-body">
@@ -298,14 +298,14 @@ export default function PortfolioPage() {
                         {labelOf(id)}
                         {block ? <span className="ml-1.5 text-xs font-semibold text-muted">свой блок</span> : null}
                       </span>
-                      <button className="rounded-lg px-2 text-muted disabled:opacity-30" aria-label={`${labelOf(id)} выше`} disabled={idx === 0} onClick={() => move(id, -1)}>
+                      <button className="flex h-9 w-9 items-center justify-center rounded-lg text-muted hover:bg-line-3 disabled:opacity-30" aria-label={`${labelOf(id)} выше`} disabled={idx === 0} onClick={() => move(id, -1)}>
                         ↑
                       </button>
-                      <button className="rounded-lg px-2 text-muted disabled:opacity-30" aria-label={`${labelOf(id)} ниже`} disabled={idx === p.order.length - 1} onClick={() => move(id, 1)}>
+                      <button className="flex h-9 w-9 items-center justify-center rounded-lg text-muted hover:bg-line-3 disabled:opacity-30" aria-label={`${labelOf(id)} ниже`} disabled={idx === p.order.length - 1} onClick={() => move(id, 1)}>
                         ↓
                       </button>
                       {block ? (
-                        <button className="text-xs font-bold text-red" onClick={() => removeBlock(id)}>
+                        <button className="min-h-9 px-1 text-xs font-bold text-red" onClick={() => removeBlock(id)}>
                           Удалить
                         </button>
                       ) : (

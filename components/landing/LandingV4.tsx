@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import ThemeToggle from "@/components/ThemeToggle";
 import { LANDING, LANGS, type Lang } from "@/lib/i18n/landing";
+import { setLang, useLang } from "@/lib/i18n/lang";
 import s from "./landing.module.css";
 
 const cx = (...c: (string | false | undefined)[]) => c.filter(Boolean).join(" ");
@@ -22,25 +23,11 @@ function useReducedMotion() {
 }
 
 export default function LandingV4() {
-  const [lang, setLang] = useState<Lang>("ru");
+  // Язык общий для всего сайта (lib/i18n/lang.ts); лендинг рисует свои тексты сам, без словаря.
+  const lang = useLang();
   const t = LANDING[lang];
   const reduce = useReducedMotion();
-
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem("uh-lang") as Lang | null;
-      if (saved && LANDING[saved]) setLang(saved);
-    } catch {}
-  }, []);
-  useEffect(() => {
-    document.documentElement.lang = lang;
-  }, [lang]);
-  const chooseLang = (l: Lang) => {
-    setLang(l);
-    try {
-      localStorage.setItem("uh-lang", l);
-    } catch {}
-  };
+  const chooseLang = (l: Lang) => setLang(l);
 
   // Появление блоков при прокрутке.
   useEffect(() => {
@@ -84,7 +71,7 @@ function Nav({ t, lang, chooseLang }: { t: T; lang: Lang; chooseLang: (l: Lang) 
       <div className={cx(s.navIn, s.glass)}>
         <a href="#top" style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <Logo />
-          <span style={{ fontSize: 19, fontWeight: 800, letterSpacing: "-.02em" }}>UniHelper</span>
+          <span className={s.brand}>UniHelper</span>
         </a>
         <div className={s.navLinks}>
           <a href="#play">{t.nav.play}</a>

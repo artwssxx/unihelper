@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 import type { ContactInfo } from "./profileSchema";
 import type { ScoreRecord } from "./scores";
 import type { Profile } from "./types";
@@ -94,6 +94,8 @@ export interface Stored {
 }
 
 const listeners = new Set<() => void>();
+// Разобранное состояние для useStore: один JSON.parse на изменение, а не на каждый компонент.
+let snap: Stored | null = null;
 
 export function load(): Stored {
   try {
@@ -108,6 +110,12 @@ function markDemo(on: boolean) {
   document.documentElement.toggleAttribute("data-demo", on);
 }
 
+function emit(next: Stored) {
+  snap = next;
+  markDemo(Boolean(next.demo?.active));
+  listeners.forEach((l) => l());
+}
+
 export function save(patch: Partial<Stored>): void {
   const next = { ...load(), ...patch };
   try {
@@ -115,8 +123,7 @@ export function save(patch: Partial<Stored>): void {
   } catch {
     /* хранилище недоступно — продолжаем без него */
   }
-  markDemo(Boolean(next.demo?.active));
-  listeners.forEach((l) => l());
+  emit(next);
 }
 
 export function update(fn: (s: Stored) => Partial<Stored>): void {
@@ -127,11 +134,9 @@ export function reset(): void {
   try {
     localStorage.removeItem(KEY);
   } catch {}
-  markDemo(false);
-  listeners.forEach((l) => l());
+  emit({});
 }
 
-/** Хук: актуальное состояние хранилища; null до гидрации. */
 /** Подписка на любые изменения хранилища (для синхронизации с аккаунтом). */
 export function subscribe(fn: () => void): () => void {
   listeners.add(fn);
@@ -140,17 +145,22 @@ export function subscribe(fn: () => void): () => void {
   };
 }
 
+function subscribeStore(fn: () => void): () => void {
+  // Изменения из другой вкладки: сбрасываем кеш и перечитываем.
+  const onStorage = (e: StorageEvent) => {
+    if (e.key !== KEY && e.key !== null) return;
+    snap = null;
+    fn();
+  };
+  listeners.add(fn);
+  window.addEventListener("storage", onStorage);
+  return () => {
+    listeners.delete(fn);
+    window.removeEventListener("storage", onStorage);
+  };
+}
+
+/** Хук: актуальное состояние хранилища; null на сервере и при гидрации (как в HTML). */
 export function useStore(): Stored | null {
-  const [state, setState] = useState<Stored | null>(null);
-  useEffect(() => {
-    const sync = () => setState(load());
-    sync();
-    listeners.add(sync);
-    window.addEventListener("storage", sync);
-    return () => {
-      listeners.delete(sync);
-      window.removeEventListener("storage", sync);
-    };
-  }, []);
-  return state;
+  return useSyncExternalStore(subscribeStore, () => (snap ??= load()), () => null);
 }
