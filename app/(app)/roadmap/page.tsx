@@ -26,7 +26,7 @@ export default function RoadmapPage() {
 
   const items: RoadmapItem[] = useMemo(() => {
     if (!profile) return [];
-    const auto = buildRoadmap(profile, store?.myPrograms ?? [], new Date(), programs);
+    const auto = buildRoadmap(profile, store?.myPrograms ?? [], new Date(), [...programs, ...(store?.customUnis ?? [])]);
     const manual = (store?.customSteps ?? []).map((c) => ({ id: c.id, title: c.title, track: c.track as Track, due: c.month, estimated: false, source: "manual" as const }));
     return [...auto, ...manual].sort((a, b) => a.due.localeCompare(b.due));
   }, [profile, store, programs]);

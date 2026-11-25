@@ -1,7 +1,9 @@
 // Родители и дети: сводка прогресса ребёнка для родителя. Только итоги (сила профиля, моки, план,
 // уроки, вузы, монеты) — без переписки, текстов эссе и контактов. Чистый расчёт, без сети.
 
+import { gradesSummary, gradeText } from "./grades";
 import { majorsLabel } from "./majorsLabel";
+import { profileMajors } from "./profileConst";
 import type { MockHistoryItem } from "./clientStore";
 import { withMocks } from "./mocks/profileLink";
 import { buildRoadmap, effectiveStatus } from "./roadmap";
@@ -30,6 +32,8 @@ export interface ChildSummary {
   city: string | null;
   majors: string | null;
   strength: { score: number; level: string } | null;
+  /** Средний по предметам и профильные (если ребёнок загрузил оценки). */
+  grades: { average: string; core100: number | null; weak: string[]; source: string } | null;
   strengthHistory: { score: number; at: string }[];
   mocks: { label: string; result: string; at: string; hard: boolean }[];
   roadmap: { done: number; total: number; overdue: number; next: { title: string; due: string }[] } | null;
@@ -86,6 +90,11 @@ export function childSummary(args: {
     }));
   }
 
+  const gs = p ? gradesSummary(p.grades, profileMajors(p)) : null;
+  const grades: ChildSummary["grades"] = gs && p?.grades
+    ? { average: gradeText(gs.average, gs.scale), core100: gs.core.average100 == null ? null : Math.round(gs.core.average100), weak: gs.weakCore.map((i) => i.subject), source: p.grades.source }
+    : null;
+
   const mocks = [...(d.mocks ?? [])]
     .filter((m) => m.status === "completed")
     .sort((a, b) => b.finishedAt.localeCompare(a.finishedAt))
@@ -106,6 +115,7 @@ export function childSummary(args: {
     city: p?.city || null,
     majors: p ? majorsLabel(p) : null,
     strength: strength ? { score: strength.score, level: LEVEL_NAMES[strength.overall] } : null,
+    grades,
     strengthHistory: (d.strengthHistory ?? []).slice(-12),
     mocks,
     roadmap,

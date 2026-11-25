@@ -2,8 +2,7 @@
 
 import { useState } from "react";
 import MajorPicker from "@/components/MajorPicker";
-import { t } from "@/lib/i18n/ru";
-import { COUNTRIES } from "@/lib/profileConst";
+import CountryPicker from "@/components/CountryPicker";
 import type { AchievementLevel, Profile } from "@/lib/types";
 
 // Родитель регистрирует ребёнка: короткая анкета (то же, что в анкете ученика), ребёнку уйдёт ссылка-приглашение.
@@ -49,12 +48,7 @@ export default function ChildForm({ busy, onSubmit }: { busy: boolean; onSubmit:
       </div>
       <div>
         <div className="text-sm font-semibold">Куда хочет поступать</div>
-        <div className="mt-1.5 flex flex-wrap gap-2">
-          {COUNTRIES.map((c) => {
-            const on = p.targetCountries.includes(c);
-            return <button type="button" key={c} className="chip" data-on={on} aria-pressed={on} onClick={() => set({ targetCountries: on ? p.targetCountries.filter((x) => x !== c) : [...p.targetCountries, c] })}>{t.countries[c]}</button>;
-          })}
-        </div>
+        <div className="mt-1.5"><CountryPicker compact value={p.targetCountries} onChange={(v) => set({ targetCountries: v })} /></div>
       </div>
       <div>
         <div className="text-sm font-semibold">Направления</div>

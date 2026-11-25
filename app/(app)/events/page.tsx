@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { update, useStore, type EventRegistration } from "@/lib/clientStore";
 import { TYPE_LABEL, rankEvents, type EventItem } from "@/lib/content/events";
 import { useContent } from "@/lib/useContent";
+import OnlineForYou from "@/components/events/OnlineForYou";
 
 const FIELDS = [
   { id: "name", label: "Имя" },
@@ -40,6 +41,9 @@ export default function EventsPage() {
         </p>
       </section>
 
+      <OnlineForYou />
+
+      <h2 className="pt-2 text-2xl font-extrabold">Лента ивентов UniHelper</h2>
       <p className="rounded-2xl border border-dashed border-line-2 bg-surface px-5 py-3 text-sm text-body">
         Сейчас в ленте <b>демонстрационные примеры</b> (помечены «[Пример]»). Реальные ивенты добавят организаторы через «Разместить ивент» после модерации.
       </p>
@@ -62,7 +66,7 @@ export default function EventsPage() {
           const date = new Date(e.startsAt);
           const full = e.registrationMode === "unihelper" && e.registered >= e.capacity;
           return (
-            <article key={e.id} className="card flex gap-4">
+            <article key={e.id} id={e.id} className="card flex scroll-mt-24 gap-4">
               <div className={`flex h-14 w-[52px] flex-none flex-col items-center justify-center rounded-xl ${e.online ? "bg-orange-soft text-orange-ink-2" : "bg-primary-soft text-primary-ink"}`}>
                 <span className="text-lg font-extrabold">{String(date.getDate()).padStart(2, "0")}</span>
                 <span className="text-[11px] font-bold uppercase">{date.toLocaleDateString("ru-RU", { month: "short" }).replace(".", "")}</span>

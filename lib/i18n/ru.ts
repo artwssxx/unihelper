@@ -12,7 +12,7 @@ export const ru = {
     ],
     price: "Агентство: $2–5 тыс. Unihelper Pro: 120 000 сум в месяц.",
   },
-  countries: { US: "США", AE: "ОАЭ", HU: "Венгрия", TR: "Турция", KR: "Корея", DE: "Германия", IT: "Италия", JP: "Япония", UZ: "Узбекистан" },
+  countries: { US: "США", AE: "ОАЭ", HU: "Венгрия", TR: "Турция", KR: "Корея", DE: "Германия", IT: "Италия", JP: "Япония", UZ: "Узбекистан", HK: "Гонконг", MO: "Макао", PS: "Палестина", KP: "КНДР", CD: "ДР Конго", CG: "Конго" } as Record<string, string>,
   majors: {
     cs: "IT и Computer Science",
     engineering: "Инженерия",

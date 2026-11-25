@@ -50,7 +50,7 @@ export interface AnalyzeResult {
   note?: string;
 }
 
-async function pdfText(base64: string): Promise<string> {
+export async function pdfText(base64: string): Promise<string> {
   const { extractText, getDocumentProxy } = await import("unpdf");
   const pdf = await getDocumentProxy(new Uint8Array(Buffer.from(base64, "base64")));
   const { text } = await extractText(pdf, { mergePages: true });

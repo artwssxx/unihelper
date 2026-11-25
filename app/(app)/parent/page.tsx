@@ -143,7 +143,7 @@ function ChildCard({ c, onRemove }: { c: ChildSummary; onRemove: () => void }) {
         </div>
       )}
 
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Stat title="Сила профиля" value={c.strength ? `${c.strength.score}` : "—"} sub={c.strength ? `из 100 · ${c.strength.level} · не шанс поступления` : "после анкеты"}>
           {c.strengthHistory.length > 1 && (
             <div className="mt-2 flex h-10 items-end gap-1" aria-label="Динамика силы профиля">
@@ -154,6 +154,7 @@ function ChildCard({ c, onRemove }: { c: ChildSummary; onRemove: () => void }) {
         <Stat title="Дорожная карта" value={c.roadmap ? `${c.roadmap.done} / ${c.roadmap.total}` : "—"} sub={c.roadmap ? (c.roadmap.overdue ? `просрочено: ${c.roadmap.overdue}` : "без просрочек") : ""}>
           {c.roadmap && <div className="mt-2 h-2 overflow-hidden rounded-full bg-line-3"><div className="h-full rounded-full bg-primary" style={{ width: `${pct}%` }} /></div>}
         </Stat>
+        <Stat title="Оценки в школе" value={c.grades ? c.grades.average : "—"} sub={c.grades ? `${c.grades.core100 != null ? `профильные ${c.grades.core100} из 100` : "профильных нет"}${c.grades.weak.length ? ` · подтянуть: ${c.grades.weak.join(", ")}` : ""}` : "ребёнок ещё не загрузил оценки"} />
         <Stat title="Активность" value={c.coins ? `уровень ${c.coins.level}` : "—"} sub={c.coins ? `${c.coins.title} · серия ${c.coins.streak} · уроков: ${c.lessons}` : `уроков: ${c.lessons}`} />
       </div>
 

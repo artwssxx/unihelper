@@ -91,6 +91,8 @@ export interface Stored {
   customUnis?: import("./types").Program[];
   /** Демо для инвесторов: вымышленный ученик и пошаговый тур. */
   demo?: { active: boolean; step: number; tour: boolean };
+  /** Метки подбора с прошлого визита — показать, что изменилось после правок профиля. */
+  matchSnap?: import("./matchDiff").MatchSnap;
   /** Аккаунт родителя: без своей анкеты, кабинет — /parent. */
   role?: "parent";
 }
@@ -118,10 +120,31 @@ function emit(next: Stored) {
   listeners.forEach((l) => l());
 }
 
+const PENDING = "unihelper:pending";
+
+/** Время последнего изменения, которое ещё не ушло в аккаунт (null — всё отправлено). */
+export function pendingSince(): number | null {
+  try {
+    const v = Number(localStorage.getItem(PENDING));
+    return v > 0 ? v : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Отметить, что изменения до момента `upTo` дошли до аккаунта. */
+export function markSynced(upTo: number): void {
+  try {
+    const v = Number(localStorage.getItem(PENDING));
+    if (v && v <= upTo) localStorage.removeItem(PENDING);
+  } catch {}
+}
+
 export function save(patch: Partial<Stored>): void {
   const next = { ...load(), ...patch };
   try {
     localStorage.setItem(KEY, JSON.stringify(next));
+    localStorage.setItem(PENDING, String(Date.now()));
   } catch {
     /* хранилище недоступно — продолжаем без него */
   }
@@ -135,6 +158,7 @@ export function update(fn: (s: Stored) => Partial<Stored>): void {
 export function reset(): void {
   try {
     localStorage.removeItem(KEY);
+    localStorage.removeItem(PENDING);
   } catch {}
   emit({});
 }

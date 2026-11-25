@@ -8,14 +8,19 @@ const byKey = <T,>(a: T[] = [], b: T[] = [], key: (x: T) => string) => {
   return [...m.values()];
 };
 
-export function mergeStates(local: Stored, remote: Stored): Stored {
+/**
+ * preferLocal — в браузере есть изменения, которые ещё не дошли до аккаунта (сохранили и сразу обновили
+ * страницу): тогда профиль, контакты и портфолио берём из браузера, иначе — из аккаунта.
+ */
+export function mergeStates(local: Stored, remote: Stored, preferLocal = false): Stored {
   const l = local.demo?.active ? {} : local; // демо в аккаунт не переносим
+  const pick = <K extends keyof Stored>(k: K): Stored[K] => (preferLocal ? l[k] ?? remote[k] : remote[k] ?? l[k]);
   return {
     ...l,
     ...remote,
-    profile: remote.profile ?? l.profile,
-    contact: remote.contact ?? l.contact,
-    profileId: remote.profileId ?? l.profileId,
+    profile: pick("profile"),
+    contact: pick("contact"),
+    profileId: pick("profileId"),
     myPrograms: [...new Set([...(remote.myPrograms ?? []), ...(l.myPrograms ?? [])])],
     roadmap: { ...(l.roadmap ?? {}), ...(remote.roadmap ?? {}) },
     customSteps: byKey(remote.customSteps, l.customSteps, (x) => x.id),
@@ -24,7 +29,9 @@ export function mergeStates(local: Stored, remote: Stored): Stored {
     lessons: { ...(l.lessons ?? {}), ...(remote.lessons ?? {}) },
     essays: byKey(remote.essays, l.essays, (x) => x.id),
     scores: byKey(remote.scores, l.scores, (x) => x.id),
-    portfolio: remote.portfolio ?? l.portfolio,
+    portfolio: pick("portfolio"),
+    role: pick("role"),
+    matchSnap: pick("matchSnap"),
     seenQuestions: [...new Set([...(remote.seenQuestions ?? []), ...(l.seenQuestions ?? [])])].slice(-3000),
     customUnis: byKey(remote.customUnis, l.customUnis, (x) => x.id),
     demo: undefined,

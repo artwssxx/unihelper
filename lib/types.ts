@@ -1,3 +1,5 @@
+import type { Grades } from "./grades";
+
 // Общие типы Unihelper. Логика оценки живёт в lib/scoring, данные программ — в data/programs.ts.
 
 export type Major =
@@ -10,16 +12,8 @@ export type Major =
   | "design"
   | "natural_sciences";
 
-export type CountryCode =
-  | "US"
-  | "AE"
-  | "HU"
-  | "TR"
-  | "KR"
-  | "DE"
-  | "IT"
-  | "JP"
-  | "UZ";
+/** Код страны ISO 3166-1 alpha-2: ученик может выбрать любую страну мира (см. ALL_COUNTRIES в lib/countries). */
+export type CountryCode = string;
 
 export type AchievementLevel = "none" | "school" | "city" | "national" | "international";
 
@@ -53,6 +47,8 @@ export interface Profile {
   /** Баллы хард-моков (середина диапазона). Только для Profile Strength, НЕ для требований вузов. */
   mockSat?: number | null;
   mockIelts?: number | null;
+  /** Оценки по предметам (eMaktab, EMIS, фото табеля или вручную). Если их достаточно — GPA считается по ним. */
+  grades?: Grades;
 }
 
 export type FundingType = "none" | "partial" | "full";
@@ -72,6 +68,8 @@ export interface Program {
   isCustom?: boolean;
   /** Требования заполнены ИИ (черновик). */
   aiDraft?: boolean;
+  /** Из общей базы вузов (карточка собрана ИИ один раз для всех), а не добавлен учеником. */
+  pooled?: boolean;
   majors: Major[] | "any";
   url: string | null;
   qsRank: number | null;

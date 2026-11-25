@@ -4,7 +4,7 @@ import { track } from "@/lib/analytics";
 import { getLang } from "./i18n/lang";
 import type { Session } from "@supabase/supabase-js";
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
-import { load, save, subscribe, type Stored } from "./clientStore";
+import { load, markSynced, pendingSince, save, subscribe, type Stored } from "./clientStore";
 import { LIMITS, type Plan } from "./plans";
 import { mergeStates } from "./stateMerge";
 import { authEnabled, supabaseBrowser } from "./supabaseClient";
@@ -79,10 +79,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const r = await apiFetch("/api/me/state", { cache: "no-store" }).catch(() => null);
     if (!r?.ok) return setSyncedUser(s.user.id); // сервер недоступен — дальше решают данные браузера
     const j = await r.json();
-    const merged = mergeStates(load(), (j.data ?? {}) as Stored);
+    // Есть неотправленные изменения (сохранили и сразу обновили страницу) — они новее данных аккаунта.
+    const merged = mergeStates(load(), (j.data ?? {}) as Stored, pendingSince() != null);
     save(merged);
     setSyncedUser(s.user.id);
-    await apiFetch("/api/me/state", { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify({ data: merged }) });
+    const at = Date.now();
+    const put = await apiFetch("/api/me/state", { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify({ data: merged }) }).catch(() => null);
+    if (put?.ok) markSynced(at);
     await refreshPlan();
   }, [refreshPlan]);
 
@@ -130,15 +133,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (ready) document.documentElement.toggleAttribute("data-auth", Boolean(session));
   }, [ready, session]);
 
-  // Дальнейшие изменения — в аккаунт с задержкой 2 с.
+  // Дальнейшие изменения — в аккаунт с задержкой 2 с; при уходе со страницы — сразу (keepalive).
   useEffect(() => {
     if (!session) return;
-    return subscribe(() => {
+    const push = (keepalive = false) => {
       if (pushTimer.current) clearTimeout(pushTimer.current);
-      pushTimer.current = setTimeout(() => {
-        apiFetch("/api/me/state", { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify({ data: load() }) }).catch(() => {});
-      }, 2000);
+      pushTimer.current = null;
+      const at = Date.now();
+      const body = JSON.stringify({ data: load() });
+      // keepalive ограничен ~64 КБ: большое состояние отправит следующая загрузка (флаг «не отправлено» останется).
+      if (keepalive && body.length > 60_000) return;
+      apiFetch("/api/me/state", { method: "PUT", headers: { "content-type": "application/json" }, body, keepalive })
+        .then((r) => r.ok && markSynced(at))
+        .catch(() => {});
+    };
+    const flush = () => {
+      if (pushTimer.current && synced.current) push(true);
+    };
+    const onHide = () => document.visibilityState === "hidden" && flush();
+    window.addEventListener("pagehide", flush);
+    document.addEventListener("visibilitychange", onHide);
+    const unsub = subscribe(() => {
+      if (pushTimer.current) clearTimeout(pushTimer.current);
+      pushTimer.current = setTimeout(() => push(), 2000);
     });
+    return () => {
+      unsub();
+      window.removeEventListener("pagehide", flush);
+      document.removeEventListener("visibilitychange", onHide);
+    };
   }, [session]);
 
   const signOut = useCallback(async () => {

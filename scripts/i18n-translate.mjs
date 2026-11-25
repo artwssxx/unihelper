@@ -2,7 +2,7 @@
 // Запуск: npm run i18n:translate (нужен GEMINI_API_KEY в .env.local). Уже переведённое не трогает —
 // правки вручную в JSON сохраняются. Новые строки из кода и со страниц (scripts/i18n-extra.json) добираются повторным запуском.
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
-import { dateEntries } from "./i18n-dates.mjs";
+import { countryEntries, dateEntries } from "./i18n-dates.mjs";
 import { extract } from "./i18n-extract.mjs";
 
 const ROOT = new URL("..", import.meta.url).pathname;
@@ -71,11 +71,14 @@ async function call(items, attempt = 0) {
   }
 }
 
+// Коды стран — из lib/countries.ts (строка ALL_COUNTRIES).
+const ALL_COUNTRIES = readFileSync(new URL("../lib/countries.ts", import.meta.url), "utf8").match(/"((?:[A-Z]{2} )+[A-Z]{2})"/)[1].split(" ");
+
 async function main() {
   if (!KEY) throw new Error("Нет GEMINI_API_KEY");
   const dict = { uz: loadJson(DICT.uz, {}), en: loadJson(DICT.en, {}) };
   // Даты — без ИИ, через Intl (точно и бесплатно).
-  for (const [k, v] of dateEntries()) {
+  for (const [k, v] of [...dateEntries(), ...countryEntries(ALL_COUNTRIES)]) {
     dict.uz[k] ??= v.uz;
     dict.en[k] ??= v.en;
   }

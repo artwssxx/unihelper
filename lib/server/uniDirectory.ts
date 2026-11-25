@@ -77,3 +77,16 @@ export async function browseUniversities(o: { q: string; country?: string; page:
   });
   return { items, total, page, pages };
 }
+
+/** Вуз справочника по названию (точное совпадение, затем «содержит все слова»); null — нет в справочнике. */
+export function findInDirectory(name: string, country: string): { name: string; country: string; web: string | null } | null {
+  const nq = norm(name);
+  if (nq.length < 3) return null;
+  const words = nq.split(" ");
+  const inCountry = INDEX.filter((x) => x.r[1] === country);
+  const hit = inCountry.find((x) => x.n === nq) ?? inCountry.filter((x) => words.every((w) => x.n.includes(w))).sort((a, b) => a.n.length - b.n.length)[0];
+  return hit ? { name: hit.r[0], country: hit.r[1], web: hit.r[2] || null } : null;
+}
+
+/** Нормализованное название — чтобы не показывать один вуз дважды (каталог и общая база). */
+export const uniNorm = norm;

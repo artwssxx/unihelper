@@ -34,6 +34,16 @@ export const STRENGTH_POINTS = {
   qualitative: { weak: 25, ok: 60, strong: 90 } as const,
 } as const;
 
+/** Оценки по предметам: как профильные предметы и спецпредметы сдвигают ось «Учёба». */
+export const SUBJECT_RULES = {
+  /** Очки оси += (профильные − средний) × coreShift, в пределах ±coreShiftMax. */
+  coreShift: 0.5,
+  coreShiftMax: 8,
+  /** За каждый спецпредмет по направлению с оценкой ≥ strongCore100 — бонус, но не больше specialBonusMax. */
+  specialBonus: 2,
+  specialBonusMax: 4,
+} as const;
+
 export const FIT_RULES = {
   /** Разница с типичным профилем, которую считаем «на уровне». */
   tolerance: { gpa100: 3, ielts: 0.5, sat: 60 },

@@ -45,3 +45,22 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   console.log(e.size);
   console.log([...e].slice(0, 8).map(([k, v]) => `${k} → ${v.uz} | ${v.en}`).join("\n"));
 }
+
+// Названия стран (выбор из всех стран мира): русское название → uz/en через Intl. Короткие названия из lib/i18n/ru.ts — вручную.
+const COUNTRY_OWN = {
+  US: ["США", "AQSh", "USA"], KR: ["Корея", "Koreya", "Korea"], AE: ["ОАЭ", "BAA", "UAE"], HU: ["Венгрия", "Vengriya", "Hungary"],
+  TR: ["Турция", "Turkiya", "Türkiye"], DE: ["Германия", "Germaniya", "Germany"], IT: ["Италия", "Italiya", "Italy"], JP: ["Япония", "Yaponiya", "Japan"],
+  UZ: ["Узбекистан", "O‘zbekiston", "Uzbekistan"], HK: ["Гонконг", "Gonkong", "Hong Kong"], MO: ["Макао", "Makao", "Macau"],
+  PS: ["Палестина", "Falastin", "Palestine"], KP: ["КНДР", "Shimoliy Koreya", "North Korea"], CD: ["ДР Конго", "Kongo DR", "DR Congo"], CG: ["Конго", "Kongo", "Congo"],
+};
+export function countryEntries(codes) {
+  const dn = (l) => new Intl.DisplayNames([l], { type: "region" });
+  const ru = dn("ru"), uz = dn("uz"), en = dn("en");
+  const out = new Map();
+  for (const c of codes) {
+    const own = COUNTRY_OWN[c];
+    if (own) out.set(key(own[0]), { uz: own[1], en: own[2] });
+    else out.set(key(ru.of(c)), { uz: key(uz.of(c)), en: key(en.of(c)) });
+  }
+  return out;
+}

@@ -22,6 +22,14 @@ describe("buildRoadmap", () => {
     expect(r.some((i) => i.id === "apply-UZ")).toBe(true);
   });
 
+  it("любая страна мира: заявка с пометкой «уточни сроки»", () => {
+    const r = buildRoadmap({ ...p, targetCountries: ["CA", "MY"] }, [], now);
+    const ca = r.find((i) => i.id === "apply-CA")!;
+    expect(ca.title).toContain("Канада — уточни сроки");
+    expect(ca.estimated).toBe(true);
+    expect(r.some((i) => i.id === "docs-MY")).toBe(true);
+  });
+
   it("сроки заявок помечены «ориентировочно», шаги ведут в разделы", () => {
     const r = buildRoadmap(p, [], now);
     expect(r.filter((i) => i.track === "applications").every((i) => i.estimated)).toBe(true);

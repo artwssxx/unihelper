@@ -1,3 +1,4 @@
+import { countryName } from "./countries";
 import { PROGRAMS } from "@/data/programs";
 import { scoreProfile } from "./scoring/strength";
 import type { CountryCode, Profile } from "./types";
@@ -66,8 +67,9 @@ export function buildRoadmap(profile: Profile, myPrograms: string[] = [], now = 
     const p = programs.find((x) => x.id === pid);
     if (p) countries.add(p.country as CountryCode);
   }
+  // Страны без шаблона сроков: ориентир — январь (типичный срок для иностранцев), с пометкой «уточни».
   const deadlines = [...countries]
-    .map((c) => ({ c, d: DEADLINE_OFFSET[c] }))
+    .map((c) => ({ c, d: DEADLINE_OFFSET[c] ?? { offset: 4, label: `${countryName(c)} — уточни сроки на сайтах вузов` } }))
     .filter((x): x is { c: CountryCode; d: { offset: number; label: string } } => Boolean(x.d))
     .sort((a, b) => a.d.offset - b.d.offset);
   const nowOffset = (now.getFullYear() - y) * 12 + now.getMonth() - 8;

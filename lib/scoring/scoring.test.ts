@@ -3,7 +3,8 @@ import { PROGRAMS, getProgram } from "../../data/programs";
 import type { Profile, Program } from "../types";
 import { admissionFit, evaluateProgram, fundingFit } from "./fit";
 import { filterPrograms, matchPrograms } from "./match";
-import { gpaTo100, levelOfPoints, nextBand, piecewise, scoreProfile } from "./strength";
+import { subjectKey } from "../grades";
+import { gpaTo100, levelOfPoints, nextBand, piecewise, profileGpa100, scoreProfile } from "./strength";
 
 const base: Profile = {
   grade: 11,
@@ -202,5 +203,52 @@ describe("несколько направлений", () => {
     const p = { ...base, major: "medicine" as const, majors: ["medicine" as const, "cs" as const], achievementsText: "сделал сайт для школы и хакатон" };
     const r = admissionFit(p, prog({ majors: ["cs", "medicine"] }));
     expect(r.reasons.join(" ")).toContain("связаны со специальностью");
+  });
+});
+
+describe("оценки по предметам", () => {
+  const grades = (items: [string, number, boolean?][], scale: 5 | 10 | 100 = 5) => ({
+    items: items.map(([subject, grade, special]) => ({ subject, key: subjectKey(subject), grade, ...(special ? { special } : {}) })),
+    scale, source: "manual" as const, updatedAt: "2026-11-25",
+  });
+  const strongCs = grades([["Matematika", 5, true], ["Informatika", 5], ["Fizika", 4.8], ["Ona tili", 4], ["Tarix", 4.2], ["Jismoniy tarbiya", 3]]);
+
+  it("GPA считается по оценкам, физкультура в средний не входит", () => {
+    expect(profileGpa100({ ...base, gpa: 3.0, grades: strongCs })).toBeCloseTo(92, 0);
+    // меньше трёх предметов — остаётся GPA из анкеты
+    expect(profileGpa100({ ...base, grades: grades([["Matematika", 5], ["Fizika", 5]]) })).toBe(92);
+    // ученик отключил подсчёт по оценкам
+    expect(profileGpa100({ ...base, grades: { ...strongCs, useForGpa: false } })).toBe(92);
+  });
+
+  it("сильные профильные предметы и спецпредмет поднимают ось «Учёба», слабые — опускают", () => {
+    const pts = (p: Profile) => scoreProfile(p).axes.find((a) => a.axis === "academics")!.points!;
+    const same = grades([["Matematika", 4.6], ["Informatika", 4.6], ["Fizika", 4.6], ["Ona tili", 4.6], ["Tarix", 4.6]]);
+    const coreStrong = grades([["Matematika", 5, true], ["Informatika", 5], ["Fizika", 5], ["Ona tili", 4.2], ["Tarix", 3.8]]);
+    const coreWeak = grades([["Matematika", 3.8], ["Informatika", 4.2], ["Fizika", 4], ["Ona tili", 5], ["Tarix", 6 - 0.4]]);
+    expect(pts({ ...base, grades: coreStrong })).toBeGreaterThan(pts({ ...base, grades: same }));
+    expect(pts({ ...base, grades: coreWeak })).toBeLessThan(pts({ ...base, grades: same }));
+    expect(scoreProfile({ ...base, grades: coreStrong }).axes[0].note).toContain("спецпредметы");
+  });
+
+  it("слабый профильный предмет: совет про него и не выше «Реалистично»", () => {
+    const weakMath = grades([["Matematika", 3.2], ["Informatika", 5], ["Fizika", 5], ["Ona tili", 5], ["Tarix", 5], ["Ingliz tili", 5]]);
+    const p: Profile = { ...base, essays: "strong", recommendations: "strong", grades: weakMath };
+    expect(scoreProfile(p).tips.some((t) => t.includes("Математика"))).toBe(true);
+    const easy = prog({ acceptanceRate: 0.9, typical: { gpa100: 60, ielts: 5, sat: null } });
+    const r = admissionFit(p, easy);
+    expect(r.label).toBe("realistic");
+    expect(r.reasons.join(" ")).toContain("слабая оценка по профильному предмету: математика");
+    // без слабого предмета тот же профиль — «Высокое соответствие»
+    expect(admissionFit({ ...p, grades: strongCs }, easy).label).toBe("high");
+    expect(admissionFit({ ...p, grades: strongCs }, easy).reasons.join(" ")).toContain("сильные оценки по профильным предметам");
+  });
+
+  it("профильные предметы зависят от направления: для медицины важны биология и химия", () => {
+    const g = grades([["Matematika", 3.4], ["Biologiya", 5], ["Kimyo", 5], ["Ona tili", 4.5]]);
+    const med = admissionFit({ ...base, major: "medicine", majors: ["medicine"], grades: g }, prog({ majors: "any" }));
+    expect(med.reasons.join(" ")).not.toContain("слабая оценка");
+    const cs = admissionFit({ ...base, grades: g }, prog({ majors: "any" }));
+    expect(cs.reasons.join(" ")).toContain("математика");
   });
 });

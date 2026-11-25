@@ -7,9 +7,10 @@ import MajorPicker from "@/components/MajorPicker";
 import { useAuth } from "@/lib/auth";
 import { useEffect, useState } from "react";
 import { load, save } from "@/lib/clientStore";
-import { t } from "@/lib/i18n/ru";
-import { COUNTRIES, contactSchema, profileSchema } from "@/lib/profileSchema";
-import type { AchievementLevel, CountryCode, Profile } from "@/lib/types";
+import { contactSchema, profileSchema } from "@/lib/profileSchema";
+import CountryPicker from "@/components/CountryPicker";
+import { isCountry } from "@/lib/countries";
+import type { AchievementLevel, Profile } from "@/lib/types";
 
 const EMPTY: Profile = {
   grade: 10,
@@ -57,9 +58,9 @@ export default function Quiz() {
     const sp = new URLSearchParams(location.search);
     const n = sp.get("next");
     if (n && n.startsWith("/") && !n.startsWith("//") && !n.startsWith("/quiz")) setNext(n);
-    const country = sp.get("country") as CountryCode | null;
+    const country = sp.get("country");
     const base = { ...EMPTY, ...(s.draft ?? {}) };
-    if (country && (COUNTRIES as readonly string[]).includes(country) && !base.targetCountries.includes(country)) {
+    if (country && isCountry(country) && !base.targetCountries.includes(country)) {
       base.targetCountries = [...base.targetCountries, country];
     }
     if (s.draft || country) setP(base);
@@ -119,8 +120,6 @@ export default function Quiz() {
     }
   }
 
-  const toggleCountry = (c: CountryCode) =>
-    set({ targetCountries: p.targetCountries.includes(c) ? p.targetCountries.filter((x) => x !== c) : [...p.targetCountries, c] });
 
   if (registering) {
     return (
@@ -226,13 +225,7 @@ export default function Quiz() {
 
         {step === 5 && (
           <Q title="Где хочешь учиться?" hint="Можно выбрать несколько. Узбекские вузы покажем всегда — как запасной вариант.">
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-              {COUNTRIES.map((c) => (
-                <button key={c} className="chip" data-on={p.targetCountries.includes(c)} onClick={() => toggleCountry(c)}>
-                  {t.countries[c]}
-                </button>
-              ))}
-            </div>
+            <CountryPicker value={p.targetCountries} onChange={(v) => set({ targetCountries: v })} />
           </Q>
         )}
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { track } from "@/lib/analytics";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import FitPills from "@/components/FitPills";
 import NeedProfile from "@/components/NeedProfile";
 import { ProGate } from "@/components/ProLock";
@@ -19,6 +19,8 @@ import { FIT_LABEL_NAMES, FUNDING_LABEL_NAMES, totalCost } from "@/lib/scoring/f
 import { matchPrograms, type MatchItem } from "@/lib/scoring/match";
 import type { FitLabel, Major, Profile, Program } from "@/lib/types";
 import { useContent } from "@/lib/useContent";
+import { useUniPool } from "@/lib/useUniPool";
+import { diffMatch, snapChanged, snapOf } from "@/lib/matchDiff";
 import { useProfile } from "@/lib/useProfile";
 
 type Tab = "match" | "mine" | "custom" | "world";
@@ -47,14 +49,43 @@ export default function ProgramsPage() {
   const [showFilters, setShowFilters] = useState(false);
   const activeFilters = countries.length + (major ? 1 : 0) + (maxCost !== "" ? 1 : 0) + (funding !== "any" ? 1 : 0) + (label !== "eligible" ? 1 : 0) + (backupOnly ? 1 : 0);
 
-  const custom = useMemo(() => (store?.customUnis ?? []).filter((p) => Number.isFinite(p.tuitionUsd)), [store?.customUnis]);
+  // Свои вузы ученика; вузы из общей базы, которые он добавил в список, хранятся рядом (pooled) и в лимит не входят.
+  const custom = useMemo(() => (store?.customUnis ?? []).filter((p) => Number.isFinite(p.tuitionUsd) && !p.pooled), [store?.customUnis]);
+  const pool = useUniPool(profile?.targetCountries ?? [], profile?.major ?? "cs");
+  const pooled = useMemo(() => {
+    const saved = (store?.customUnis ?? []).filter((p) => p.pooled);
+    const fresh = new Map(pool.programs.map((p) => [p.id, p]));
+    const own = new Set(custom.map((p) => p.university.toLowerCase()));
+    // Свежая карточка из базы важнее сохранённой копии; вуз, который ученик добавил сам, не дублируем.
+    return [...new Map([...saved, ...fresh.values()].map((p) => [p.id, fresh.get(p.id) ?? p])).values()].filter((p) => !own.has(p.university.toLowerCase()));
+  }, [store?.customUnis, pool.programs, custom]);
   // Фильтр направления: по умолчанию — все направления ученика, иначе одно выбранное.
   const effProfile = useMemo<Profile | null>(() => (profile ? (major ? { ...profile, major, majors: [major] } : profile) : null), [profile, major]);
   const all = useMemo(() => {
     if (!effProfile) return [];
-    const m = matchPrograms(effProfile, [...programs, ...custom]);
+    const m = matchPrograms(effProfile, [...programs, ...custom, ...pooled]);
     return [...m.abroad, ...m.local];
-  }, [effProfile, programs, custom]);
+  }, [effProfile, programs, custom, pooled]);
+
+  // «Подбор обновился»: сравниваем метки с прошлым визитом (оценки, IELTS, страны изменились — метки тоже).
+  const [changes, setChanges] = useState<ReturnType<typeof diffMatch> | null>(null);
+  const fullMatch = useMemo(() => {
+    if (!profile || !major) return all;
+    const m = matchPrograms(profile, [...programs, ...custom, ...pooled]);
+    return [...m.abroad, ...m.local];
+  }, [all, major, profile, programs, custom, pooled]);
+  useEffect(() => {
+    if (!fullMatch.length || pool.loading) return;
+    const t = setTimeout(() => {
+      const prev = store?.matchSnap;
+      const d = diffMatch(prev, fullMatch);
+      if (d.up.length || d.down.length) setChanges(d);
+      const next = snapOf(fullMatch);
+      if (snapChanged(prev, next)) update(() => ({ matchSnap: next }));
+    }, 800);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fullMatch, pool.loading]);
 
   if (profile === undefined) return null;
   if (profile === null || !effProfile) return <NeedProfile text="Подбор вузов считается по твоему профилю." />;
@@ -93,7 +124,16 @@ export default function ProgramsPage() {
       return;
     }
     setNote(null);
-    update((s) => ({ myPrograms: (s.myPrograms ?? []).includes(id) ? (s.myPrograms ?? []).filter((x) => x !== id) : [...(s.myPrograms ?? []), id] }));
+    // Вуз из общей базы сохраняем копией: он нужен дорожной карте, главной и родителю, даже если база обновится.
+    const fromPool = pooled.find((p) => p.id === id);
+    update((s) => {
+      const on = (s.myPrograms ?? []).includes(id);
+      const rest = (s.customUnis ?? []).filter((x) => x.id !== id);
+      return {
+        myPrograms: on ? (s.myPrograms ?? []).filter((x) => x !== id) : [...(s.myPrograms ?? []), id],
+        ...(fromPool ? { customUnis: on ? rest : [...rest, fromPool] } : {}),
+      };
+    });
   };
   const saveCustom = (raw: Program) => {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -136,6 +176,20 @@ export default function ProgramsPage() {
         </p>
       )}
       {note && <p className="rounded-2xl bg-primary-soft px-5 py-3 text-sm font-semibold text-primary-ink">{note}</p>}
+      {changes && (
+        <div className="rounded-2xl bg-green-soft px-5 py-3 text-sm text-ink" role="status">
+          <div className="flex items-start justify-between gap-3">
+            <b>Подбор обновился после изменений в профиле</b>
+            <button className="text-muted" aria-label="Скрыть" onClick={() => setChanges(null)}>×</button>
+          </div>
+          <ul className="mt-1 space-y-0.5">
+            {[...changes.up, ...changes.down].slice(0, 4).map((c) => (
+              <li key={c.id}><span translate="no">{c.university}</span>: {FIT_LABEL_NAMES[c.from]} → <b>{FIT_LABEL_NAMES[c.to]}</b></li>
+            ))}
+          </ul>
+          {changes.up.length + changes.down.length > 4 && <p className="mt-1 text-muted">и ещё {changes.up.length + changes.down.length - 4}</p>}
+        </div>
+      )}
 
       <div className="tabs-row" role="tablist">
         {(
@@ -214,7 +268,12 @@ export default function ProgramsPage() {
         </div>
       </section>
 
-      <p className="text-sm text-muted">Найдено: {filtered.length}</p>
+      <p className="text-sm text-muted">
+        Найдено: {filtered.length}
+        {tab === "match" && pooled.length > 0 && ` · из них из общей базы вузов: ${filtered.filter((i) => i.program.pooled).length}`}
+        {tab === "match" && pool.loading && " · подгружаем вузы из общей базы…"}
+        {tab === "match" && !pool.loading && pool.growing && " · база по твоим странам пополняется, новые вузы появятся сами"}
+      </p>
       {filtered.length === 0 && (
         <div className="card text-sm text-muted">
           {tab === "mine"
@@ -279,6 +338,7 @@ function ProgramCard({ item, inList, onToggle, onOpen }: { item: MatchItem; inLi
         </button>
         <div className="flex flex-wrap gap-1.5">
           {p.isCustom && <span className="pill bg-line-3 text-muted">{p.aiDraft ? "свой · черновик ИИ" : "свой вуз"}</span>}
+          {p.pooled && <span className="pill bg-line-3 text-muted">общая база · собрано ИИ</span>}
           {p.isPartner && <span className="pill border border-line text-muted">партнёр</span>}
           {p.verifiedAt && <span className="pill bg-green-soft text-green">проверено</span>}
         </div>
@@ -368,7 +428,7 @@ function Detail(props: {
           {row("Обучение", `$${p.tuitionUsd.toLocaleString("ru-RU")}/год`)}
           {row("Проживание", `≈ $${p.livingUsd.toLocaleString("ru-RU")}/год`)}
           {row("Сроки", p.deadlineNote || nd)}
-          {row("Данные", p.verifiedAt ? `проверены ${p.verifiedAt.slice(0, 10)}` : p.isCustom ? (p.aiDraft ? "черновик ИИ — сверить" : "введены вами") : "ориентировочно — сверить")}
+          {row("Данные", p.verifiedAt ? `проверены ${p.verifiedAt.slice(0, 10)}` : p.pooled ? "собрано ИИ, не проверено экспертом — сверить" : p.isCustom ? (p.aiDraft ? "черновик ИИ — сверить" : "введены вами") : "ориентировочно — сверить")}
         </div>
 
         <div className="mt-6 flex flex-wrap gap-2">

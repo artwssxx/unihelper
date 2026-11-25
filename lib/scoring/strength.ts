@@ -1,5 +1,7 @@
 import type { AxisResult, Profile, StrengthLevel, StrengthResult } from "../types";
-import { STRENGTH_POINTS as SP, STRENGTH_RULES } from "./config";
+import { gradesGpa100, gradesSummary, gradeText, SUBJECT_RU } from "../grades";
+import { profileMajors } from "../profileConst";
+import { STRENGTH_POINTS as SP, STRENGTH_RULES, SUBJECT_RULES } from "./config";
 
 export const LEVEL_NAMES = ["начальный", "развивающийся", "сильный", "очень сильный"] as const;
 
@@ -8,6 +10,11 @@ export function gpaTo100(gpa: number | null, scale: 5 | 100): number | null {
   if (scale === 100) return Math.max(0, Math.min(100, gpa));
   // 5-балльная: 5.0 → 100, 4.0 → 80, 3.0 → 60
   return Math.max(0, Math.min(100, (gpa / 5) * 100));
+}
+
+/** GPA ученика 0–100: по оценкам предметов, если их достаточно, иначе — введённый в анкете. */
+export function profileGpa100(p: Profile): number | null {
+  return gradesGpa100(p.grades) ?? gpaTo100(p.gpa, p.gpaScale);
 }
 
 /** Линейная интерполяция между опорными точками (с обрезкой по краям). */
@@ -39,10 +46,34 @@ function levelByThresholds(value: number, thresholds: readonly number[]): Streng
 }
 
 function academics(p: Profile): AxisResult {
-  const g = gpaTo100(p.gpa, p.gpaScale);
+  const g = profileGpa100(p);
   if (g == null) return { axis: "academics", level: null, points: null, note: "GPA не указан" };
   const level = levelByThresholds(g, STRENGTH_RULES.academics.gpa100);
-  return { axis: "academics", level, points: Math.round(piecewise(g, SP.gpa100.x, SP.gpa100.y)), note: `GPA ≈ ${Math.round(g)}/100` };
+  let points = piecewise(g, SP.gpa100.x, SP.gpa100.y);
+  let note = `GPA ≈ ${Math.round(g)}/100`;
+  // Оценки по предметам: профильные предметы весят больше среднего, спецпредметы по направлению — бонус.
+  const s = gradesSummary(p.grades, profileMajors(p));
+  if (s && gradesGpa100(p.grades) != null) {
+    note = `средний ${gradeText(s.average, s.scale)} по ${s.count} предметам`;
+    if (s.core.average100 != null) {
+      const shift = (s.core.average100 - s.average100) * SUBJECT_RULES.coreShift;
+      points += Math.max(-SUBJECT_RULES.coreShiftMax, Math.min(SUBJECT_RULES.coreShiftMax, shift));
+      note += `, профильные ≈ ${Math.round(s.core.average100)}/100`;
+    }
+    const strongSpecial = s.special.filter((i) => s.core.keys.includes(i.key) && s.strongCore.includes(i)).length;
+    points += Math.min(SUBJECT_RULES.specialBonusMax, strongSpecial * SUBJECT_RULES.specialBonus);
+    if (strongSpecial) note += `, спецпредметы по направлению`;
+  }
+  return { axis: "academics", level, points: Math.round(Math.max(0, Math.min(100, points))), note };
+}
+
+/** Самый слабый профильный предмет (ниже порога) — для совета. */
+function weakCoreTip(p: Profile): string | null {
+  const s = gradesSummary(p.grades, profileMajors(p));
+  const w = s?.weakCore.sort((a, b) => a.grade - b.grade)[0];
+  if (!s || !w) return null;
+  const name = w.key === "other" ? w.subject : SUBJECT_RU[w.key];
+  return `Подтяни предмет «${name}» (сейчас ${gradeText(w.grade, s.scale)}): он профильный для твоего направления, вузы смотрят на него в первую очередь.`;
 }
 
 function tests(p: Profile): AxisResult {
@@ -116,6 +147,8 @@ export function scoreProfile(p: Profile): StrengthResult {
   const overall = levelOfPoints(score);
   // 3 совета по самым слабым осям (не оценённые эссе — в конце, но учитываются).
   const ranked = [...axes].sort((a, b) => (a.level ?? 1.5) - (b.level ?? 1.5));
-  const tips = ranked.slice(0, 3).map((a) => TIP_BY_AXIS[a.axis]);
+  const weak = weakCoreTip(p);
+  const tips = ranked.slice(0, 3).map((a) => (a.axis === "academics" && weak ? weak : TIP_BY_AXIS[a.axis]));
+  if (weak && !tips.includes(weak)) tips[tips.length - 1] = weak;
   return { axes, overall, score, tips };
 }

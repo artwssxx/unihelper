@@ -61,4 +61,12 @@ describe("слияние данных браузера и аккаунта", asy
     expect(d.myPrograms).toEqual([]);
     expect(d.demo).toBeUndefined();
   });
+  it("неотправленные изменения браузера новее аккаунта: профиль берём из браузера", () => {
+    const local = { profile: { city: "Самарканд", ielts: 7 } as never, customUnis: [{ id: "u1" } as never] };
+    const remote = { profile: { city: "Ташкент", ielts: 6.5 } as never, customUnis: [{ id: "u2" } as never] };
+    expect(mergeStates(local, remote).profile?.city).toBe("Ташкент");
+    const m = mergeStates(local, remote, true);
+    expect(m.profile?.city).toBe("Самарканд");
+    expect(m.customUnis?.map((x) => x.id).sort()).toEqual(["u1", "u2"]);
+  });
 });

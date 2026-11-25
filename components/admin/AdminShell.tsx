@@ -18,6 +18,7 @@ const NAV = [
   { href: "/admin/leads", label: "Лиды вузов", icon: I.User },
   { href: "/admin/community", label: "Комьюнити", icon: I.Users },
   { href: "/admin/telegram", label: "Telegram-бот", icon: I.Send },
+  { href: "/admin/integrations", label: "eMaktab и EMIS", icon: I.Globe },
 ];
 
 export default function AdminShell({ children }: { children: React.ReactNode }) {

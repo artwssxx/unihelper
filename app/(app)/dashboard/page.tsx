@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo } from "react";
+import CatMascot from "@/components/advisor/CatMascot";
 import FitPills from "@/components/FitPills";
 import MockTrend from "@/components/MockTrend";
 import NeedProfile from "@/components/NeedProfile";
@@ -13,21 +14,26 @@ import { matchPrograms } from "@/lib/scoring/match";
 import { scoreProfile } from "@/lib/scoring/strength";
 import { lessonsForDomainsIn, useContent } from "@/lib/useContent";
 import { useProfile } from "@/lib/useProfile";
+import { useUniPool } from "@/lib/useUniPool";
 
 export default function Dashboard() {
   const { profile, store } = useProfile();
   const { programs: PROGRAMS, events: EVENTS, lessons: LESSONS } = useContent();
+  // Подбор = каталог + свои вузы + общая база по странам ученика (как на странице «Программы»).
+  const pool = useUniPool(profile?.targetCountries ?? [], profile?.major ?? "cs");
   const data = useMemo(() => {
     if (!profile || !store) return null;
     const strength = scoreProfile(profile);
-    const match = matchPrograms(profile, PROGRAMS);
+    const saved = new Set((store.customUnis ?? []).map((p) => p.id));
+    const candidates = [...PROGRAMS, ...(store.customUnis ?? []).filter((p) => Number.isFinite(p.tuitionUsd)), ...pool.programs.filter((p) => !saved.has(p.id))];
+    const match = matchPrograms(profile, candidates);
     const all = [...match.abroad, ...match.local];
     const mine = (store.myPrograms ?? []).map((id) => all.find((i) => i.program.id === id)).filter(Boolean) as typeof all;
     // Нет своего списка — показываем по одной: реалистичная за рубежом, амбициозная, запасной вариант.
     const picks = mine.length
       ? mine.slice(0, 3)
       : [match.abroad.find((i) => i.fit.admission.label === "realistic"), match.abroad.find((i) => i.fit.admission.label === "ambitious"), all.find((i) => i.fit.isBackup)].filter(Boolean) as typeof all;
-    const roadmap = buildRoadmap(profile, store.myPrograms ?? [], new Date(), PROGRAMS);
+    const roadmap = buildRoadmap(profile, store.myPrograms ?? [], new Date(), candidates);
     const steps = roadmap
       .map((i) => ({ i, st: effectiveStatus(i, store.roadmap?.[i.id]) }))
       .filter((x) => x.st !== "done")
@@ -39,7 +45,7 @@ export default function Dashboard() {
     const lastMock = [...(store.mocks ?? [])].filter((m) => m.status === "completed").sort((a, b) => b.finishedAt.localeCompare(a.finishedAt))[0];
     const weak = lastMock?.weakDomains?.[0];
     return { strength, picks, steps, weekCount, upcoming, myEventIds: new Set(myEvents.map((e) => e!.id)), weak, lessons: weak ? lessonsForDomainsIn(LESSONS, [weak], 1) : [] };
-  }, [profile, store, PROGRAMS, EVENTS, LESSONS]);
+  }, [profile, store, PROGRAMS, EVENTS, LESSONS, pool.programs]);
 
   // История силы профиля: запоминаем новое значение, чтобы показать рост «+N с даты».
   const hist = store?.strengthHistory ?? [];
@@ -164,9 +170,14 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <div className="rounded-[22px] border border-inv bg-inv p-6 text-white">
-          <h2 className="m-0 text-xl font-extrabold">AI Advisor</h2>
-          <p className="mb-4 mt-2.5 text-sm leading-relaxed text-navy-text">Спроси про программы, гранты или эссе — отвечаю с учётом твоего профиля.</p>
+        <div className="advisor-hero relative overflow-hidden rounded-[22px] p-6 text-white">
+          <div className="flex items-start gap-3">
+            <div className="min-w-0 flex-1">
+              <h2 className="m-0 text-xl font-extrabold">AI Advisor · Юни</h2>
+              <p className="mb-4 mt-2.5 text-sm leading-relaxed text-navy-text">Спроси про программы, гранты или эссе — отвечаю с учётом твоего профиля.</p>
+            </div>
+            <CatMascot size={76} className="-mb-2 -mt-1 flex-none" />
+          </div>
           <div className="flex flex-wrap gap-2">
             <Link href={`/assistant?q=${encodeURIComponent("Хватит ли мне IELTS 6.5?")}`} className="rounded-full border border-navy-line bg-navy-2 px-3 py-2 text-[13px] font-semibold">Хватит ли мне IELTS 6.5?</Link>
             <Link href="/essays" className="rounded-full border border-navy-line bg-navy-2 px-3 py-2 text-[13px] font-semibold">Проверь моё эссе</Link>

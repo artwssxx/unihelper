@@ -43,3 +43,8 @@ export function programFromProfile(ref: UniRef, p: UniProfile, fallbackMajor: Ma
     verifiedAt: null,
   };
 }
+
+/** Вуз из общей базы → программа для подбора. id постоянный, чтобы держать вуз в «Моём списке» и видеть изменения оценки. */
+export function poolProgram(ref: UniRef, p: UniProfile, fallbackMajor: Major): Program {
+  return { ...programFromProfile(ref, p, fallbackMajor), id: `pool-${ref.country.toLowerCase()}-${slug(ref.name).slice(0, 48)}`, isCustom: false, pooled: true };
+}

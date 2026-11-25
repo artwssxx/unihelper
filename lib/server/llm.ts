@@ -5,9 +5,11 @@ import { z } from "zod";
 
 // Слой ИИ, не привязанный к провайдеру.
 //  - gemini (по умолчанию, бесплатный тариф Google AI Studio) — через OpenAI-совместимый endpoint;
-//  - compat — любой OpenAI-совместимый API (Groq, OpenRouter и т. п.);
+//  - groq, mistral, cerebras, openrouter — бесплатные тарифы с OpenAI-совместимым API (ключи GROQ_API_KEY и т. д.);
+//  - compat — любой другой OpenAI-совместимый API (OPENAI_COMPAT_*);
 //  - anthropic — Claude API.
-// Выбор: AI_PROVIDER, иначе первый провайдер, для которого задан ключ.
+// Основной: AI_PROVIDER, иначе первый, для которого задан ключ. Остальные с ключами — запасные по цепочке
+// (порядок — AI_FALLBACKS): перегрузка или лимит у основного → тот же запрос уходит следующему.
 // «fast» — чат и советы, «smart» — оценка Writing и эссе.
 
 export type Tier = "fast" | "smart";
@@ -19,8 +21,10 @@ export interface LLM {
   name: string;
   /** timeoutMs — лимит на один вызов модели (по умолчанию 20/28 с); для длинных ответов, например текста IELTS, больше. */
   /** images — картинки (base64) для распознавания, например скриншот результата экзамена. */
-  json<T>(o: { system: string; user: string; schema: z.ZodType<T>; tier: Tier; maxTokens?: number; timeoutMs?: number; images?: LlmImage[] }): Promise<T>;
-  stream(o: { system: string; messages: ChatMessage[]; tier: Tier; maxTokens?: number }): AsyncGenerator<string>;
+  json<T>(o: { system: string; user: string; schema: z.ZodType<T>; tier: Tier; maxTokens?: number; timeoutMs?: number; images?: LlmImage[]; deadlineAt?: number }): Promise<T>;
+  stream(o: { system: string; messages: ChatMessage[]; tier: Tier; maxTokens?: number; deadlineAt?: number }): AsyncGenerator<string>;
+  /** Умеет ли провайдер читать картинки. */
+  vision?: boolean;
 }
 
 const list = (v: string | undefined, d: string[]) => (v ? v.split(",").map((s) => s.trim()).filter(Boolean) : d);
@@ -29,8 +33,8 @@ const list = (v: string | undefined, d: string[]) => (v ? v.split(",").map((s) =
 
 class RetryableError extends Error {}
 
-function compatProvider(cfg: { name: string; baseUrl: string; key: string; models: Record<Tier, string[]> }): LLM {
-  const headers = { authorization: `Bearer ${cfg.key}`, "content-type": "application/json" };
+function compatProvider(cfg: { name: string; baseUrl: string; key: string; models: Record<Tier, string[]>; visionModels?: string[]; extraHeaders?: Record<string, string> }): LLM {
+  const headers = { authorization: `Bearer ${cfg.key}`, "content-type": "application/json", ...cfg.extraHeaders };
 
   // Бюджет каждого запроса: укладываемся в лимит функции Vercel (maxDuration = 60 с).
   async function call(model: string, body: Record<string, unknown>, tier: Tier, deadline: number, timeoutMs?: number): Promise<Response> {
@@ -55,16 +59,18 @@ function compatProvider(cfg: { name: string; baseUrl: string; key: string; model
 
   return {
     name: cfg.name,
+    vision: cfg.visionModels ? cfg.visionModels.length > 0 : true,
 
-    async json({ system, user, schema, tier, maxTokens = 4000, timeoutMs, images }) {
-      const deadline = Date.now() + 55_000;
+    async json({ system, user, schema, tier, maxTokens = 4000, timeoutMs, images, deadlineAt }) {
+      const deadline = deadlineAt ?? Date.now() + 55_000;
+      const models = images?.length && cfg.visionModels ? cfg.visionModels : cfg.models[tier];
       const content = images?.length
         ? [{ type: "text", text: user }, ...images.map((i) => ({ type: "image_url", image_url: { url: `data:${i.mime};base64,${i.data}` } }))]
         : user;
       const jsonSchema = JSON.stringify(z.toJSONSchema(schema));
       const sys = `${system}\n\nОтвечай ТОЛЬКО валидным JSON без пояснений и без markdown, строго по этой JSON Schema:\n${jsonSchema}`;
       const errors: string[] = [];
-      for (const model of cfg.models[tier]) {
+      for (const model of models) {
         try {
           const res = await call(model, {
             messages: [{ role: "system", content: sys }, { role: "user", content }],
@@ -85,8 +91,8 @@ function compatProvider(cfg: { name: string; baseUrl: string; key: string; model
       throw new Error(`[${cfg.name}] все модели недоступны: ${errors.join("; ")}`);
     },
 
-    async *stream({ system, messages, tier, maxTokens = 3000 }) {
-      const deadline = Date.now() + 55_000;
+    async *stream({ system, messages, tier, maxTokens = 3000, deadlineAt }) {
+      const deadline = deadlineAt ?? Date.now() + 55_000;
       const errors: string[] = [];
       for (const model of cfg.models[tier]) {
         let res: Response;
@@ -162,9 +168,64 @@ function anthropicProvider(): LLM {
   };
 }
 
+// ───────────── Цепочка: основной + запасные ─────────────
+
+/** Пробует провайдеров по очереди. Стрим переключается, только если ещё ничего не успел отдать. */
+export function chain(list: LLM[], primaryBudgetMs = 30_000): LLM {
+  if (list.length === 1) return list[0];
+  return {
+    name: list.map((l) => l.name).join(" → "),
+    vision: list.some((l) => l.vision !== false),
+    async json(o) {
+      const end = Date.now() + 55_000;
+      const errors: string[] = [];
+      const usable = o.images?.length ? list.filter((l) => l.vision !== false) : list;
+      for (const [i, l] of usable.entries()) {
+        // Основному — не весь лимит функции: запасным тоже нужно время.
+        const deadlineAt = i === 0 && usable.length > 1 ? Math.min(end, Date.now() + primaryBudgetMs) : end;
+        if (deadlineAt - Date.now() < 3_000) break;
+        try {
+          return await l.json({ ...o, deadlineAt });
+        } catch (e) {
+          errors.push(`${l.name}: ${(e as Error).message.slice(0, 160)}`);
+        }
+      }
+      throw new Error(`все провайдеры недоступны: ${errors.join(" | ")}`);
+    },
+    async *stream(o) {
+      const end = Date.now() + 55_000;
+      const errors: string[] = [];
+      for (const [i, l] of list.entries()) {
+        const deadlineAt = i === 0 ? Math.min(end, Date.now() + primaryBudgetMs) : end;
+        if (deadlineAt - Date.now() < 3_000) break;
+        let started = false;
+        try {
+          for await (const t of l.stream({ ...o, deadlineAt })) {
+            started = true;
+            yield t;
+          }
+          return;
+        } catch (e) {
+          if (started) throw e; // часть ответа уже у ученика — не начинаем заново у другого провайдера
+          errors.push(`${l.name}: ${(e as Error).message.slice(0, 160)}`);
+        }
+      }
+      throw new Error(`все провайдеры недоступны: ${errors.join(" | ")}`);
+    },
+  };
+}
+
 // ───────────── Выбор провайдера ─────────────
 
 let cached: LLM | null | undefined;
+
+/** Бесплатные OpenAI-совместимые тарифы. Модели можно заменить переменными <ИМЯ>_MODELS / <ИМЯ>_MODELS_VISION. */
+const PRESETS: Record<string, { env: string; baseUrl: string; fast: string[]; smart: string[]; vision: string[] }> = {
+  groq: { env: "GROQ_API_KEY", baseUrl: "https://api.groq.com/openai/v1", fast: ["openai/gpt-oss-120b", "llama-3.3-70b-versatile"], smart: ["openai/gpt-oss-120b"], vision: ["meta-llama/llama-4-scout-17b-16e-instruct"] },
+  mistral: { env: "MISTRAL_API_KEY", baseUrl: "https://api.mistral.ai/v1", fast: ["mistral-small-latest"], smart: ["mistral-medium-latest", "mistral-small-latest"], vision: ["mistral-small-latest"] },
+  cerebras: { env: "CEREBRAS_API_KEY", baseUrl: "https://api.cerebras.ai/v1", fast: ["gpt-oss-120b"], smart: ["gpt-oss-120b"], vision: [] },
+  openrouter: { env: "OPENROUTER_API_KEY", baseUrl: "https://openrouter.ai/api/v1", fast: ["openai/gpt-oss-120b:free", "meta-llama/llama-3.3-70b-instruct:free"], smart: ["openai/gpt-oss-120b:free"], vision: [] },
+};
 
 export function llm(): LLM | null {
   if (cached !== undefined) return cached;
@@ -185,6 +246,19 @@ export function llm(): LLM | null {
         },
       });
     }
+    const pre = PRESETS[name];
+    if (pre && process.env[pre.env]) {
+      const up = name.toUpperCase();
+      const models = list(process.env[`${up}_MODELS`], []);
+      return compatProvider({
+        name,
+        baseUrl: pre.baseUrl,
+        key: process.env[pre.env]!,
+        models: { fast: models.length ? models : pre.fast, smart: models.length ? models : pre.smart },
+        visionModels: list(process.env[`${up}_MODELS_VISION`], pre.vision),
+        ...(name === "openrouter" ? { extraHeaders: { "x-title": "UniHelper" } } : {}),
+      });
+    }
     if (name === "compat" && compat) {
       const models = list(process.env.OPENAI_COMPAT_MODELS, []);
       if (!models.length) return null;
@@ -199,6 +273,11 @@ export function llm(): LLM | null {
     return null;
   };
 
-  cached = want ? make(want) : make("gemini") ?? make("anthropic") ?? make("compat");
+  const order = ["gemini", "anthropic", "compat", "groq", "mistral", "cerebras", "openrouter"];
+  const primary = want ? make(want) : order.map(make).find(Boolean) ?? null;
+  if (!primary) return (cached = null);
+  const fallbackOrder = list(process.env.AI_FALLBACKS, ["groq", "mistral", "cerebras", "openrouter", "compat", "gemini", "anthropic"]);
+  const fallbacks = fallbackOrder.filter((n) => n !== primary.name).map(make).filter((x): x is LLM => Boolean(x));
+  cached = chain([primary, ...fallbacks]);
   return cached;
 }

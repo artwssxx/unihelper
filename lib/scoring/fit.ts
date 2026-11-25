@@ -1,7 +1,8 @@
 import type { Confidence, FitLabel, FitResult, FundingLabel, Profile, Program } from "../types";
 import { profileMajors } from "../profileConst";
 import { FIT_RULES, MAJOR_KEYWORDS } from "./config";
-import { gpaTo100 } from "./strength";
+import { gradesSummary, SUBJECT_RU, type SubjectKey } from "../grades";
+import { profileGpa100 } from "./strength";
 
 export const FIT_LABEL_NAMES: Record<FitLabel, string> = {
   not_eligible: "Не соответствует требованиям",
@@ -44,7 +45,7 @@ export function portfolioRelevant(profile: Profile, program: Program): boolean |
 export function admissionFit(profile: Profile, program: Program): FitResult["admission"] {
   const reasons: string[] = [];
   const unknown: string[] = [];
-  const g100 = gpaTo100(profile.gpa, profile.gpaScale);
+  const g100 = profileGpa100(profile);
   const req = program.requirements;
 
   // 1. Формальные требования — не проходит → дальше не считаем.
@@ -84,6 +85,16 @@ export function admissionFit(profile: Profile, program: Program): FitResult["adm
   const relevant = portfolioRelevant(profile, program);
   if (relevant === false) reasons.push("активности слабо связаны со специальностью");
   else if (relevant) reasons.push("активности связаны со специальностью");
+
+  // 3б. Оценки по профильным предметам (если ученик их загрузил): направления программы ∩ направления ученика.
+  const mine = profileMajors(profile);
+  const progMajors = program.majors === "any" ? mine : mine.filter((m) => (program.majors as string[]).includes(m));
+  const subj = gradesSummary(profile.grades, progMajors.length ? progMajors : mine);
+  const subjName = (k: SubjectKey, raw: string) => (k === "other" ? raw : SUBJECT_RU[k].toLowerCase());
+  const weakCore = subj?.weakCore ?? [];
+  if (weakCore.length) reasons.push(`слабая оценка по профильному предмету: ${[...new Set(weakCore.map((i) => subjName(i.key, i.subject)))].join(", ")}`);
+  else if (subj && subj.core.items.length >= 2 && subj.strongCore.length === subj.core.items.length)
+    reasons.push(`сильные оценки по профильным предметам (${[...new Set(subj.core.items.map((i) => subjName(i.key, i.subject)))].join(", ")})`);
 
   // 4. Качественные компоненты.
   const w = program.weights;
@@ -133,6 +144,8 @@ export function admissionFit(profile: Profile, program: Program): FitResult["adm
     reasons.push("полный грант — максимум «Реалистично»");
   }
   if (label === "high" && (!qualAssessed || ar == null || ar < FIT_RULES.noHighBelow)) label = "realistic";
+  // Слабый профильный предмет: «Высокое соответствие» невозможно.
+  if (label === "high" && weakCore.length) label = "realistic";
   if (label === "realistic" && program.isFullGrant && academic !== "above" && academic !== "at") label = "ambitious";
 
   return { label, reasons, unknown: [...new Set(unknown)], confidence: confidence(profile, program, academic) };

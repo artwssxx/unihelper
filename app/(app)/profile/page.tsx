@@ -2,15 +2,17 @@
 
 import { track } from "@/lib/analytics";
 import ParentsCard from "@/components/family/ParentsCard";
+import GradesCard from "@/components/grades/GradesCard";
+import { gradesGpa100 } from "@/lib/grades";
 import MajorPicker from "@/components/MajorPicker";
 import { useCallback, useEffect, useState } from "react";
 import NeedProfile from "@/components/NeedProfile";
 import StrengthCard from "@/components/StrengthCard";
 import { reset, update } from "@/lib/clientStore";
-import { t } from "@/lib/i18n/ru";
-import { COUNTRIES, profileSchema } from "@/lib/profileSchema";
+import { profileSchema } from "@/lib/profileSchema";
+import CountryPicker from "@/components/CountryPicker";
 import { scoreProfile } from "@/lib/scoring/strength";
-import type { CountryCode, Profile } from "@/lib/types";
+import type { Profile } from "@/lib/types";
 import { useProfile } from "@/lib/useProfile";
 import Link from "next/link";
 import { apiFetch, useAuth, usePlan } from "@/lib/auth";
@@ -61,6 +63,7 @@ export default function ProfilePage() {
           <Field label="Город"><input className="input" value={p.city} onChange={(e) => set({ city: e.target.value })} /></Field>
           <Field label={`GPA (шкала ${p.gpaScale === 5 ? "1–5" : "0–100"})`}>
             <input className="input" type="number" step="0.1" value={p.gpa ?? ""} onChange={(e) => set({ gpa: e.target.value === "" ? null : Number(e.target.value) })} />
+            {gradesGpa100(store?.profile?.grades) != null && <span className="mt-1 block text-xs font-normal text-muted">Сейчас GPA считается по оценкам предметов (ниже).</span>}
           </Field>
           <Field label="Шкала GPA">
             <select className="input" value={p.gpaScale} onChange={(e) => set({ gpaScale: Number(e.target.value) as 5 | 100, gpa: null })}>
@@ -99,23 +102,17 @@ export default function ProfilePage() {
         </label>
         <fieldset>
           <legend className="text-sm font-semibold">Страны</legend>
-          <div className="mt-2 flex flex-wrap gap-2">
-            {COUNTRIES.map((c) => (
-              <button key={c} className="chip px-3 py-2 text-sm" data-on={p.targetCountries.includes(c)} aria-pressed={p.targetCountries.includes(c)}
-                onClick={() => set({ targetCountries: p.targetCountries.includes(c) ? p.targetCountries.filter((x) => x !== c) : [...p.targetCountries, c as CountryCode] })}>
-                {t.countries[c]}
-              </button>
-            ))}
-          </div>
+          <div className="mt-2"><CountryPicker value={p.targetCountries} onChange={(v) => set({ targetCountries: v })} /></div>
         </fieldset>
         <p className="text-xs text-muted">Эссе оценивается в разделе «Эссе». Баллы моков учитываются в силе профиля автоматически («по моку») и не заменяют официальные.</p>
         <div className="flex flex-wrap items-center gap-3">
-          <button className="btn-primary" disabled={!draft || !valid} onClick={() => { update(() => ({ profile: p })); setDraft(null); setSaved(true); }}>Сохранить</button>
+          <button className="btn-primary" disabled={!draft || !valid} onClick={() => { update((st) => ({ profile: { ...p, grades: st.profile?.grades } })); setDraft(null); setSaved(true); }}>Сохранить</button>
           {saved && <span className="text-sm font-bold text-green">Сохранено</span>}
           {!valid && <span className="text-sm text-red">Проверьте поля</span>}
         </div>
       </section>
 
+      <GradesCard />
       <AccountCard />
       <TelegramCard />
       <ParentsCard />
