@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
+type Audience = { users: number | null; visitors: number | null };
+
 type Stats = {
   storage: "supabase" | "file" | "readonly"; ai: string | null; database: boolean;
   content: Record<"programs" | "events" | "lessons", { total: number; edited: number }>;
@@ -16,6 +18,13 @@ type Stats = {
 export default function AdminHome() {
   const [s, setS] = useState<Stats | null>(null);
   useEffect(() => { fetch("/api/admin/stats", { cache: "no-store" }).then((r) => r.json()).then(setS); }, []);
+  const [audience, setAudience] = useState<Audience | null>(null);
+  useEffect(() => {
+    fetch("/api/admin/audience", { cache: "no-store" })
+      .then((r) => r.ok ? r.json() : null)
+      .then((data) => setAudience(data ?? { users: null, visitors: null }))
+      .catch(() => setAudience({ users: null, visitors: null }));
+  }, []);
   if (!s) return <p className="text-muted">Загрузка…</p>;
   const sections = [
     { href: "/admin/programs", t: "Программы и гранты", n: s.content.programs },
@@ -32,6 +41,10 @@ export default function AdminHome() {
         <Status label="ИИ" ok={Boolean(s.ai)} text={s.ai ? `подключён: ${s.ai}` : "не подключён (нет ключа)"} />
         <Status label="База данных" ok={s.database} text={s.database ? "Supabase подключена" : "не подключена — данные учеников в браузере"} />
         <Status label="Сохранение правок" ok={s.storage !== "readonly"} text={s.storage === "supabase" ? "в Supabase" : s.storage === "file" ? "в локальный файл" : "только чтение — нужна база"} />
+      </div>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <AudienceCount label="Зарегистрированные пользователи" value={audience?.users} />
+        <AudienceCount label="Посетители за последние 30 дней" value={audience?.visitors} />
       </div>
       <div className="grid gap-4 md:grid-cols-3">
         {sections.map((x) => (
@@ -71,6 +84,17 @@ export default function AdminHome() {
         </div>
         {s.mockAttempts != null && <p className="mt-3 text-sm text-body">Попыток моков в базе: {s.mockAttempts}</p>}
       </div>
+    </div>
+  );
+}
+
+function AudienceCount({ label, value }: { label: string; value: number | null | undefined }) {
+  return (
+    <div className="card">
+      <div className="text-sm font-bold text-muted">{label}</div>
+      {value == null
+        ? <div className="mt-2 text-sm text-body">{value === undefined ? "Загрузка…" : "Нет данных"}</div>
+        : <div className="mt-2 text-[36px] font-extrabold">{value}</div>}
     </div>
   );
 }
