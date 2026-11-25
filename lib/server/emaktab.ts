@@ -66,6 +66,19 @@ interface LoginForm { action: string; hidden: Record<string, string>; captchaUrl
 /** Форма с полем пароля: адрес отправки, скрытые поля, капча. */
 const PASSWORD_INPUT = /<input\b[^>]*(type\s*=\s*["']?password|name\s*=\s*["']?password["'\s>])/i;
 
+/** Фрагменты разметки вокруг «captcha» — для диагностики, если картинку найти не удалось (публичная страница входа). */
+function captchaSnippets(html: string): string {
+  const out: string[] = [];
+  const re = /captcha|smartcaptcha|recaptcha|turnstile|hcaptcha/gi;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(html)) && out.length < 4) {
+    out.push(html.slice(Math.max(0, m.index - 60), m.index + 90).replace(/\s+/g, " "));
+    re.lastIndex = m.index + 200;
+  }
+  return out.join(" ‖ ").slice(0, 700);
+}
+let lastCaptchaHtml = "";
+
 export function parseLoginForm(html: string, base: string): LoginForm | null {
   const forms = html.match(/<form\b[\s\S]*?<\/form>/gi) ?? [];
   // Поле пароля может стоять вне <form>…</form> (разметка собирается частями) — тогда берём всю страницу
@@ -81,6 +94,7 @@ export function parseLoginForm(html: string, base: string): LoginForm | null {
   }
   const img = html.match(/(?:https?:\/\/[^"'\s>]+)?\/captcha\/[^"'\s>]+/i)?.[0] ?? null;
   // Блок капчи на странице есть всегда, но скрыт классом …_hidden, пока eMaktab её не требует.
+  lastCaptchaHtml = html;
   const captcha = (html.match(/<div\b[^>]*class\s*=\s*["'][^"']*login__body__captcha[^"']*["']/gi) ?? []).some((t) => !/login__body__captcha_hidden/.test(t));
   return { action: new URL(decode(attr(open, "action") || base), base).toString(), hidden, captchaUrl: img ? new URL(decode(img), base).toString() : null, captcha };
 }
@@ -155,7 +169,10 @@ async function captchaChallenge(form: LoginForm, jar: Jar, message: string): Pro
     notes.push(r.note);
     if ((image = r.image)) break;
   }
-  if (!image) console.error("[emaktab] капча без картинки:", notes.join(", "));
+  if (!image) {
+    notes.push(captchaSnippets(lastCaptchaHtml));
+    console.error("[emaktab] капча без картинки:", notes.join(", "));
+  }
   return { status: "captcha", image, message, state: seal({ jar, action: f.action, hidden: { ...f.hidden, "Captcha.Id": captchaId } }), ...(image ? {} : { diag: notes.join(" · ") }) };
 }
 
