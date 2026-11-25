@@ -39,3 +39,20 @@ describe("результаты экзаменов", () => {
     expect(parseScoreDate("Listening 7.5")).toBeNull();
   });
 });
+
+describe("автопроверка сертификата", async () => {
+  const { certificateCheck } = await import("./scores");
+  const now = new Date("2026-11-25");
+  it("официальный свежий IELTS с сходящимися секциями — проверено", () => {
+    const r = certificateCheck({ exam: "ielts", kind: "official", date: "2026-10-12", ielts: { listening: 7.5, reading: 7, writing: 6.5, speaking: 7, overall: 7 } }, now);
+    expect(r).toEqual({ status: "verified", score: 7, notes: [] });
+  });
+  it("просроченный, со слов, без даты, несходящийся итог — предупреждения; без балла — отказ", () => {
+    expect(certificateCheck({ exam: "ielts", kind: "official", date: "2023-01-10", ielts: { overall: 7 } }, now).notes[0]).toContain("больше 2 лет");
+    const self = certificateCheck({ exam: "sat", kind: "self", date: null, sat: { math: 700, rw: 650, total: 1400 } }, now);
+    expect(self.status).toBe("warn");
+    expect(self.notes.join(" ")).toContain("Сумма секций 1350 не равна итогу 1400");
+    expect(self.notes.join(" ")).toContain("со слов");
+    expect(certificateCheck({ exam: "sat", kind: "official", date: "2026-05-01", sat: {} }, now).status).toBe("fail");
+  });
+});

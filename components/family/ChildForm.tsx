@@ -3,6 +3,7 @@
 import { useState } from "react";
 import MajorPicker from "@/components/MajorPicker";
 import CountryPicker from "@/components/CountryPicker";
+import NumberInput from "@/components/NumberInput";
 import type { AchievementLevel, Profile } from "@/lib/types";
 
 // Родитель регистрирует ребёнка: короткая анкета (то же, что в анкете ученика), ребёнку уйдёт ссылка-приглашение.
@@ -19,7 +20,6 @@ export default function ChildForm({ busy, onSubmit }: { busy: boolean; onSubmit:
   const [name, setName] = useState("");
   const [p, setP] = useState<Profile>(EMPTY);
   const set = (patch: Partial<Profile>) => setP({ ...p, ...patch });
-  const num = (v: string) => (v === "" ? null : Number(v));
   const valid = name.trim() && p.city.trim() && p.gpa != null && p.gpa > 0 && p.gpa <= p.gpaScale && p.targetCountries.length > 0;
   return (
     <form className="space-y-5" onSubmit={(e) => { e.preventDefault(); if (valid) onSubmit(name.trim(), p); }}>
@@ -42,9 +42,9 @@ export default function ChildForm({ busy, onSubmit }: { busy: boolean; onSubmit:
             <option value={5}>1–5</option><option value={100}>0–100</option>
           </select>
         </label>
-        <label className="block text-sm font-semibold">Средний балл<input className="input mt-1.5 font-normal" type="number" step="0.1" value={p.gpa ?? ""} onChange={(e) => set({ gpa: num(e.target.value) })} placeholder={p.gpaScale === 5 ? "4.6" : "88"} /></label>
-        <label className="block text-sm font-semibold">IELTS<input className="input mt-1.5 font-normal" type="number" step="0.5" value={p.ielts ?? ""} onChange={(e) => set({ ielts: num(e.target.value) })} placeholder="не сдавал" /></label>
-        <label className="block text-sm font-semibold">SAT<input className="input mt-1.5 font-normal" type="number" step="10" value={p.sat ?? ""} onChange={(e) => set({ sat: num(e.target.value) })} placeholder="не сдавал" /></label>
+        <label className="block text-sm font-semibold">Средний балл<NumberInput className="input mt-1.5 font-normal" value={p.gpa} onChange={(v) => set({ gpa: v })} placeholder={p.gpaScale === 5 ? "4.6" : "88"} /></label>
+        <label className="block text-sm font-semibold">IELTS<NumberInput className="input mt-1.5 font-normal" value={p.ielts} onChange={(v) => set({ ielts: v })} placeholder="не сдавал" /></label>
+        <label className="block text-sm font-semibold">SAT<NumberInput className="input mt-1.5 font-normal" decimals={false} value={p.sat} onChange={(v) => set({ sat: v })} placeholder="не сдавал" /></label>
       </div>
       <div>
         <div className="text-sm font-semibold">Куда хочет поступать</div>

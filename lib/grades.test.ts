@@ -56,3 +56,16 @@ describe("отметки из дневника и сводка", () => {
     expect(gradeFromGroup("5-B")).toBeNull();
   });
 });
+
+describe("сокращённые названия предметов из eMaktab", () => {
+  it("инф. и ИТ, осн. гос. и права, доприз. подгот., физич.воспит., основы предприн-ва, Час будущего", () => {
+    expect(subjectKey("инф. и ИТ")).toBe("informatics");
+    expect(subjectKey("осн. гос. и права")).toBe("law");
+    expect(subjectKey("доприз. подгот.")).toBe("military");
+    expect(subjectKey("физич.воспит.")).toBe("pe");
+    expect(subjectKey("основы предприн-ва")).toBe("economics");
+    expect(subjectKey("Час будущего")).toBe("upbringing");
+    expect(subjectKey("ENGLISH")).toBe("english");
+    expect(subjectKey("физика")).toBe("physics");
+  });
+});

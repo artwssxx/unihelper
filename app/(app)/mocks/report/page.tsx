@@ -1,6 +1,7 @@
 "use client";
 
 import { readFile } from "@/lib/readFile";
+import NumberInput from "@/components/NumberInput";
 import Link from "next/link";
 import { useMemo, useRef, useState } from "react";
 import IeltsTrend from "@/components/IeltsTrend";
@@ -131,12 +132,12 @@ export default function ScoreReportPage() {
               {IELTS_SECTIONS.map((sct) => (
                 <label key={sct.id} className="block text-sm font-semibold">
                   {sct.label}
-                  <input className="input mt-1.5" type="number" min={0} max={9} step={0.5} value={ielts[sct.id] ?? ""} placeholder="—" onChange={(e) => setIelts({ ...ielts, [sct.id]: e.target.value === "" ? null : Number(e.target.value) })} />
+                  <NumberInput className="input mt-1.5" value={ielts[sct.id]} placeholder="—" onChange={(v) => setIelts({ ...ielts, [sct.id]: v })} />
                 </label>
               ))}
               <label className="block text-sm font-semibold">
                 Overall
-                <input className="input mt-1.5" type="number" min={0} max={9} step={0.5} value={ielts.overall ?? ""} placeholder={autoOverall != null ? String(autoOverall) : "—"} onChange={(e) => setIelts({ ...ielts, overall: e.target.value === "" ? null : Number(e.target.value) })} />
+                <NumberInput className="input mt-1.5" value={ielts.overall} placeholder={autoOverall != null ? String(autoOverall) : "—"} onChange={(v) => setIelts({ ...ielts, overall: v })} />
               </label>
             </div>
           ) : (
@@ -144,7 +145,7 @@ export default function ScoreReportPage() {
               {([["math", "Math"], ["rw", "Reading & Writing"], ["total", "Total"]] as const).map(([k, l]) => (
                 <label key={k} className="block text-sm font-semibold">
                   {l}
-                  <input className="input mt-1.5" type="number" min={k === "total" ? 400 : 200} max={k === "total" ? 1600 : 800} step={10} value={sat[k] ?? ""} placeholder={k === "total" && sat.math && sat.rw ? String(sat.math + sat.rw) : "—"} onChange={(e) => setSat({ ...sat, [k]: e.target.value === "" ? null : Number(e.target.value) })} />
+                  <NumberInput className="input mt-1.5" decimals={false} value={sat[k]} placeholder={k === "total" && sat.math && sat.rw ? String(sat.math + sat.rw) : "—"} onChange={(v) => setSat({ ...sat, [k]: v })} />
                 </label>
               ))}
             </div>

@@ -67,7 +67,8 @@ const SYS = {
 /** Вход в eMaktab или EMIS по логину ученика: пароль уходит на сервер один раз и не сохраняется. */
 export function SystemLogin({ system, onResult }: { system: "emaktab" | "emis"; onResult: (r: ImportResult) => void }) {
   const t = SYS[system];
-  const [login, setLogin] = useState("");
+  // Логин (не пароль) запоминаем на этом устройстве — при обновлении дневника останется ввести только пароль.
+  const [login, setLogin] = useState(() => { try { return localStorage.getItem(`uh-login-${system}`) ?? ""; } catch { return ""; } });
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -87,6 +88,7 @@ export function SystemLogin({ system, onResult }: { system: "emaktab" | "emis"; 
     if (!j) return setErr("Нет связи с сервером. Проверь интернет и попробуй ещё раз.");
     if (j.status === "ok") {
       setPassword("");
+      try { localStorage.setItem(`uh-login-${system}`, login.trim()); } catch { /* без запоминания */ }
       return onResult({ items: j.items, scale: j.scale, source: system, period: j.period, grade: j.grade, diary: j.diary, person: j.person, note: system === "emaktab" ? `Из eMaktab: ${j.marks} отметок за ${j.period}.` : `Из EMIS: ${j.items.length} предметов (${j.period}).` });
     }
     if (j.status === "captcha") {

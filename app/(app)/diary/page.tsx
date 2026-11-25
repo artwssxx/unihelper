@@ -2,7 +2,7 @@
 
 import { useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import SchoolConnect from "@/components/diary/SchoolConnect";
+import SchoolConnect, { SchoolLoginModal } from "@/components/diary/SchoolConnect";
 import type { ImportResult } from "@/components/grades/GradesImport";
 import NeedProfile from "@/components/NeedProfile";
 import { Calendar, Chart, Check, Pen, Target, Warn } from "@/components/icons";
@@ -76,36 +76,58 @@ function DiaryView({ diary, onDone, programs }: { diary: Diary; onDone: (r: Impo
   const lab = g100 != null ? gpaLabel(g100) : null;
   const insights = useMemo(() => (profile ? diaryInsights(profile, programs, diary) : []), [profile, programs, diary]);
   const [refresh, setRefresh] = useState(false);
+  const today = todayIso();
+  const graded = diary.subjects.filter((x) => x.grade != null).sort((a, b) => (b.grade as number) - (a.grade as number));
+  const best = graded[0];
+  const worst = graded.length > 1 ? graded[graded.length - 1] : null;
+  const hwWeek = upcomingHomework(diary, today, 99).filter((h) => h.date >= today && h.date <= shiftIso(today, 7)).length;
   const disconnect = () => {
     if (confirm("Отключить дневник? Расписание и домашка исчезнут, оценки в профиле останутся.")) update(() => ({ diary: undefined }));
   };
   return (
-    <>
-      <section className="grid items-start gap-4 lg:grid-cols-[1.1fr_1fr]">
-        <div className="card flex flex-wrap items-center gap-5">
-          <div>
-            <div className="text-xs font-bold uppercase tracking-wide text-muted">GPA</div>
-            <div className="mt-1 text-[44px] font-extrabold leading-none">{s ? s.average : "—"}<span className="text-lg text-muted"> из {s?.scale ?? 5}</span></div>
-            {lab && g100 != null && <div className={`gpa-${lab.tone} mt-2 inline-block rounded-full px-3 py-1 text-sm font-extrabold`}>{lab.label} · ≈ {Math.round(g100)} из 100</div>}
-          </div>
-          <div className="min-w-[200px] flex-1 text-sm text-body">
-            {lab && <p>{lab.hint[0].toUpperCase() + lab.hint.slice(1)}.</p>}
-            <p className="mt-2 text-xs text-muted"><span>{`Из ${SOURCE_NAME[diary.source]}`}</span>{diary.period && <span>{` · ${diary.period}`}</span>} · <span>обновлено</span> <span>{new Date(diary.fetchedAt).toLocaleDateString("ru-RU", { day: "numeric", month: "long" })}</span></p>
-            <div className="mt-3 flex flex-wrap gap-2">
-              <button className="btn-secondary py-2 text-sm" onClick={() => setRefresh(!refresh)}>Обновить</button>
-              <button className="py-2 text-sm font-semibold text-muted underline" onClick={disconnect}>Отключить</button>
+    <section className="grid items-start gap-4 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]">
+      <div className="min-w-0 space-y-4">
+        <div className="card space-y-4">
+          <div className="flex flex-wrap items-end gap-x-5 gap-y-2">
+            <div>
+              <div className="text-xs font-bold uppercase tracking-wide text-muted">GPA</div>
+              <div className="mt-1 text-[44px] font-extrabold leading-none">{s ? s.average : "—"}<span className="text-lg text-muted"> из {s?.scale ?? 5}</span></div>
             </div>
+            {lab && g100 != null && <div className={`gpa-${lab.tone} mb-1 rounded-full px-3 py-1 text-sm font-extrabold`}>{lab.label} · ≈ {Math.round(g100)} из 100</div>}
           </div>
-          {refresh && <div className="w-full"><SchoolConnect only={diary.source} onDone={(r) => { setRefresh(false); onDone(r); }} /></div>}
+          {lab && <p className="text-sm text-body">{lab.hint[0].toUpperCase() + lab.hint.slice(1)}.</p>}
+          <div className="grid grid-cols-2 gap-2.5">
+            <Tile label="Сильнейший предмет" value={best ? String(best.grade) : "—"} sub={best?.subject} tone="good" />
+            <Tile label="Подтянуть" value={worst ? String(worst.grade) : "—"} sub={worst?.subject} tone={worst && to100(worst.grade as number, 5) < 80 ? "warn" : undefined} />
+            <Tile label="Пропуски" value={diary.absences ? String(diary.absences.total) : "—"} sub={diary.absences ? "за семестр" : "нет данных"} tone={diary.absences && diary.absences.total >= 10 ? "warn" : undefined} />
+            <Tile label="Домашка на неделю" value={String(hwWeek)} sub={`предметов с оценками: ${graded.length}`} />
+          </div>
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-t border-line pt-3">
+            <p className="min-w-0 flex-1 text-xs text-muted"><span>{`Из ${SOURCE_NAME[diary.source]}`}</span>{diary.period && <span>{` · ${diary.period}`}</span>} · <span>обновлено</span> <span>{new Date(diary.fetchedAt).toLocaleDateString("ru-RU", { day: "numeric", month: "long" })}</span></p>
+            <button className="btn-secondary py-2 text-sm" onClick={() => setRefresh(true)}>Обновить</button>
+            <button className="py-2 text-sm font-semibold text-muted underline" onClick={disconnect}>Отключить</button>
+          </div>
         </div>
+        <DaySchedule diary={diary} />
+        <Homework diary={diary} />
+      </div>
+      <div className="min-w-0 space-y-4">
         <Insights items={insights} />
-      </section>
+        <Subjects subjects={diary.subjects} scale={s?.scale ?? 5} source={diary.source} />
+        {diary.absences && <Absences absences={diary.absences} />}
+      </div>
+      {refresh && <SchoolLoginModal system={diary.source} onClose={() => setRefresh(false)} onDone={onDone} />}
+    </section>
+  );
+}
 
-      <DaySchedule diary={diary} />
-      <Homework diary={diary} />
-      <Subjects subjects={diary.subjects} scale={s?.scale ?? 5} source={diary.source} />
-      {diary.absences && <Absences absences={diary.absences} />}
-    </>
+function Tile({ label, value, sub, tone }: { label: string; value: string; sub?: string; tone?: "good" | "warn" }) {
+  return (
+    <div className={`rounded-2xl p-3 ${tone === "good" ? "bg-green-soft" : tone === "warn" ? "bg-orange-soft" : "bg-line-3"}`}>
+      <div className="text-[11px] font-bold uppercase tracking-wide text-muted">{label}</div>
+      <div className="mt-0.5 text-2xl font-extrabold leading-tight">{value}</div>
+      {sub && <div className="truncate text-xs text-muted" translate="no" title={sub}>{sub}</div>}
+    </div>
   );
 }
 
@@ -144,6 +166,7 @@ function DaySchedule({ diary }: { diary: Diary }) {
           <button className="btn-secondary h-10 w-10 p-0" aria-label="Следующий день" onClick={() => go(1)}>›</button>
         </div>
       </div>
+      <WeekStrip diary={diary} date={date} today={today} onPick={setDate} />
       <p className="text-sm font-semibold text-ink-2">{date === today ? "Сегодня, " : date === shiftIso(today, 1) ? "Завтра, " : ""}{fmtDay(date, { weekday: "long", day: "numeric", month: "long" })}</p>
       {projected && <p className="rounded-xl bg-line-3 px-3 py-2 text-xs text-muted">Обычное расписание этого дня недели. Темы и домашка появятся, когда обновишь дневник ближе к дате.</p>}
       {!lessons.length ? (
@@ -177,8 +200,34 @@ function DaySchedule({ diary }: { diary: Diary }) {
   );
 }
 
+/** Неделя выбранного дня: пн–сб, число уроков точками; сегодня обведено. */
+function WeekStrip({ diary, date, today, onPick }: { diary: Diary; date: string; today: string; onPick: (d: string) => void }) {
+  const [y, m, d] = date.split("-").map(Number);
+  const wd = (new Date(y, m - 1, d).getDay() + 6) % 7;
+  const monday = shiftIso(date, -wd);
+  const days = Array.from({ length: 6 }, (_, i) => shiftIso(monday, i));
+  return (
+    <div className="grid grid-cols-6 gap-1.5" role="tablist" aria-label="Дни недели">
+      {days.map((x) => {
+        const n = dayLessons(diary, x).lessons.length;
+        const on = x === date;
+        return (
+          <button key={x} role="tab" aria-selected={on} onClick={() => onPick(x)}
+            className={`flex min-h-[56px] flex-col items-center justify-center rounded-xl border text-center ${on ? "border-primary bg-primary text-white" : x === today ? "border-primary bg-primary-soft text-primary-ink" : "border-line bg-surface"}`}>
+            <span className="text-[11px] font-bold uppercase opacity-80">{fmtDay(x, { weekday: "short" })}</span>
+            <span className="text-base font-extrabold leading-tight">{Number(x.slice(8))}</span>
+            <span className="mt-0.5 flex h-1.5 gap-0.5">{Array.from({ length: Math.min(n, 6) }, (_, i) => <i key={i} className={`h-1.5 w-1.5 rounded-full ${on ? "bg-white" : "bg-primary"}`} />)}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 function Homework({ diary }: { diary: Diary }) {
-  const list = upcomingHomework(diary, todayIso());
+  const [all, setAll] = useState(false);
+  const full = upcomingHomework(diary, todayIso(), 40);
+  const list = all ? full : full.slice(0, 6);
   return (
     <section className="card space-y-3" aria-labelledby="hwT">
       <h2 id="hwT" className="m-0 text-lg font-extrabold">Домашние задания</h2>
@@ -194,6 +243,7 @@ function Homework({ diary }: { diary: Diary }) {
           ))}
         </ul>
       )}
+      {full.length > list.length && <button className="btn-secondary py-2 text-sm" onClick={() => setAll(true)}>{`Показать все (${full.length})`}</button>}
     </section>
   );
 }

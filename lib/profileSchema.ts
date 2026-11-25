@@ -49,6 +49,10 @@ export const profileSchema = z.object({
   mockSat: z.number().int().min(400).max(1600).nullish(),
   mockIelts: z.number().min(0).max(9).nullish(),
   grades: gradesSchema.optional(),
+  testProof: z.object({
+    ielts: z.object({ official: z.boolean(), date: z.string().max(20).nullable() }).optional(),
+    sat: z.object({ official: z.boolean(), date: z.string().max(20).nullable() }).optional(),
+  }).optional(),
 });
 
 export const contactSchema = z.object({

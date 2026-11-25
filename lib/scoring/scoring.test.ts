@@ -252,3 +252,14 @@ describe("оценки по предметам", () => {
     expect(cs.reasons.join(" ")).toContain("математика");
   });
 });
+
+describe("советы по реальным цифрам", () => {
+  it("IELTS 7 — не советуем сдать на 6.5+; без тестов — советуем", () => {
+    const strong: Profile = { ...base, ielts: 7, sat: null, bestAchievementLevel: "school", activitiesCount: 1 };
+    const t = scoreProfile(strong).tips.join(" ");
+    expect(t).not.toContain("6.5+");
+    const none = scoreProfile({ ...base, ielts: null, sat: null }).tips.join(" ");
+    expect(none).toContain("IELTS с целью 6.5+");
+    expect(scoreProfile({ ...base, ielts: 5.5, sat: null }).tips.join(" ")).toContain("Пересдай IELTS: сейчас 5.5");
+  });
+});

@@ -95,8 +95,8 @@ function LoginScreen({ path }: { path: string }) {
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="rounded-2xl border border-line bg-surface p-4">
             <div className="font-extrabold">Нет аккаунта?</div>
-            <p className="mt-1 text-sm text-body">Регистрация начинается с анкеты: 8 вопросов, 3 минуты. Потом — вход через Telegram, Google или почту.</p>
-            <Link href={`/quiz?next=${encodeURIComponent(path)}`} className="btn-primary mt-3">Начать с анкеты</Link>
+            <p className="mt-1 text-sm text-body">Войди через Telegram, Google или почту — аккаунт создастся сам. Потом анкета: 8 вопросов, 3 минуты.</p>
+            <Link href={`/quiz?next=${encodeURIComponent(path)}`} className="btn-primary mt-3">Зарегистрироваться</Link>
           </div>
           <div className="rounded-2xl border border-line bg-surface p-4 sm:col-span-2">
             <div className="font-extrabold">Я родитель</div>

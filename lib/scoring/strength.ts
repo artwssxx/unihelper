@@ -129,13 +129,41 @@ function essays(p: Profile): AxisResult {
   return { axis: "essays", level: lvl, points: Math.round(q.reduce((a, b) => a + b, 0) / q.length), note: p.essays === "not_assessed" ? "эссе не оценено" : "оценено" };
 }
 
-const TIP_BY_AXIS: Record<AxisResult["axis"], string> = {
-  academics: "Подтяните оценки по профильным предметам: GPA — первое, что смотрят все программы.",
-  tests: "Запишитесь на IELTS с целью 6.5+: без него большинство программ и грантов недоступны.",
-  activities: "Углубите 1–2 активности по специальности: доведите их до результата уровня города или выше — олимпиада, проект, конкурс.",
-  leadership: "Запустите свою инициативу: клуб, волонтёрский проект или мероприятие в школе — и посчитайте, скольким людям она помогла.",
-  essays: "Начните личное эссе: напишите черновик и попросите ИИ-помощника проверить структуру и клише.",
-};
+/** Совет по оси — по реальным цифрам ученика (не предлагать IELTS 6.5+, если у него уже 7). */
+function tipFor(axis: AxisResult["axis"], p: Profile): string {
+  switch (axis) {
+    case "academics": {
+      const g = profileGpa100(p);
+      if (g == null) return "Укажи средний балл или подключи eMaktab / EMIS — без GPA подбор вузов неточный.";
+      if (g < 88) return `Подтяни оценки по профильным предметам: GPA ≈ ${Math.round(g)} из 100, а для большинства грантов нужно 88+.`;
+      if (g < 95) return `GPA ≈ ${Math.round(g)} из 100 — хорошо. До уровня сильнейших (95+) держи пятёрки по профильным предметам.`;
+      return "GPA отличный — сохрани его до выпуска: вузы смотрят оценки за последние годы.";
+    }
+    case "tests": {
+      const { ielts, sat } = p;
+      if (ielts == null && sat == null) return "Запишись на IELTS с целью 6.5+: без него большинство программ и грантов недоступны.";
+      if (ielts != null && ielts < 6.5) return `Пересдай IELTS: сейчас ${ielts}, а для большинства грантов нужно 6.5+.`;
+      if (sat != null && sat < 1300) return `SAT ${sat}: для грантов в США цель — 1400+, пересдача обычно даёт +50–100 баллов.`;
+      if (ielts != null && ielts < 7.5) return `IELTS ${ielts} уже открывает большинство программ. Чтобы усилить тесты — IELTS 7.5+${sat == null ? " или SAT 1300+ для вузов США" : ""}.`;
+      if (sat == null) return "IELTS отличный. Для вузов США и топовых программ добавь SAT с целью 1400+.";
+      return "Тесты — твоя сильная сторона. Следи, чтобы сертификаты были действующими: IELTS — 2 года.";
+    }
+    case "activities":
+      if (p.bestAchievementLevel === "none") return "Начни 1–2 активности по специальности: олимпиада, проект или конкурс — с результатом, который можно показать.";
+      if (p.bestAchievementLevel === "school") return "Доведи активности до уровня города или выше — олимпиада, проект, конкурс.";
+      if (p.bestAchievementLevel === "city") return "Следующий шаг — результат республиканского уровня: заключительный этап олимпиады или национальный конкурс.";
+      return "Сильные достижения — опиши их цифрами в портфолио и эссе: место, масштаб, что изменилось.";
+    case "leadership":
+      return p.ledSomething
+        ? "Покажи результат своей инициативы цифрами: сколько людей участвовало и что изменилось."
+        : "Запусти свою инициативу: клуб, волонтёрский проект или мероприятие в школе — и посчитай, скольким людям она помогла.";
+    case "essays":
+      if (p.essays === "strong") return "Эссе сильное — подготовь версии под каждый вуз и попроси учителей о рекомендациях заранее.";
+      if (p.essays === "ok") return "Доведи эссе до сильного: одна конкретная история вместо перечисления достижений.";
+      if (p.essays === "weak") return "Перепиши эссе: начни с момента, который тебя изменил, и проверь его в разделе «Эссе».";
+      return "Начни личное эссе: напиши черновик и попроси ИИ-помощника проверить структуру и клише.";
+  }
+}
 
 export function scoreProfile(p: Profile): StrengthResult {
   const axes = [academics(p), tests(p), activities(p), leadership(p), essays(p)];
@@ -148,7 +176,7 @@ export function scoreProfile(p: Profile): StrengthResult {
   // 3 совета по самым слабым осям (не оценённые эссе — в конце, но учитываются).
   const ranked = [...axes].sort((a, b) => (a.level ?? 1.5) - (b.level ?? 1.5));
   const weak = weakCoreTip(p);
-  const tips = ranked.slice(0, 3).map((a) => (a.axis === "academics" && weak ? weak : TIP_BY_AXIS[a.axis]));
+  const tips = ranked.slice(0, 3).map((a) => (a.axis === "academics" && weak ? weak : tipFor(a.axis, p)));
   if (weak && !tips.includes(weak)) tips[tips.length - 1] = weak;
   return { axes, overall, score, tips };
 }

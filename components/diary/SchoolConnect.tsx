@@ -42,30 +42,35 @@ export function SchoolButtons({ onPick, compact, only }: { onPick: (s: SchoolSys
   );
 }
 
+/** Окно входа в eMaktab / EMIS (можно открыть напрямую — например, «Обновить» в дневнике). */
+export function SchoolLoginModal({ system, onDone, onClose, children }: { system: SchoolSystem; onDone: (r: ImportResult) => void; onClose: () => void; children?: React.ReactNode }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-[rgba(10,14,28,.5)] p-3 sm:items-center" onClick={onClose}>
+      <div role="dialog" aria-modal aria-labelledby="schT" className="max-h-[92vh] w-full max-w-[520px] overflow-y-auto rounded-[24px] bg-surface-solid p-5 shadow-2xl sm:p-6" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex items-center gap-3">
+            {system === "emaktab" ? <EmaktabMark /> : <EmisMark />}
+            <h2 id="schT" className="text-xl font-extrabold">{system === "emaktab" ? "Вход через eMaktab" : "Вход через EMIS"}</h2>
+          </div>
+          <button className="btn-secondary h-10 w-10 flex-none p-0" aria-label="Закрыть" onClick={onClose}><Close /></button>
+        </div>
+        {children}
+        <div className="mt-4">
+          <SystemLogin system={system} onResult={(r) => { onClose(); track("school_connect_done", { system }); onDone(r); }} />
+        </div>
+        <p className="mt-4 text-xs text-muted">Пароль не сохраняется. Берём оценки, расписание, домашние задания и пропуски, а для анкеты — имя, класс и школу. Учителей, адрес и документы не берём.</p>
+      </div>
+    </div>
+  );
+}
+
 /** Кнопки + окно входа. После входа результат уходит в onDone (сохранение решает вызывающий). */
 export default function SchoolConnect({ onDone, compact, only, children }: { onDone: (r: ImportResult) => void; compact?: boolean; only?: SchoolSystem; children?: React.ReactNode }) {
   const [open, setOpen] = useState<SchoolSystem | null>(null);
   return (
     <>
       <SchoolButtons compact={compact} only={only} onPick={(s) => { setOpen(s); track("school_connect_open", { system: s }); }} />
-      {open && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-[rgba(10,14,28,.5)] p-3 sm:items-center" onClick={() => setOpen(null)}>
-          <div role="dialog" aria-modal aria-labelledby="schT" className="max-h-[92vh] w-full max-w-[520px] overflow-y-auto rounded-[24px] bg-surface-solid p-5 shadow-2xl sm:p-6" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-start justify-between gap-3">
-              <div className="flex items-center gap-3">
-                {open === "emaktab" ? <EmaktabMark /> : <EmisMark />}
-                <h2 id="schT" className="text-xl font-extrabold">{open === "emaktab" ? "Вход через eMaktab" : "Вход через EMIS"}</h2>
-              </div>
-              <button className="btn-secondary h-10 w-10 flex-none p-0" aria-label="Закрыть" onClick={() => setOpen(null)}><Close /></button>
-            </div>
-            {children}
-            <div className="mt-4">
-              <SystemLogin system={open} onResult={(r) => { setOpen(null); track("school_connect_done", { system: open }); onDone(r); }} />
-            </div>
-            <p className="mt-4 text-xs text-muted">Пароль не сохраняется. Берём оценки, расписание, домашние задания и пропуски, а для анкеты — имя, класс и школу. Учителей, адрес и документы не берём.</p>
-          </div>
-        </div>
-      )}
+      {open && <SchoolLoginModal system={open} onDone={onDone} onClose={() => setOpen(null)}>{children}</SchoolLoginModal>}
     </>
   );
 }

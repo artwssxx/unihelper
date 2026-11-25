@@ -10,8 +10,11 @@ import { load, save } from "@/lib/clientStore";
 import { contactSchema, profileSchema } from "@/lib/profileSchema";
 import CountryPicker from "@/components/CountryPicker";
 import SchoolConnect from "@/components/diary/SchoolConnect";
+import NumberInput from "@/components/NumberInput";
+import CertificateUpload from "@/components/quiz/CertificateUpload";
 import type { ImportResult } from "@/components/grades/GradesImport";
 import { SOURCE_NAME } from "@/lib/diary";
+import { gradesSummary } from "@/lib/grades";
 import { gradesFrom } from "@/lib/schoolImport";
 import { isCountry } from "@/lib/countries";
 import type { AchievementLevel, Profile } from "@/lib/types";
@@ -47,7 +50,8 @@ const STEPS = 9; // 8 вопросов + контакты
 // Анкета — первый шаг регистрации: после неё вход (Telegram, Google или почта), и только потом кабинет.
 export default function Quiz() {
   const router = useRouter();
-  const { user, enabled } = useAuth();
+  const { user, enabled, ready } = useAuth();
+  const [self, setSelf] = useState("/quiz");
   const [registering, setRegistering] = useState(false);
   const [next, setNext] = useState("/dashboard");
   const [step, setStep] = useState(0);
@@ -62,6 +66,7 @@ export default function Quiz() {
   useEffect(() => {
     const s = load();
     const sp = new URLSearchParams(location.search);
+    setSelf(`/quiz${location.search}`);
     const n = sp.get("next");
     if (n && n.startsWith("/") && !n.startsWith("//") && !n.startsWith("/quiz")) setNext(n);
     const country = sp.get("country");
@@ -90,7 +95,8 @@ export default function Quiz() {
   // и после регистрации переносится в аккаунт.
   const fillFrom = (r: ImportResult) => {
     const grades = r.items.length ? gradesFrom(r) : undefined;
-    const avg = r.items.length ? r.items.reduce((a, b) => a + b.grade, 0) / r.items.length : null;
+    // Средний — как везде на сайте: без физкультуры, музыки и т. п. (gradesSummary).
+    const avg = grades ? gradesSummary(grades, [])?.average ?? null : null;
     const gpa = avg == null ? null : r.scale === 100 ? Math.round(avg) : Math.round((r.scale === 10 ? avg / 2 : avg) * 100) / 100;
     const grade = r.person?.grade ?? r.grade ?? null;
     set({
@@ -160,6 +166,20 @@ export default function Quiz() {
     );
   }
 
+  // Сначала регистрация (Telegram, Google или почта), потом анкета: после входа вернёмся сюда же.
+  if (enabled && !ready) return <div className="card h-64 animate-pulse" aria-busy />;
+  if (enabled && !user) {
+    return (
+      <div className="space-y-5 pt-2">
+        <div>
+          <h1 className="text-[26px] font-extrabold leading-tight sm:text-[34px]">Создай аккаунт — это минута</h1>
+          <p className="mt-2 text-body">Войди через Telegram, Google или почту. Потом короткая анкета: класс, оценки, тесты и цели. Оценки и имя можно подтянуть из eMaktab или EMIS, а сертификаты IELTS и SAT — загрузить файлом.</p>
+        </div>
+        <div className="flex justify-center"><LoginCard next={self} mode="register" /></div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6 pt-2">
       <div className="space-y-2">
@@ -174,21 +194,6 @@ export default function Quiz() {
 
       <div className="card space-y-5">
         {step === 0 && (
-          <div className="space-y-3 rounded-2xl bg-line-3 p-4">
-            <div>
-              <b className="block">Заполни быстрее через электронный дневник</b>
-              <p className="mt-0.5 text-sm text-body">Подставим класс, город, средний балл и оценки по предметам. Пароль не сохраняется.</p>
-            </div>
-            <SchoolConnect onDone={fillFrom}>
-              <label className="mt-3 flex items-center gap-2 text-sm font-semibold">
-                <input type="checkbox" className="h-5 w-5" checked={fillName} onChange={(e) => setFillName(e.target.checked)} />
-                Заполнить имя и фамилию из дневника
-              </label>
-            </SchoolConnect>
-            {filled && <p className="rounded-xl bg-green-soft px-3 py-2 text-sm font-semibold text-green" role="status">{filled}</p>}
-          </div>
-        )}
-        {step === 0 && (
           <Q title="В каком ты классе и откуда?">
             <div className="grid grid-cols-3 gap-2">
               {[8, 9, 10, 11, 12, 13].map((g) => (
@@ -202,6 +207,21 @@ export default function Quiz() {
         )}
 
         {step === 1 && (
+          <div className="space-y-3 rounded-2xl bg-line-3 p-4">
+            <div>
+              <b className="block">Не помнишь средний балл? Возьмём из электронного дневника</b>
+              <p className="mt-0.5 text-sm text-body">Войди через eMaktab или EMIS — подставим GPA, оценки по предметам, класс и по желанию имя. Пароль не сохраняется.</p>
+            </div>
+            <SchoolConnect onDone={fillFrom}>
+              <label className="mt-3 flex items-center gap-2 text-sm font-semibold">
+                <input type="checkbox" className="h-5 w-5" checked={fillName} onChange={(e) => setFillName(e.target.checked)} />
+                Заполнить имя и фамилию из дневника
+              </label>
+            </SchoolConnect>
+            {filled && <p className="rounded-xl bg-green-soft px-3 py-2 text-sm font-semibold text-green" role="status">{filled}</p>}
+          </div>
+        )}
+        {step === 1 && (
           <Q title="Средний балл (GPA)" hint="Средняя оценка за последний год.">
             <div className="grid grid-cols-2 gap-2">
               {([5, 100] as const).map((s) => (
@@ -210,26 +230,24 @@ export default function Quiz() {
                 </button>
               ))}
             </div>
-            <input
-              className="input"
-              type="number"
-              inputMode="decimal"
-              step={p.gpaScale === 5 ? 0.1 : 1}
-              min={0}
-              max={p.gpaScale}
-              placeholder={p.gpaScale === 5 ? "например 4.6" : "например 88"}
-              value={p.gpa ?? ""}
-              onChange={(e) => set({ gpa: e.target.value === "" ? null : Number(e.target.value) })}
+            <NumberInput
+              aria-label="Средний балл"
+              placeholder={p.gpaScale === 5 ? "например 4,6" : "например 88"}
+              value={p.gpa}
+              onChange={(v) => set({ gpa: v })}
             />
+            {p.gpa != null && (p.gpa <= 0 || p.gpa > p.gpaScale) && <p className="text-sm font-semibold text-red">{`Средний балл — от 1 до ${p.gpaScale}.`}</p>}
           </Q>
         )}
 
         {step === 2 && (
-          <TestStep title="IELTS" placeholder="например 6.5" step={0.5} value={p.ielts} onChange={(v) => set({ ielts: v })} />
+          <TestStep exam="ielts" title="IELTS" placeholder="например 6,5" value={p.ielts} onChange={(v) => set({ ielts: v })}
+            onCertificate={(v, official, date) => set({ ielts: v, testProof: { ...p.testProof, ielts: { official, date } } })} />
         )}
 
         {step === 3 && (
-          <TestStep title="SAT" placeholder="например 1350" step={10} value={p.sat} onChange={(v) => set({ sat: v })} />
+          <TestStep exam="sat" title="SAT" placeholder="например 1350" value={p.sat} onChange={(v) => set({ sat: v })}
+            onCertificate={(v, official, date) => set({ sat: v, testProof: { ...p.testProof, sat: { official, date } } })} />
         )}
 
         {step === 4 && (
@@ -250,13 +268,12 @@ export default function Quiz() {
             </div>
             <label className="flex items-center justify-between gap-3 text-sm">
               <span>Сколько всего активностей?</span>
-              <input
+              <NumberInput
                 className="input w-24"
-                type="number"
-                min={0}
-                max={30}
+                decimals={false}
+                aria-label="Сколько всего активностей"
                 value={p.activitiesCount}
-                onChange={(e) => set({ activitiesCount: Math.max(0, Math.min(30, Number(e.target.value) || 0)) })}
+                onChange={(v) => set({ activitiesCount: Math.max(0, Math.min(30, v ?? 0)) })}
               />
             </label>
             <button className="chip w-full" data-on={p.ledSomething} onClick={() => set({ ledSomething: !p.ledSomething })}>
@@ -334,8 +351,8 @@ function Q({ title, hint, children }: { title: string; hint?: string; children: 
   );
 }
 
-function TestStep(props: { title: string; placeholder: string; step: number; value: number | null; onChange: (v: number | null) => void }) {
-  const [notTaken, setNotTaken] = useState(props.value == null);
+function TestStep(props: { exam: "ielts" | "sat"; title: string; placeholder: string; value: number | null; onChange: (v: number | null) => void; onCertificate: (v: number, official: boolean, date: string | null) => void }) {
+  const [notTaken, setNotTaken] = useState(false);
   return (
     <Q title={`Твой результат ${props.title}`} hint="Если ещё не сдавал — так и отметь, это нормально.">
       <button
@@ -349,15 +366,10 @@ function TestStep(props: { title: string; placeholder: string; step: number; val
         {notTaken ? "✓ " : ""}Ещё не сдавал(а)
       </button>
       {!notTaken && (
-        <input
-          className="input"
-          type="number"
-          inputMode="decimal"
-          step={props.step}
-          placeholder={props.placeholder}
-          value={props.value ?? ""}
-          onChange={(e) => props.onChange(e.target.value === "" ? null : Number(e.target.value))}
-        />
+        <>
+          <NumberInput aria-label={`Балл ${props.title}`} decimals={props.exam === "ielts"} placeholder={props.placeholder} value={props.value} onChange={props.onChange} />
+          <CertificateUpload exam={props.exam} onScore={props.onCertificate} />
+        </>
       )}
     </Q>
   );

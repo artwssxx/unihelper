@@ -228,7 +228,7 @@ export default function LoginCard({ next = "/dashboard", mode = "login", signupH
       {err && <p className="text-sm font-semibold text-red" role="alert">{err}</p>}
       {mode === "login" && signupHint && (
         <p className="rounded-xl bg-bg px-3 py-2 text-sm text-body">
-          Нет аккаунта? Регистрация начинается с анкеты — <Link href={`/quiz?next=${encodeURIComponent(next)}`} className="font-bold text-primary">пройти за 3 минуты</Link>.
+          Нет аккаунта? Войди любым способом выше — аккаунт создастся сам, а потом короткая анкета на 3 минуты.
         </p>
       )}
       <p className="text-xs leading-relaxed text-muted">

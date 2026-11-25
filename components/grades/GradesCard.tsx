@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Check, Close } from "@/components/icons";
 import GradesImport, { type ImportResult } from "@/components/grades/GradesImport";
+import NumberInput from "@/components/NumberInput";
 import { update } from "@/lib/clientStore";
 import { gradesSummary, gradeText, NON_ACADEMIC, SUBJECT_RU, subjectKey, to100, type GradeItem, type Grades, type GradeScale } from "@/lib/grades";
 import { majorsLabel } from "@/lib/majorsLabel";
@@ -147,8 +148,8 @@ function Editor({ draft, setDraft, onSave, onCancel, gradeHint }: { draft: Draft
           return (
             <li key={i} className="flex items-center gap-2">
               <input className="input min-w-0 flex-1" list="uh-subjects" value={it.subject} translate="no" aria-label="Предмет" onChange={(e) => setItem(i, { subject: e.target.value, key: subjectKey(e.target.value) })} />
-              <input className={`input w-[84px] flex-none text-center ${pct != null && pct < 70 ? "text-orange-ink-2" : ""}`} type="number" inputMode="decimal" step="0.01" min={1} max={draft.scale} aria-label="Оценка"
-                value={it.grade ?? ""} placeholder="—" onChange={(e) => setItem(i, { grade: e.target.value === "" ? null : Number(e.target.value) })} />
+              <NumberInput className={`input w-[84px] flex-none text-center ${pct != null && pct < 70 ? "text-orange-ink-2" : ""}`} aria-label="Оценка"
+                value={it.grade} placeholder="—" onChange={(v) => setItem(i, { grade: v })} />
               <button type="button" className="chip h-10 flex-none px-3 text-sm" data-on={Boolean(it.special)} aria-pressed={Boolean(it.special)} onClick={() => setItem(i, { special: !it.special })}>спец</button>
               <button type="button" className="btn-secondary h-10 w-10 flex-none p-0" aria-label="Убрать предмет" onClick={() => setDraft({ ...draft, items: draft.items.filter((_, j) => j !== i) })}><Close size={16} /></button>
             </li>

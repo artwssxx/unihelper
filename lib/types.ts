@@ -47,6 +47,8 @@ export interface Profile {
   /** Баллы хард-моков (середина диапазона). Только для Profile Strength, НЕ для требований вузов. */
   mockSat?: number | null;
   mockIelts?: number | null;
+  /** IELTS / SAT подтверждены загруженным сертификатом (официальный отчёт, дата экзамена). */
+  testProof?: { ielts?: { official: boolean; date: string | null }; sat?: { official: boolean; date: string | null } };
   /** Оценки по предметам (eMaktab, EMIS, фото табеля или вручную). Если их достаточно — GPA считается по ним. */
   grades?: Grades;
 }

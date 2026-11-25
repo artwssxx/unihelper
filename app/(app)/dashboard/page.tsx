@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo } from "react";
 import CatMascot from "@/components/advisor/CatMascot";
 import GpaCard from "@/components/diary/GpaCard";
+import TodayLessons from "@/components/diary/TodayLessons";
 import FitPills from "@/components/FitPills";
 import MockTrend from "@/components/MockTrend";
 import NeedProfile from "@/components/NeedProfile";
@@ -186,6 +187,7 @@ export default function Dashboard() {
           </div>
         </div>
       </section>
+      <TodayLessons />
     </div>
   );
 }

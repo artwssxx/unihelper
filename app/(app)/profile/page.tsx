@@ -3,6 +3,8 @@
 import { track } from "@/lib/analytics";
 import ParentsCard from "@/components/family/ParentsCard";
 import GradesCard from "@/components/grades/GradesCard";
+import NumberInput from "@/components/NumberInput";
+import CertificateUpload from "@/components/quiz/CertificateUpload";
 import { gradesGpa100 } from "@/lib/grades";
 import MajorPicker from "@/components/MajorPicker";
 import { useCallback, useEffect, useState } from "react";
@@ -62,7 +64,7 @@ export default function ProfilePage() {
           </Field>
           <Field label="Город"><input className="input" value={p.city} onChange={(e) => set({ city: e.target.value })} /></Field>
           <Field label={`GPA (шкала ${p.gpaScale === 5 ? "1–5" : "0–100"})`}>
-            <input className="input" type="number" step="0.1" value={p.gpa ?? ""} onChange={(e) => set({ gpa: e.target.value === "" ? null : Number(e.target.value) })} />
+            <NumberInput aria-label="GPA" value={p.gpa} onChange={(v) => set({ gpa: v })} />
             {gradesGpa100(store?.profile?.grades) != null && <span className="mt-1 block text-xs font-normal text-muted">Сейчас GPA считается по оценкам предметов (ниже).</span>}
           </Field>
           <Field label="Шкала GPA">
@@ -70,9 +72,19 @@ export default function ProfilePage() {
               <option value={5}>1–5</option><option value={100}>0–100</option>
             </select>
           </Field>
-          <Field label="IELTS (официальный)"><input className="input" type="number" step="0.5" value={p.ielts ?? ""} placeholder="не сдавал" onChange={(e) => set({ ielts: e.target.value === "" ? null : Number(e.target.value) })} /></Field>
-          <Field label="SAT (официальный)"><input className="input" type="number" step="10" value={p.sat ?? ""} placeholder="не сдавал" onChange={(e) => set({ sat: e.target.value === "" ? null : Number(e.target.value) })} /></Field>
-          <Field label="Бюджет семьи в год, $"><input className="input" type="number" step="500" value={p.budgetUsd} onChange={(e) => set({ budgetUsd: Number(e.target.value) || 0 })} /></Field>
+          <Field label="IELTS (официальный)">
+            <NumberInput aria-label="IELTS" value={p.ielts} placeholder="не сдавал" onChange={(v) => set({ ielts: v })} />
+            {p.testProof?.ielts && <Proof official={p.testProof.ielts.official} date={p.testProof.ielts.date} />}
+          </Field>
+          <Field label="SAT (официальный)">
+            <NumberInput aria-label="SAT" decimals={false} value={p.sat} placeholder="не сдавал" onChange={(v) => set({ sat: v })} />
+            {p.testProof?.sat && <Proof official={p.testProof.sat.official} date={p.testProof.sat.date} />}
+          </Field>
+          <Field label="Бюджет семьи в год, $"><NumberInput decimals={false} value={p.budgetUsd} onChange={(v) => set({ budgetUsd: v ?? 0 })} /></Field>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <CertificateUpload exam="ielts" onScore={(v, official, date) => set({ ielts: v, testProof: { ...p.testProof, ielts: { official, date } } })} />
+          <CertificateUpload exam="sat" onScore={(v, official, date) => set({ sat: v, testProof: { ...p.testProof, sat: { official, date } } })} />
         </div>
         <Field label="Направления">
           <MajorPicker value={p} onChange={(v) => set(v)} />
@@ -86,7 +98,7 @@ export default function ProfilePage() {
               {LEVELS.map((l) => <option key={l.v} value={l.v}>{l.label}</option>)}
             </select>
           </Field>
-          <Field label="Число активностей"><input className="input" type="number" min={0} max={30} value={p.activitiesCount} onChange={(e) => set({ activitiesCount: Math.max(0, Math.min(30, Number(e.target.value) || 0)) })} /></Field>
+          <Field label="Число активностей"><NumberInput decimals={false} value={p.activitiesCount} onChange={(v) => set({ activitiesCount: Math.max(0, Math.min(30, v ?? 0)) })} /></Field>
           <Field label="Рекомендации">
             <select className="input" value={p.recommendations} onChange={(e) => set({ recommendations: e.target.value as Profile["recommendations"] })}>
               <option value="not_assessed">Не оценено</option>
@@ -125,6 +137,14 @@ export default function ProfilePage() {
         <button className="btn-secondary text-red" onClick={() => { if (confirm("Удалить все данные Unihelper с этого устройства?")) { reset(); location.href = "/"; } }}>Удалить данные</button>
       </section>
     </div>
+  );
+}
+
+function Proof({ official, date }: { official: boolean; date: string | null }) {
+  return (
+    <span className={`mt-1 block text-xs font-semibold ${official ? "text-green" : "text-orange-ink-2"}`}>
+      {official ? "подтверждено сертификатом" : "сертификат с замечаниями"}{date ? ` · ${new Date(date).toLocaleDateString("ru-RU", { month: "long", year: "numeric" })}` : ""}
+    </span>
   );
 }
 

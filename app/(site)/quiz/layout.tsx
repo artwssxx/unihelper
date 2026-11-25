@@ -10,10 +10,7 @@ export default function QuizLayout({ children }: { children: React.ReactNode }) 
           <I.Logo />
           <span className="text-lg font-extrabold">UniHelper</span>
         </Link>
-        <div className="flex items-center gap-3">
-          <Link href="/login" className="text-sm font-bold text-muted">У меня уже есть аккаунт</Link>
-          <LangSwitch />
-        </div>
+        <LangSwitch />
       </header>
       <main className="mx-auto max-w-[720px] px-4 pb-16">{children}</main>
     </div>

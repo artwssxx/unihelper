@@ -61,7 +61,7 @@ describe("eMaktab: дневник", async () => {
       [1, "Matematika", null, null, null, null, null, [], true],
       [2, "Fizika", "09:05", "09:50", "21", "Optika", "§12, 3-mashq", [5], false],
     ]);
-    expect(r.marks).toEqual([{ subject: "Fizika", date: "2026-11-24", value: 5 }]);
+    expect(r.marks).toEqual([{ subject: "Fizika", date: "2026-11-24", value: 5, work: "Отметки" }]);
     expect(r.absences).toEqual([{ date: "2026-11-24", subject: "Matematika" }]);
     expect(JSON.stringify(r)).not.toContain("firstName");
   });
@@ -71,5 +71,23 @@ describe("eMaktab: дневник", async () => {
       [{ subject: "Fizika", key: "physics", grade: 4.67 }],
     );
     expect(s[0].parts.map((p) => [p.name, p.avg, p.marks.length])).toEqual([["1 четверть", 4.5, 2], ["2 четверть", 5, 1]]);
+  });
+});
+
+describe("eMaktab: контекст со страницы и журнал посещений", async () => {
+  const { contextFromPage, daysFromEmaktab, subjectsFromMarks } = await import("./emaktab");
+  it("контекст ученика из JSON страницы /marks (основная школа, класс, 19-значные ID)", () => {
+    const html = `<script>var s = {"x":1,"context":{"userId":1000001016824,"role":"Student","schoolMemberships":[{"personId":1000000104740,"firstName":"Ali","lastName":"Valiyev","schoolId":1000000000109,"schoolName":"110-maktab","isOo":true,"isOdo":false,"groups":[{"groupId":2517696270732813268,"groupName":"11-L"}]}],"lastViewers":[]},"y":"}"};</script>`;
+    expect(contextFromPage(html)).toEqual({ personId: "1000000104740", schoolId: "1000000000109", groupId: "2517696270732813268", groupName: "11-L", schoolName: "110-maktab", firstName: "Ali", lastName: "Valiyev", role: "Student" });
+    expect(contextFromPage("<html>нет контекста</html>")).toBeNull();
+  });
+  it("«п» в журнале — пропуск, «о» — опоздание (не пропуск); отметки по видам работ", () => {
+    const r = daysFromEmaktab([{ days: [{ date: "1793059200", lessons: [
+      { number: 1, subject: { name: "алгебра" }, logEntry: { lessonLogEntryValue: "п" }, workMarks: [] },
+      { number: 2, subject: { name: "физика" }, logEntry: { lessonLogEntryValue: "о" }, workMarks: [{ workName: "Ответ на уроке", marks: [{ value: "8" }] }, { workName: "Самостоятельная работа", marks: [{ value: "10" }] }] },
+    ] }] }]);
+    expect(r.absences).toEqual([{ date: "2026-10-27", subject: "алгебра" }]);
+    const s = subjectsFromMarks(r.marks, [{ subject: "физика", key: "physics", grade: 9 }]);
+    expect(s[0].parts.map((p) => [p.name, p.avg])).toEqual([["Ответ на уроке", 8], ["Самостоятельная работа", 10]]);
   });
 });

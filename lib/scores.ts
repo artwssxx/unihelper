@@ -155,3 +155,41 @@ export function ruleAnalysis(r: Pick<ScoreRecord, "exam" | "ielts" | "sat">, tar
     ai: false,
   };
 }
+
+// ── Автопроверка загруженного сертификата (анкета, профиль) ──
+
+export interface CertCheck {
+  status: "verified" | "warn" | "fail";
+  score: number | null;
+  notes: string[];
+}
+
+/**
+ * Проверка сертификата IELTS/SAT по распознанному результату: официальный ли отчёт, есть ли дата и не просрочен ли
+ * (IELTS — 2 года, SAT — 5 лет: так считает большинство вузов), сходятся ли секции с итогом. Балл берём только итоговый.
+ */
+export function certificateCheck(r: { exam: ScoreExam; kind: "official" | "self"; date: string | null; ielts?: IeltsScores; sat?: SatScores }, now = new Date()): CertCheck {
+  const notes: string[] = [];
+  let score: number | null = null;
+  let bad = false;
+  if (r.exam === "ielts") {
+    const s = r.ielts ?? {};
+    score = s.overall ?? ieltsOverall(s);
+    const calc = ieltsOverall(s);
+    if (score != null && calc != null && calc !== score) { notes.push(`Overall ${score} не сходится с баллами секций (по ним выходит ${calc}) — проверь.`); bad = true; }
+  } else {
+    const s = r.sat ?? {};
+    score = s.total ?? (s.math != null && s.rw != null ? s.math + s.rw : null);
+    if (s.total != null && s.math != null && s.rw != null && s.math + s.rw !== s.total) { notes.push(`Сумма секций ${s.math + s.rw} не равна итогу ${s.total} — проверь.`); bad = true; }
+  }
+  if (score == null) return { status: "fail", score: null, notes: ["Не нашли итоговый балл. Загрузи отчёт целиком — там, где видно Overall / Total."] };
+  if (r.kind !== "official") { notes.push("Не похоже на официальный отчёт (IELTS TRF или отчёт College Board) — балл сохраним как «со слов»."); bad = true; }
+  if (!r.date) { notes.push("Не видна дата экзамена."); bad = true; }
+  else {
+    const years = (now.getTime() - Date.parse(r.date)) / (365.25 * 86400_000);
+    const limit = r.exam === "ielts" ? 2 : 5;
+    if (years > limit) { notes.push(`Экзамену больше ${limit} лет — большинство вузов такой результат не примут.`); bad = true; }
+    if (years < -0.05) { notes.push("Дата экзамена в будущем — проверь отчёт."); bad = true; }
+  }
+  return { status: bad ? "warn" : "verified", score, notes };
+}
