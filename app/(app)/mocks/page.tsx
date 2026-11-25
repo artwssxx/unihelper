@@ -117,7 +117,10 @@ export default function MocksHub() {
           <h2 className="m-0 text-xl font-extrabold">Уже сдавал IELTS или SAT?</h2>
           <p className="mt-1 max-w-[620px] text-sm text-body">Загрузи отчёт (PDF или фото) или опиши результат — разберём по секциям, сравним с требованиями твоих вузов и соберём план.</p>
         </div>
-        <Link href="/mocks/report" className="btn-primary">Разобрать мой результат</Link>
+        <div className="flex flex-wrap gap-2">
+          <Link href="/mocks/report" className="btn-primary">Разобрать мой результат</Link>
+          <Link href="/mocks/calculator" className="btn-secondary">Графический калькулятор</Link>
+        </div>
       </section>
 
       <section className="grid gap-5 lg:grid-cols-2 2xl:grid-cols-[1fr_1fr_0.9fr]">

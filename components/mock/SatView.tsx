@@ -3,7 +3,7 @@
 import { useState } from "react";
 import * as I from "@/components/icons";
 import type { ActiveAttempt } from "@/lib/mocks/client";
-import Calculator from "./Calculator";
+import Calculator from "@/components/calc/Calculator";
 import QuestionGrid from "./QuestionGrid";
 
 const L = "ABCDEFGH";
