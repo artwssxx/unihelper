@@ -99,7 +99,10 @@ function LoginScreen({ path }: { path: string }) {
           </div>
         </div>
       </section>
-      <LoginCard next={path} signupHint={false} />
+      {/* На телефоне форма входа — первой, пояснения ниже */}
+      <div className="order-first lg:order-none">
+        <LoginCard next={path} signupHint={false} />
+      </div>
     </div>
   );
 }

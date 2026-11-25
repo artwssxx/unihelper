@@ -19,3 +19,19 @@ export function supabaseBrowser(): Promise<SupabaseClient | null> {
     : Promise.resolve(null);
   return client;
 }
+
+let emailClient: Promise<SupabaseClient | null> | null = null;
+
+/**
+ * Клиент только для отправки письма со ссылкой: неявный поток (implicit). Ссылка из письма тогда
+ * несёт токены сама и срабатывает в любом браузере — на телефоне письмо часто открывается
+ * не там, где начали вход. Сессию из ссылки сохраняет основной клиент на /auth/callback.
+ */
+export function supabaseEmailLink(): Promise<SupabaseClient | null> {
+  emailClient ??= authEnabled
+    ? import("@supabase/supabase-js").then(({ createClient }) =>
+        createClient(URL_!, ANON!, { auth: { flowType: "implicit", persistSession: false, autoRefreshToken: false, detectSessionInUrl: false, storageKey: "uh-email-link" } }),
+      )
+    : Promise.resolve(null);
+  return emailClient;
+}

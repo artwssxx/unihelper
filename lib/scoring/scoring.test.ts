@@ -189,3 +189,18 @@ describe("matchPrograms", () => {
     expect(b.abroad.map((i) => i.fit.admission.label)).toEqual(a.abroad.map((i) => i.fit.admission.label));
   });
 });
+
+describe("несколько направлений", () => {
+  it("программа подходит, если совпадает любое из выбранных направлений", () => {
+    const biz = prog({ id: "biz-only", majors: ["business"], country: "HU", isLocal: false });
+    const onlyCs = { ...base, major: "cs" as const, majors: undefined, targetCountries: ["HU" as const] };
+    const csAndBiz = { ...onlyCs, majors: ["cs" as const, "business" as const] };
+    expect(filterPrograms(onlyCs, [biz])).toHaveLength(0);
+    expect(filterPrograms(csAndBiz, [biz])).toHaveLength(1);
+  });
+  it("активности считаются профильными по любому из направлений", () => {
+    const p = { ...base, major: "medicine" as const, majors: ["medicine" as const, "cs" as const], achievementsText: "сделал сайт для школы и хакатон" };
+    const r = admissionFit(p, prog({ majors: ["cs", "medicine"] }));
+    expect(r.reasons.join(" ")).toContain("связаны со специальностью");
+  });
+});

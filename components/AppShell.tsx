@@ -148,7 +148,7 @@ const TABS = [
 function TabBar({ path, onMenu }: { path: string; onMenu: () => void }) {
   const item = "flex min-h-[52px] flex-1 flex-col items-center justify-center gap-0.5 text-[11px] font-bold";
   return (
-    <nav aria-label="Основные разделы" className="fixed inset-x-0 bottom-0 z-30 flex border-t border-line bg-surface-solid px-1 pb-[env(safe-area-inset-bottom)] lg:hidden">
+    <nav aria-label="Основные разделы" className="member-only fixed inset-x-0 bottom-0 z-30 flex border-t border-line bg-surface-solid px-1 pb-[env(safe-area-inset-bottom)] lg:hidden">
       {TABS.map((t) => {
         const on = path === t.href || path.startsWith(t.href + "/");
         return (

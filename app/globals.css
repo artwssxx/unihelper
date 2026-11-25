@@ -251,6 +251,10 @@ html[data-auth] [data-guest="auth"],
 html[data-demo] [data-guest="auth"] {
   display: none;
 }
+/* Только для вошедших и демо (нижняя панель кабинета): гостю она ведёт лишь на экран входа. */
+html:not([data-auth]):not([data-demo]) .member-only {
+  display: none;
+}
 
 /* uz/en: страница видна после применения словаря (components/I18n.tsx), без вспышки русского. */
 html[data-lang]:not([data-tr]) body {
