@@ -16,6 +16,11 @@ describe("источники онлайн-ивентов", () => {
     const r = parseCodechef({ future_contests: [{ contest_code: "START200", contest_name: "Starters 200", contest_start_date_iso: "2026-11-26T20:00:00+05:30", contest_end_date_iso: "2026-11-26T22:00:00+05:30", contest_duration: "120" }] }, NOW);
     expect(r[0]).toMatchObject({ id: "cc-START200", beginner: true, note: "2 ч · все уровни" });
   });
+  it("CodeChef: дата без ISO (время Индии)", () => {
+    const r = parseCodechef({ future_contests: [{ contest_code: "START201", contest_name: "Starters 201", contest_start_date: "03 Dec 2026  20:00:00", contest_duration: "120" }] }, NOW);
+    expect(r[0].startsAt).toBe("2026-12-03T14:30:00.000Z");
+    expect(r[0].endsAt).toBeNull();
+  });
   it("Devpost: даты, темы → направления, только онлайн и не по приглашениям", () => {
     expect(parseDevpostDates("Nov 20 - Dec 15, 2026")).toEqual(["2026-11-20T12:00:00.000Z", "2026-12-15T12:00:00.000Z"]);
     expect(parseDevpostDates("Dec 01 - 03, 2026")).toEqual(["2026-12-01T12:00:00.000Z", "2026-12-03T12:00:00.000Z"]);

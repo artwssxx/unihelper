@@ -3485,5 +3485,16 @@
  "Выключить автообновление": "Avtomatik yangilanishni o‘chirish",
  "Сегодня обновлений уже много. Попробуй завтра.": "Bugun yangilanishlar ko‘p bo‘ldi. Ertaga urinib ko‘r.",
  "eMaktab сразу завершил сессию. Попробуй ещё раз.": "eMaktab sessiyani darhol tugatdi. Yana urinib ko‘r.",
- "EMIS сразу завершил сессию. Попробуй ещё раз.": "EMIS sessiyani darhol tugatdi. Yana urinib ko‘r."
+ "EMIS сразу завершил сессию. Попробуй ещё раз.": "EMIS sessiyani darhol tugatdi. Yana urinib ko‘r.",
+ "подтянуть": "yaxshilash kerak",
+ "имя. Проверь ответы и продолжай.": "ism. Javoblarni tekshirib, davom et.",
+ "город. Проверь ответы и продолжай.": "shahar. Javoblarni tekshirib, davom et.",
+ "класс. Проверь ответы и продолжай.": "sinf. Javoblarni tekshirib, davom et.",
+ "GPA # и # предметов. Проверь ответы и продолжай.": "GPA # va # ta fan. Javoblarni tekshirib, davom et.",
+ "Войди в аккаунт.": "Akkauntga kir.",
+ "Сохранить оценки (": "Baholarni saqlash (",
+ "#-А": "#-A",
+ "профильный предмет для твоего направления, а оценка сейчас # из #": "yo‘nalishing uchun asosiy fan, hozirgi bahoing esa # (# balldan)",
+ "подтяни её": "uni yaxshila",
+ "вузы смотрят на этот предмет в первую очередь.": "OTMlar avvalo shu fanga qaraydi."
 }

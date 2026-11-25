@@ -13,14 +13,22 @@ const SOURCES: { id: Exclude<OnlineSource, "unihelper">; url: string; parse: (ra
   { id: "codechef", url: "https://www.codechef.com/api/list/contests/all?sort_by=START&sorting_order=asc&offset=0&mode=all", parse: parseCodechef },
 ];
 
+/** Форма пустого ответа (ключи и длины списков) — чтобы по статусу понять, что поменялось у источника. */
+function shape(raw: unknown): string {
+  if (Array.isArray(raw)) return `array[${raw.length}]`;
+  if (!raw || typeof raw !== "object") return typeof raw;
+  return Object.entries(raw as Record<string, unknown>).slice(0, 12).map(([k, v]) => (Array.isArray(v) ? `${k}[${v.length}]` : k)).join(",");
+}
+
 let memo: { at: number; items: OnlineEvent[]; status: Record<string, string> } | null = null;
 
 async function fetchSource(s: (typeof SOURCES)[number]): Promise<{ items: OnlineEvent[]; status: string }> {
   try {
     const r = await fetch(s.url, { headers: { "user-agent": UA, accept: "application/json" }, signal: AbortSignal.timeout(9000), next: { revalidate: 10_800 } });
     if (!r.ok) return { items: [], status: `HTTP ${r.status}` };
-    const items = s.parse(await r.json());
-    return { items, status: `ok (${items.length})` };
+    const raw = await r.json();
+    const items = s.parse(raw);
+    return { items, status: items.length ? `ok (${items.length})` : `ok (0) · ${shape(raw)}` };
   } catch (e) {
     return { items: [], status: (e as Error).name === "TimeoutError" ? "timeout" : "error" };
   }

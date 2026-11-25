@@ -75,7 +75,7 @@ async function call(items, attempt = 0) {
 const ALL_COUNTRIES = readFileSync(new URL("../lib/countries.ts", import.meta.url), "utf8").match(/"((?:[A-Z]{2} )+[A-Z]{2})"/)[1].split(" ");
 
 async function main() {
-  if (!KEY) throw new Error("Нет GEMINI_API_KEY");
+  if (!KEY && !process.argv.some((a) => a.startsWith("--list="))) throw new Error("Нет GEMINI_API_KEY");
   const dict = { uz: loadJson(DICT.uz, {}), en: loadJson(DICT.en, {}) };
   // Даты — без ИИ, через Intl (точно и бесплатно).
   for (const [k, v] of [...dateEntries(), ...countryEntries(ALL_COUNTRIES)]) {
@@ -90,6 +90,9 @@ async function main() {
   const keys = new Set([...extract().keys(), ...extra]);
   const todo = [...keys].filter((k) => !junk(k) && (dict.uz[k] == null || dict.en[k] == null));
   console.log(`строк: ${keys.size}, без перевода: ${todo.length}`);
+  // --list=<файл>: только выписать строки без перевода (перевести вручную, если ИИ недоступен).
+  const listTo = process.argv.find((a) => a.startsWith("--list="))?.slice(7);
+  if (listTo) return writeFileSync(listTo, JSON.stringify(todo, null, 1));
   const limit = Number(process.argv.find((a) => a.startsWith("--limit="))?.split("=")[1] ?? Infinity);
   const queue = todo.slice(0, limit).map((ru, i) => ({ i, ru }));
   let done = 0;

@@ -29,18 +29,30 @@ describe("цепочка ИИ-провайдеров", () => {
     expect(a.calls).toBe(1);
   });
   it("картинки — только провайдерам с распознаванием", async () => {
-    const a = fake("gemini", { fail: true }), b = fake("cerebras", { vision: false }), c = fake("mistral", { vision: true });
+    const a = fake("gemini-v", { fail: true }), b = fake("cerebras-v", { vision: false }), c = fake("mistral-v", { vision: true });
     const r = await chain([a, b, c]).json({ system: "", user: "", schema, tier: "fast", images: [{ mime: "image/png", data: "" }] });
-    expect(r).toEqual({ answer: "mistral" });
+    expect(r).toEqual({ answer: "mistral-v" });
     expect(b.calls).toBe(0);
   });
   it("стрим: переключается, пока ничего не отдал; обрыв посреди ответа не повторяет", async () => {
-    expect(await read(chain([fake("gemini", { fail: true }), fake("groq", { reply: "привет мир" })]).stream({ system: "", messages: [], tier: "fast" }))).toBe("привет мир");
-    const b = fake("groq");
-    await expect(read(chain([fake("gemini", { reply: "раз два три", failAfter: 1 }), b]).stream({ system: "", messages: [], tier: "fast" }))).rejects.toThrow("обрыв");
+    expect(await read(chain([fake("gemini-s1", { fail: true }), fake("groq-s1", { reply: "привет мир" })]).stream({ system: "", messages: [], tier: "fast" }))).toBe("привет мир");
+    const b = fake("groq-s2");
+    await expect(read(chain([fake("gemini-s2", { reply: "раз два три", failAfter: 1 }), b]).stream({ system: "", messages: [], tier: "fast" }))).rejects.toThrow("обрыв");
     expect(b.calls).toBe(0);
   });
   it("все недоступны — понятная ошибка", async () => {
-    await expect(chain([fake("gemini", { fail: true }), fake("groq", { fail: true })]).json({ system: "", user: "", schema, tier: "fast" })).rejects.toThrow("все провайдеры недоступны");
+    await expect(chain([fake("gemini-x", { fail: true }), fake("groq-x", { fail: true })]).json({ system: "", user: "", schema, tier: "fast" })).rejects.toThrow("все провайдеры недоступны");
+  });
+});
+
+describe("перегруженный провайдер уходит в конец очереди", () => {
+  it("второй запрос сразу идёт к запасному", async () => {
+    const a = fake("gemini-cd", { fail: true }), b = fake("groq-cd");
+    const c = chain([a, b]);
+    await c.json({ system: "", user: "", schema, tier: "fast" });
+    expect(a.calls).toBe(1);
+    await c.json({ system: "", user: "", schema, tier: "fast" });
+    expect(a.calls).toBe(1); // в «паузе» — не вызывался
+    expect(b.calls).toBe(2);
   });
 });

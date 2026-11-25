@@ -3485,5 +3485,16 @@
  "Выключить автообновление": "Turn off auto-update",
  "Сегодня обновлений уже много. Попробуй завтра.": "Too many updates today. Try tomorrow.",
  "eMaktab сразу завершил сессию. Попробуй ещё раз.": "eMaktab ended the session right away. Try again.",
- "EMIS сразу завершил сессию. Попробуй ещё раз.": "EMIS ended the session right away. Try again."
+ "EMIS сразу завершил сессию. Попробуй ещё раз.": "EMIS ended the session right away. Try again.",
+ "подтянуть": "to improve",
+ "имя. Проверь ответы и продолжай.": "name. Check your answers and continue.",
+ "город. Проверь ответы и продолжай.": "city. Check your answers and continue.",
+ "класс. Проверь ответы и продолжай.": "grade. Check your answers and continue.",
+ "GPA # и # предметов. Проверь ответы и продолжай.": "GPA # and # subjects. Check your answers and continue.",
+ "Войди в аккаунт.": "Sign in to your account.",
+ "Сохранить оценки (": "Save grades (",
+ "#-А": "#-A",
+ "профильный предмет для твоего направления, а оценка сейчас # из #": "a core subject for your field, and your grade is now # out of #",
+ "подтяни её": "bring it up",
+ "вузы смотрят на этот предмет в первую очередь.": "universities look at this subject first."
 }

@@ -44,18 +44,32 @@ export function parseCodeforces(raw: unknown, now = Date.now()): OnlineEvent[] {
 }
 
 // ── CodeChef: https://www.codechef.com/api/list/contests/all ──
+type CcContest = { contest_code: string; contest_name: string; contest_start_date_iso?: string; contest_start_date?: string; contest_end_date_iso?: string; contest_end_date?: string; contest_duration?: string | number };
+
+/** Дата CodeChef: ISO с поясом или «26 Nov 2026  20:00:00» (время Индии, UTC+5:30). */
+function ccDate(isoStr: string | undefined, plain: string | undefined): number {
+  const a = isoStr ? Date.parse(isoStr) : NaN;
+  if (!Number.isNaN(a)) return a;
+  const m = plain?.match(/^(\d{1,2})\s+([A-Za-z]{3})\w*\s+(\d{4})\s+(\d{1,2}):(\d{2})/);
+  const mon = m ? MONTHS[m[2].toLowerCase()] : undefined;
+  if (!m || mon == null) return NaN;
+  return Date.UTC(+m[3], mon, +m[1], +m[4], +m[5]) - 330 * 60_000;
+}
+
 export function parseCodechef(raw: unknown, now = Date.now()): OnlineEvent[] {
-  const r = raw as { future_contests?: unknown[] };
-  if (!Array.isArray(r?.future_contests)) return [];
-  return r.future_contests
-    .map((c) => c as { contest_code: string; contest_name: string; contest_start_date_iso?: string; contest_end_date_iso?: string; contest_duration?: string | number })
-    .filter((c) => c.contest_code && c.contest_start_date_iso && Date.parse(c.contest_start_date_iso) > now)
+  const r = raw as { future_contests?: unknown[]; contests?: unknown[] };
+  const list = Array.isArray(r?.future_contests) ? r.future_contests : Array.isArray(r?.contests) ? r.contests : null;
+  if (!list) return [];
+  return list
+    .map((c) => c as CcContest)
+    .map((c) => ({ ...c, start: ccDate(c.contest_start_date_iso, c.contest_start_date), end: ccDate(c.contest_end_date_iso, c.contest_end_date) }))
+    .filter((c) => c.contest_code && c.contest_name && c.start > now)
     .map((c) => {
       const beginner = /starters/i.test(c.contest_name);
       const min = Number(c.contest_duration) || 0;
       return {
         id: `cc-${c.contest_code}`, source: "codechef" as const, title: c.contest_name, url: `https://www.codechef.com/${encodeURIComponent(c.contest_code)}`, kind: "contest" as const,
-        startsAt: iso(Date.parse(c.contest_start_date_iso!)), endsAt: c.contest_end_date_iso ? iso(Date.parse(c.contest_end_date_iso)) : null,
+        startsAt: iso(c.start), endsAt: Number.isNaN(c.end) ? null : iso(c.end),
         majors: ["cs", "engineering", "natural_sciences"] as Major[], organizer: "CodeChef",
         note: `${min ? `${Math.round(min / 6) / 10} ч` : "онлайн"}${beginner ? " · все уровни" : ""}`, beginner,
       };

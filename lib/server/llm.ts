@@ -171,22 +171,34 @@ function anthropicProvider(): LLM {
 // ───────────── Цепочка: основной + запасные ─────────────
 
 /** Пробует провайдеров по очереди. Стрим переключается, только если ещё ничего не успел отдать. */
-export function chain(list: LLM[], primaryBudgetMs = 30_000): LLM {
-  if (list.length === 1) return list[0];
+/** Провайдер только что не ответил (перегрузка, лимит) — минуту ставим его в конец очереди, чтобы не ждать снова. */
+const cooldown = new Map<string, number>();
+const COOLDOWN_MS = 60_000;
+const ordered = (list: LLM[]) => {
+  const now = Date.now();
+  return [...list].sort((a, b) => Number((cooldown.get(a.name) ?? 0) > now) - Number((cooldown.get(b.name) ?? 0) > now));
+};
+
+export function chain(input: LLM[], primaryBudgetMs = 30_000): LLM {
+  if (input.length === 1) return input[0];
   return {
-    name: list.map((l) => l.name).join(" → "),
-    vision: list.some((l) => l.vision !== false),
+    name: input.map((l) => l.name).join(" → "),
+    vision: input.some((l) => l.vision !== false),
     async json(o) {
       const end = Date.now() + 55_000;
       const errors: string[] = [];
+      const list = ordered(input);
       const usable = o.images?.length ? list.filter((l) => l.vision !== false) : list;
       for (const [i, l] of usable.entries()) {
         // Основному — не весь лимит функции: запасным тоже нужно время.
         const deadlineAt = i === 0 && usable.length > 1 ? Math.min(end, Date.now() + primaryBudgetMs) : end;
         if (deadlineAt - Date.now() < 3_000) break;
         try {
-          return await l.json({ ...o, deadlineAt });
+          const r = await l.json({ ...o, deadlineAt });
+          cooldown.delete(l.name);
+          return r;
         } catch (e) {
+          cooldown.set(l.name, Date.now() + COOLDOWN_MS);
           errors.push(`${l.name}: ${(e as Error).message.slice(0, 160)}`);
         }
       }
@@ -195,6 +207,7 @@ export function chain(list: LLM[], primaryBudgetMs = 30_000): LLM {
     async *stream(o) {
       const end = Date.now() + 55_000;
       const errors: string[] = [];
+      const list = ordered(input);
       for (const [i, l] of list.entries()) {
         const deadlineAt = i === 0 ? Math.min(end, Date.now() + primaryBudgetMs) : end;
         if (deadlineAt - Date.now() < 3_000) break;
@@ -204,9 +217,11 @@ export function chain(list: LLM[], primaryBudgetMs = 30_000): LLM {
             started = true;
             yield t;
           }
+          cooldown.delete(l.name);
           return;
         } catch (e) {
           if (started) throw e; // часть ответа уже у ученика — не начинаем заново у другого провайдера
+          cooldown.set(l.name, Date.now() + COOLDOWN_MS);
           errors.push(`${l.name}: ${(e as Error).message.slice(0, 160)}`);
         }
       }
@@ -225,59 +240,76 @@ const PRESETS: Record<string, { env: string; baseUrl: string; fast: string[]; sm
   mistral: { env: "MISTRAL_API_KEY", baseUrl: "https://api.mistral.ai/v1", fast: ["mistral-small-latest"], smart: ["mistral-medium-latest", "mistral-small-latest"], vision: ["mistral-small-latest"] },
   cerebras: { env: "CEREBRAS_API_KEY", baseUrl: "https://api.cerebras.ai/v1", fast: ["gpt-oss-120b"], smart: ["gpt-oss-120b"], vision: [] },
   openrouter: { env: "OPENROUTER_API_KEY", baseUrl: "https://openrouter.ai/api/v1", fast: ["openai/gpt-oss-120b:free", "meta-llama/llama-3.3-70b-instruct:free"], smart: ["openai/gpt-oss-120b:free"], vision: [] },
+  // GitHub Models — бесплатно с личным токеном GitHub (scope models:read), лимиты на день.
+  github: { env: "GITHUB_MODELS_TOKEN", baseUrl: "https://models.github.ai/inference", fast: ["openai/gpt-4.1-mini", "openai/gpt-4.1-nano"], smart: ["openai/gpt-4.1", "openai/gpt-4.1-mini"], vision: ["openai/gpt-4.1-mini"] },
+  sambanova: { env: "SAMBANOVA_API_KEY", baseUrl: "https://api.sambanova.ai/v1", fast: ["Meta-Llama-3.3-70B-Instruct"], smart: ["Meta-Llama-3.3-70B-Instruct"], vision: [] },
 };
+
+/** Какие провайдеры настроены (имена, без ключей) — для админки. */
+export function providerNames(): string[] {
+  const out: string[] = [];
+  if (process.env.GEMINI_API_KEY) out.push("gemini");
+  if (process.env.ANTHROPIC_API_KEY || process.env.ANTHROPIC_AUTH_TOKEN) out.push("anthropic");
+  if (process.env.OPENAI_COMPAT_API_KEY && process.env.OPENAI_COMPAT_BASE_URL) out.push("compat");
+  for (const [name, pre] of Object.entries(PRESETS)) if (process.env[pre.env]) out.push(name);
+  return out;
+}
+
+/** Один провайдер отдельно (проверка из админки). */
+export function providerByName(name: string): LLM | null {
+  return makeProvider(name);
+}
+
+function makeProvider(name: string): LLM | null {
+  const gemini = process.env.GEMINI_API_KEY;
+  const compat = process.env.OPENAI_COMPAT_API_KEY && process.env.OPENAI_COMPAT_BASE_URL;
+  const claude = process.env.ANTHROPIC_API_KEY || process.env.ANTHROPIC_AUTH_TOKEN;
+  if (name === "gemini" && gemini) {
+    return compatProvider({
+      name: "gemini",
+      baseUrl: "https://generativelanguage.googleapis.com/v1beta/openai",
+      key: gemini,
+      models: {
+        fast: list(process.env.GEMINI_MODELS_FAST, ["gemini-3.5-flash-lite", "gemini-flash-lite-latest", "gemini-3.5-flash"]),
+        smart: list(process.env.GEMINI_MODELS_SMART, ["gemini-3.5-flash", "gemini-3.5-flash-lite", "gemini-flash-latest", "gemini-flash-lite-latest"]),
+      },
+    });
+  }
+  const pre = PRESETS[name];
+  if (pre && process.env[pre.env]) {
+    const up = name.toUpperCase();
+    const models = list(process.env[`${up}_MODELS`], []);
+    return compatProvider({
+      name,
+      baseUrl: pre.baseUrl,
+      key: process.env[pre.env]!,
+      models: { fast: models.length ? models : pre.fast, smart: models.length ? models : pre.smart },
+      visionModels: list(process.env[`${up}_MODELS_VISION`], pre.vision),
+      ...(name === "openrouter" ? { extraHeaders: { "x-title": "UniHelper" } } : {}),
+    });
+  }
+  if (name === "compat" && compat) {
+    const models = list(process.env.OPENAI_COMPAT_MODELS, []);
+    if (!models.length) return null;
+    return compatProvider({
+      name: "compat",
+      baseUrl: process.env.OPENAI_COMPAT_BASE_URL!.replace(/\/$/, ""),
+      key: process.env.OPENAI_COMPAT_API_KEY!,
+      models: { fast: models, smart: models },
+    });
+  }
+  if (name === "anthropic" && claude) return anthropicProvider();
+  return null;
+}
 
 export function llm(): LLM | null {
   if (cached !== undefined) return cached;
   const want = process.env.AI_PROVIDER;
-  const gemini = process.env.GEMINI_API_KEY;
-  const compat = process.env.OPENAI_COMPAT_API_KEY && process.env.OPENAI_COMPAT_BASE_URL;
-  const claude = process.env.ANTHROPIC_API_KEY || process.env.ANTHROPIC_AUTH_TOKEN;
-
-  const make = (name: string): LLM | null => {
-    if (name === "gemini" && gemini) {
-      return compatProvider({
-        name: "gemini",
-        baseUrl: "https://generativelanguage.googleapis.com/v1beta/openai",
-        key: gemini,
-        models: {
-          fast: list(process.env.GEMINI_MODELS_FAST, ["gemini-3.5-flash-lite", "gemini-flash-lite-latest", "gemini-3.5-flash"]),
-          smart: list(process.env.GEMINI_MODELS_SMART, ["gemini-3.5-flash", "gemini-3.5-flash-lite", "gemini-flash-latest", "gemini-flash-lite-latest"]),
-        },
-      });
-    }
-    const pre = PRESETS[name];
-    if (pre && process.env[pre.env]) {
-      const up = name.toUpperCase();
-      const models = list(process.env[`${up}_MODELS`], []);
-      return compatProvider({
-        name,
-        baseUrl: pre.baseUrl,
-        key: process.env[pre.env]!,
-        models: { fast: models.length ? models : pre.fast, smart: models.length ? models : pre.smart },
-        visionModels: list(process.env[`${up}_MODELS_VISION`], pre.vision),
-        ...(name === "openrouter" ? { extraHeaders: { "x-title": "UniHelper" } } : {}),
-      });
-    }
-    if (name === "compat" && compat) {
-      const models = list(process.env.OPENAI_COMPAT_MODELS, []);
-      if (!models.length) return null;
-      return compatProvider({
-        name: "compat",
-        baseUrl: process.env.OPENAI_COMPAT_BASE_URL!.replace(/\/$/, ""),
-        key: process.env.OPENAI_COMPAT_API_KEY!,
-        models: { fast: models, smart: models },
-      });
-    }
-    if (name === "anthropic" && claude) return anthropicProvider();
-    return null;
-  };
-
-  const order = ["gemini", "anthropic", "compat", "groq", "mistral", "cerebras", "openrouter"];
-  const primary = want ? make(want) : order.map(make).find(Boolean) ?? null;
+  const order = ["gemini", "anthropic", "compat", "groq", "mistral", "cerebras", "github", "sambanova", "openrouter"];
+  const primary = want ? makeProvider(want) : order.map(makeProvider).find(Boolean) ?? null;
   if (!primary) return (cached = null);
-  const fallbackOrder = list(process.env.AI_FALLBACKS, ["groq", "mistral", "cerebras", "openrouter", "compat", "gemini", "anthropic"]);
-  const fallbacks = fallbackOrder.filter((n) => n !== primary.name).map(make).filter((x): x is LLM => Boolean(x));
+  const fallbackOrder = list(process.env.AI_FALLBACKS, ["groq", "mistral", "cerebras", "github", "sambanova", "openrouter", "compat", "gemini", "anthropic"]);
+  const fallbacks = fallbackOrder.filter((n) => n !== primary.name).map(makeProvider).filter((x): x is LLM => Boolean(x));
   cached = chain([primary, ...fallbacks]);
   return cached;
 }

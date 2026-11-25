@@ -73,7 +73,7 @@ function weakCoreTip(p: Profile): string | null {
   const w = s?.weakCore.sort((a, b) => a.grade - b.grade)[0];
   if (!s || !w) return null;
   const name = w.key === "other" ? w.subject : SUBJECT_RU[w.key];
-  return `Подтяни предмет «${name}» (сейчас ${gradeText(w.grade, s.scale)}): он профильный для твоего направления, вузы смотрят на него в первую очередь.`;
+  return `«${name}» — профильный предмет для твоего направления, а оценка сейчас ${gradeText(w.grade, s.scale)}: подтяни её, вузы смотрят на этот предмет в первую очередь.`;
 }
 
 function tests(p: Profile): AxisResult {
