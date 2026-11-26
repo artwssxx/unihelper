@@ -161,7 +161,8 @@ function compatProvider(cfg: { name: string; baseUrl: string; key: string; model
           }
         }
         // Поток закрылся без текста (лимит, фильтр, ошибка внутри потока) — это сбой, пробуем следующую модель.
-        errors.push(`${model}: пустой ответ (${streamErr || head.replace(/\s+/g, " ").slice(0, 220) || "нет данных"})`);
+        const where = res.redirected ? ` → ${new URL(res.url).host}${new URL(res.url).pathname}` : "";
+        errors.push(`${model}: пустой ответ (${streamErr || head.replace(/\s+/g, " ").slice(0, 220) || "нет данных"}; HTTP ${res.status} ${res.headers.get("content-type") ?? ""}${where})`);
       }
       throw new Error(`[${cfg.name}] все модели недоступны: ${errors.join("; ")}`);
     },
@@ -325,7 +326,7 @@ function makeProvider(name: string): LLM | null {
       key: process.env[pre.env]!,
       models: { fast: models.length ? models : pre.fast, smart: models.length ? models : pre.smart },
       visionModels: list(process.env[`${up}_MODELS_VISION`], pre.vision),
-      ...(name === "openrouter" ? { extraHeaders: { "x-title": "UniHelper" } } : {}),
+      ...(name === "openrouter" ? { extraHeaders: { "x-title": "UniHelper" } } : name === "github" ? { extraHeaders: { "x-github-api-version": "2022-11-28" } } : {}),
     });
   }
   if (name === "compat" && compat) {
