@@ -42,6 +42,8 @@ export function translateDom(dict: Dict, root: HTMLElement = document.documentEl
   function textNode(n: Text) {
     const parent = n.parentElement;
     if (!parent || skipped(parent)) return;
+    const ph = parent.closest("[data-i18n-phrase]");
+    if (ph && phrase(ph)) return;
     // Несколько соседних текстовых узлов (JSX вида «{n} шагов») переводим как одну фразу.
     const kids = parent.childNodes;
     if (kids.length > 1 && [...kids].every((k) => k.nodeType === 3)) {
@@ -56,6 +58,38 @@ export function translateDom(dict: Dict, root: HTMLElement = document.documentEl
       return;
     }
     single(n, origOf(n));
+  }
+
+  // Фраза с выделением или вставкой (data-i18n-phrase): «Прогресс <span>вашего ребёнка</span>» ищется ключом
+  // «Прогресс {вашего ребёнка}», вставка с translate="no» — «{}». Перевод «{Farzandingiz} progressi»
+  // раскладывается по тем же узлам (меняется только текст), так что порядок слов берётся из перевода.
+  function phrase(el: Element): boolean {
+    type Slot = { gap: Text[] } | { inner: Text | null };
+    const slots: Slot[] = [];
+    let gap: Text[] = [];
+    for (const k of el.childNodes) {
+      if (k.nodeType === 3) { gap.push(k as Text); continue; }
+      if (k.nodeType !== 1) continue;
+      const e = k as Element;
+      const fixed = e.getAttribute("translate") === "no";
+      if (!fixed && (e.childNodes.length !== 1 || e.firstChild!.nodeType !== 3)) return false;
+      slots.push({ gap }, { inner: fixed ? null : (e.firstChild as Text) });
+      gap = [];
+    }
+    slots.push({ gap });
+    if (slots.length < 3) return false;
+    const origs = slots.map((sl) => ("gap" in sl ? sl.gap.map(origOf) : sl.inner ? [origOf(sl.inner)] : []));
+    const key = slots.map((sl, i) => ("gap" in sl ? origs[i].join("") : `{${origs[i].join("")}}`)).join("");
+    const tr = translateText(dict, key);
+    if (tr == null || /[А-Яа-яЁё]/.test(tr)) return false;
+    const parts = tr.split(/[{}]/);
+    if (parts.length !== slots.length) return false;
+    if (slots.some((sl, i) => "gap" in sl && !sl.gap.length && parts[i].trim())) return false;
+    slots.forEach((sl, i) => {
+      if ("gap" in sl) sl.gap.forEach((t, j) => write(t, origs[i][j], j === 0 ? parts[i] : ""));
+      else if (sl.inner) write(sl.inner, origs[i][0], parts[i]);
+    });
+    return true;
   }
 
   function single(n: Text, orig: string) {

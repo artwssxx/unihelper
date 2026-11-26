@@ -22,7 +22,7 @@ export function LevelCard({ s }: { s: CoinState }) {
           <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${Math.round(l.progress * 100)}%` }} />
         </div>
         <p className="mt-1.5 text-sm text-muted">
-          {next ? `${l.xp} / ${l.to} опыта — до уровня «${next.title}» (+${next.level * 10} монет за новый уровень)` : `${l.xp} опыта — максимальный уровень`}
+          {next ? `${l.xp} / ${l.to} опыта · следующий уровень: «${next.title}» · +${next.level * 10} монет за новый уровень` : `${l.xp} опыта — максимальный уровень`}
         </p>
       </div>
     </section>

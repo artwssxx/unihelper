@@ -222,10 +222,12 @@ function TelegramCard() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="m-0 text-lg font-extrabold">Telegram</h2>
-          <p className="mt-1 text-sm text-body">
-            {st.linked
-              ? `Бот @${st.bot} подключён${st.username ? ` к @${st.username}` : ""}: план на неделю, новые сообщения из комьюнити и ответы AI Advisor прямо в Telegram.`
-              : `Подключи бота @${st.bot}: раз в неделю — план и ивенты, сразу — новые сообщения из комьюнити. UniHelper можно открыть прямо в Telegram.`}
+          <p className="mt-1 text-sm text-body" data-i18n-phrase>
+            {st.linked ? (
+              <>Бот <b translate="no">@{st.bot}</b> подключён{st.username ? <> к <b translate="no">@{st.username}</b></> : null}: план на неделю, новые сообщения из комьюнити и ответы AI Advisor прямо в Telegram.</>
+            ) : (
+              <>Подключи бота <b translate="no">@{st.bot}</b>: раз в неделю — план и ивенты, сразу — новые сообщения из комьюнити. UniHelper можно открыть прямо в Telegram.</>
+            )}
           </p>
         </div>
         {!st.linked && <button className="btn-primary" disabled={busy} onClick={connect}>{busy ? "Готовим ссылку…" : "Подключить Telegram"}</button>}

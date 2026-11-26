@@ -26,7 +26,7 @@ export default async function BlogPage({ searchParams }: { searchParams: Promise
       <main className="mx-auto max-w-[1180px] space-y-8 px-4 pt-6 sm:px-6">
         <section>
           <div className="eyebrow">БЛОГ</div>
-          <h1 className="mt-3 text-[38px] font-extrabold leading-[1.05] tracking-tight sm:text-[52px]">
+          <h1 data-i18n-phrase className="mt-3 text-[38px] font-extrabold leading-[1.05] tracking-tight sm:text-[52px]">
             Поступление без <span className="serif-accent text-primary">мифов</span>
           </h1>
           <p className="mt-3 max-w-[640px] text-lg text-body">Тесты, эссе, гранты и стратегия — коротко и по делу. Суммы и сроки всегда сверяй на официальных сайтах.</p>

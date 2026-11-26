@@ -55,7 +55,7 @@ export default function ParentPage() {
     <div className="space-y-6">
       <section>
         <div className="eyebrow">ДЛЯ РОДИТЕЛЕЙ</div>
-        <h1 className="mt-3 text-[28px] font-extrabold leading-tight tracking-tight sm:text-[42px]">Прогресс <span className="serif-accent text-primary">вашего ребёнка</span></h1>
+        <h1 className="mt-3 text-[28px] font-extrabold leading-tight tracking-tight sm:text-[42px]" data-i18n-phrase>Прогресс <span className="serif-accent text-primary">вашего ребёнка</span></h1>
         <p className="mt-2 max-w-[720px] text-body">
           Сила профиля, моки, план поступления, уроки и подобранные вузы — в одном месте. Ребёнок сам решает, кого подключить: он даёт код или принимает приглашение и может отключить родителя в любой момент. Переписку и тексты эссе родитель не видит.
         </p>

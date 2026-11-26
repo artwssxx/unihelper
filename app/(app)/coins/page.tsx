@@ -79,7 +79,7 @@ export default function CoinsPage() {
             </div>
             <p className="mt-2 text-xs opacity-90">
               {state.checkedInToday ? `Сегодня +${REPEAT.checkinBase} получено.` : "Заходи каждый день: +5 за вход."}
-              {nextMilestone ? ` До бонуса +${REPEAT.streakBonus[nextMilestone]} — ${nextMilestone - state.streak} ${plural(nextMilestone - state.streak, "день", "дня", "дней")}.` : ""}
+              {nextMilestone ? ` Дней до бонуса +${REPEAT.streakBonus[nextMilestone]}: ${nextMilestone - state.streak}.` : ""}
             </p>
           </div>
         </div>

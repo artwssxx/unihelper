@@ -22,24 +22,24 @@ export default function PortfolioView({ s, preview = false }: { s: PortfolioSnap
           <div className="flex h-16 w-16 items-center justify-center rounded-full text-xl font-extrabold text-white" style={{ background: s.template === "minimal" ? s.accent : "rgba(255,255,255,.18)", border: "2px solid rgba(255,255,255,.35)" }} aria-hidden>
             {initials}
           </div>
-          <h1 className="mt-5 text-[40px] font-extrabold leading-tight tracking-tight sm:text-[52px]" style={serif}>{s.name}</h1>
-          {s.headline && <p className="mt-2 text-lg opacity-90">{s.headline}</p>}
+          <h1 className="mt-5 text-[40px] font-extrabold leading-tight tracking-tight sm:text-[52px]" style={serif} translate="no">{s.name}</h1>
+          {s.headline && <p className="mt-2 text-lg opacity-90" translate="no">{s.headline}</p>}
         </div>
       </header>
       <div className="mx-auto max-w-[880px] space-y-9 px-6 py-10 sm:px-12">
         {s.sections.map((sec) => (
           <section key={sec.id}>
-            <h2 className="text-xs font-extrabold tracking-[0.14em]" style={{ color: s.accent }}>{sec.title.toUpperCase()}</h2>
-            {sec.kind === "text" && <p className="mt-3 whitespace-pre-line text-[17px] leading-relaxed">{sec.text}</p>}
+            <h2 className="text-xs font-extrabold uppercase tracking-[0.14em]" style={{ color: s.accent }}>{sec.title}</h2>
+            {sec.kind === "text" && <p className="mt-3 whitespace-pre-line text-[17px] leading-relaxed" translate="no">{sec.text}</p>}
             {sec.kind === "list" && (
-              <ul className="mt-3 space-y-2">
+              <ul className="mt-3 space-y-2" translate="no">
                 {sec.items?.map((x, i) => (
                   <li key={i} className="flex gap-3 text-[16px] leading-relaxed"><span className="mt-2.5 h-1.5 w-1.5 flex-none rounded-full" style={{ background: s.accent }} />{x}</li>
                 ))}
               </ul>
             )}
             {sec.kind === "projects" && (
-              <div className="mt-3 grid gap-3 sm:grid-cols-2">
+              <div className="mt-3 grid gap-3 sm:grid-cols-2" translate="no">
                 {sec.projects?.map((p, i) => (
                   <div key={i} className="rounded-2xl p-5" style={{ background: th.card, border: `1px solid ${th.line}` }}>
                     <div className="font-extrabold">{p.title}</div>
@@ -49,12 +49,12 @@ export default function PortfolioView({ s, preview = false }: { s: PortfolioSnap
               </div>
             )}
             {sec.kind === "skills" && (
-              <div className="mt-3 flex flex-wrap gap-2">
+              <div className="mt-3 flex flex-wrap gap-2" translate="no">
                 {sec.items?.map((x, i) => <span key={i} className="rounded-full px-3.5 py-1.5 text-sm font-bold" style={{ background: `${s.accent}1f`, color: s.template === "night" ? th.ink : s.accent }}>{x}</span>)}
               </div>
             )}
             {sec.kind === "links" && (
-              <div className="mt-3 flex flex-wrap gap-2">
+              <div className="mt-3 flex flex-wrap gap-2" translate="no">
                 {sec.links?.map((l, i) => (
                   <a key={i} href={l.url} target="_blank" rel="noopener noreferrer nofollow" className="rounded-xl px-4 py-2.5 text-sm font-bold" style={{ background: th.card, border: `1px solid ${th.line}`, color: th.ink }}>
                     {l.label} ↗
@@ -62,7 +62,7 @@ export default function PortfolioView({ s, preview = false }: { s: PortfolioSnap
                 ))}
               </div>
             )}
-            {sec.kind === "contact" && <div className="mt-3 space-y-1 text-[16px]">{sec.items?.map((x, i) => <div key={i}>{x}</div>)}</div>}
+            {sec.kind === "contact" && <div className="mt-3 space-y-1 text-[16px]" translate="no">{sec.items?.map((x, i) => <div key={i}>{x}</div>)}</div>}
           </section>
         ))}
         {s.sections.length === 0 && <p style={{ color: th.muted }}>Разделы пока пустые.</p>}

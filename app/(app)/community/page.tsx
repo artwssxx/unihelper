@@ -44,7 +44,7 @@ export default function CommunityPage() {
       <section className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <div className="eyebrow">КОМЬЮНИТИ</div>
-          <h1 className="mt-3 text-[28px] font-extrabold leading-tight tracking-tight sm:text-[42px]">
+          <h1 className="mt-3 text-[28px] font-extrabold leading-tight tracking-tight sm:text-[42px]" data-i18n-phrase>
             Найди <span className="serif-accent text-primary">команду</span> для проекта
           </h1>
           <p className="mt-2 max-w-[640px] text-body">Школьники и студенты, которые тоже поступают за рубеж: проекты, олимпиадные команды, клубы и волонтёрство.</p>
@@ -91,7 +91,7 @@ function Intro({ demo }: { demo: boolean }) {
     <div className="space-y-6">
       <section>
         <div className="eyebrow">КОМЬЮНИТИ</div>
-        <h1 className="mt-3 text-[28px] font-extrabold leading-tight tracking-tight sm:text-[42px]">
+        <h1 className="mt-3 text-[28px] font-extrabold leading-tight tracking-tight sm:text-[42px]" data-i18n-phrase>
           Найди <span className="serif-accent text-primary">команду</span> для проекта
         </h1>
         <p className="mt-2 max-w-[640px] text-body">Проекты для портфолио, олимпиадные команды, клубы и волонтёрство — с теми, кто тоже поступает за рубеж.</p>

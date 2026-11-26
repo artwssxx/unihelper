@@ -79,7 +79,7 @@ export function admissionFit(profile: Profile, program: Program): FitResult["adm
   else if (academic === "below") reasons.push("профиль ниже типичного для поступивших");
   else if (academic === "above") reasons.push("профиль заметно выше типичного");
   else if (academic === "at") reasons.push("профиль на уровне типичного");
-  if (t.sat != null && profile.sat == null) unknown.push("SAT (не сдан, а типичные поступившие его подают)");
+  if (t.sat != null && profile.sat == null) unknown.push("SAT (не сдан — типичные поступившие его подают)");
 
   // 3. Соответствие портфолио специальности.
   const relevant = portfolioRelevant(profile, program);
