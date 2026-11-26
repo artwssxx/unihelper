@@ -40,6 +40,11 @@ describe("цепочка ИИ-провайдеров", () => {
     await expect(read(chain([fake("gemini-s2", { reply: "раз два три", failAfter: 1 }), b]).stream({ system: "", messages: [], tier: "fast" }))).rejects.toThrow("обрыв");
     expect(b.calls).toBe(0);
   });
+  it("стрим: пустой ответ — это сбой, отвечает запасной", async () => {
+    const a = fake("gemini-e", { reply: "" }), b = fake("groq-e");
+    expect(await read(chain([a, b]).stream({ system: "", messages: [{ role: "user", content: "x" }], tier: "fast" }))).toBe("groq-e");
+    expect(a.calls).toBe(1);
+  });
   it("все недоступны — понятная ошибка", async () => {
     await expect(chain([fake("gemini-x", { fail: true }), fake("groq-x", { fail: true })]).json({ system: "", user: "", schema, tier: "fast" })).rejects.toThrow("все провайдеры недоступны");
   });

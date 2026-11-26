@@ -106,7 +106,9 @@ function compatProvider(cfg: { name: string; baseUrl: string; key: string; model
         const reader = res.body!.getReader();
         const dec = new TextDecoder();
         let buf = "";
-        for (;;) {
+        let got = false;
+        let streamErr = "";
+        read: for (;;) {
           const { done, value } = await reader.read();
           if (done) break;
           buf += dec.decode(value, { stream: true });
@@ -116,16 +118,25 @@ function compatProvider(cfg: { name: string; baseUrl: string; key: string; model
             const l = line.trim();
             if (!l.startsWith("data:")) continue;
             const payload = l.slice(5).trim();
-            if (payload === "[DONE]") return;
+            if (payload === "[DONE]") break read;
+            let j: { error?: { message?: string } | string; choices?: { delta?: { content?: string } }[] };
             try {
-              const delta = JSON.parse(payload).choices?.[0]?.delta?.content;
-              if (delta) yield delta as string;
+              j = JSON.parse(payload);
             } catch {
-              /* неполная строка — пропускаем */
+              continue; // неполная строка — пропускаем
+            }
+            if (j.error) streamErr = (typeof j.error === "string" ? j.error : j.error.message ?? "error").slice(0, 160);
+            const delta = j.choices?.[0]?.delta?.content;
+            if (delta) {
+              got = true;
+              yield delta;
             }
           }
         }
-        return;
+        reader.cancel().catch(() => {});
+        if (got) return;
+        // Поток закрылся без текста (лимит, фильтр, ошибка внутри потока) — это сбой, пробуем следующую модель.
+        errors.push(`${model}: пустой ответ${streamErr ? ` (${streamErr})` : ""}`);
       }
       throw new Error(`[${cfg.name}] все модели недоступны: ${errors.join("; ")}`);
     },
@@ -214,9 +225,11 @@ export function chain(input: LLM[], primaryBudgetMs = 30_000): LLM {
         let started = false;
         try {
           for await (const t of l.stream({ ...o, deadlineAt })) {
+            if (!t) continue;
             started = true;
             yield t;
           }
+          if (!started) throw new Error("пустой ответ");
           cooldown.delete(l.name);
           return;
         } catch (e) {
