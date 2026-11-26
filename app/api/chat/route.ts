@@ -5,6 +5,7 @@ import { aiEnabled, streamChat } from "@/lib/server/ai";
 import { clientKey, takeQuota } from "@/lib/server/rateLimit";
 import { limitsFor } from "@/lib/server/plan";
 import { consumeUnlock } from "@/lib/server/coins";
+import { langOf } from "@/lib/server/replyLang";
 
 const DAILY_LIMIT = 20;
 
@@ -37,5 +38,5 @@ export async function POST(req: Request) {
       { headers },
     );
   }
-  return new Response(streamChat(profile, messages), { headers });
+  return new Response(streamChat(profile, messages, langOf(req)), { headers });
 }
