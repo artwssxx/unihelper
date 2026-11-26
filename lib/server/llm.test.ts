@@ -1,11 +1,11 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 import { chain, type LLM } from "./llm";
 
-const fake = (name: string, o: { fail?: boolean; failAfter?: number; vision?: boolean; reply?: string } = {}): LLM & { calls: number } => {
+const fake = (name: string, o: { fail?: boolean; failAfter?: number; vision?: boolean; reply?: string; err?: string } = {}): LLM & { calls: number } => {
   const f = {
     name, calls: 0, vision: o.vision,
-    async json<T>() { f.calls++; if (o.fail) throw new Error("HTTP 503"); return { answer: o.reply ?? name } as T; },
+    async json<T>() { f.calls++; if (o.fail) throw new Error(o.err ?? "HTTP 503"); return { answer: o.reply ?? name } as T; },
     async *stream() {
       f.calls++;
       if (o.fail) throw new Error("HTTP 429");
@@ -59,5 +59,21 @@ describe("перегруженный провайдер уходит в коне
     await c.json({ system: "", user: "", schema, tier: "fast" });
     expect(a.calls).toBe(1); // в «паузе» — не вызывался
     expect(b.calls).toBe(2);
+  });
+});
+
+describe("нужна оплата или ключ не принят — долгий перерыв", () => {
+  it("402: через 2 минуты провайдер всё ещё в конце очереди", async () => {
+    vi.useFakeTimers();
+    try {
+      const a = fake("samba-402", { fail: true, err: "model: HTTP 402 {\"code\":\"PAYMENT_METHOD_REQUIRED\"}" }), b = fake("groq-402");
+      const c = chain([a, b]);
+      expect(await c.json({ system: "", user: "", schema, tier: "fast" })).toEqual({ answer: "groq-402" });
+      vi.setSystemTime(Date.now() + 120_000);
+      expect(await c.json({ system: "", user: "", schema, tier: "fast" })).toEqual({ answer: "groq-402" });
+      expect(a.calls).toBe(1);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

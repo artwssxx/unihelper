@@ -33,6 +33,14 @@ const list = (v: string | undefined, d: string[]) => (v ? v.split(",").map((s) =
 
 class RetryableError extends Error {}
 
+// Модель, которой у провайдера больше нет (404), час не пробуем — не тратим время ответа.
+const goneModels = new Map<string, number>();
+const alive = (provider: string, models: string[]) => {
+  const now = Date.now();
+  const ok = models.filter((m) => (goneModels.get(`${provider}:${m}`) ?? 0) < now);
+  return ok.length ? ok : models;
+};
+
 function compatProvider(cfg: { name: string; baseUrl: string; key: string; models: Record<Tier, string[]>; visionModels?: string[]; extraHeaders?: Record<string, string> }): LLM {
   const headers = { authorization: `Bearer ${cfg.key}`, "content-type": "application/json", ...cfg.extraHeaders };
 
@@ -52,6 +60,7 @@ function compatProvider(cfg: { name: string; baseUrl: string; key: string; model
       throw new RetryableError(`${model}: ${(e as Error).message}`);
     }
     // Перегрузка, лимит, модель недоступна → пробуем следующую модель.
+    if (res.status === 404) goneModels.set(`${cfg.name}:${model}`, Date.now() + 3_600_000);
     if ([404, 408, 429, 500, 502, 503, 504].includes(res.status)) throw new RetryableError(`${model}: HTTP ${res.status}`);
     if (!res.ok) throw new Error(`${model}: HTTP ${res.status} ${(await res.text()).slice(0, 200)}`);
     return res;
@@ -63,7 +72,7 @@ function compatProvider(cfg: { name: string; baseUrl: string; key: string; model
 
     async json({ system, user, schema, tier, maxTokens = 4000, timeoutMs, images, deadlineAt }) {
       const deadline = deadlineAt ?? Date.now() + 55_000;
-      const models = images?.length && cfg.visionModels ? cfg.visionModels : cfg.models[tier];
+      const models = alive(cfg.name, images?.length && cfg.visionModels ? cfg.visionModels : cfg.models[tier]);
       const content = images?.length
         ? [{ type: "text", text: user }, ...images.map((i) => ({ type: "image_url", image_url: { url: `data:${i.mime};base64,${i.data}` } }))]
         : user;
@@ -94,7 +103,7 @@ function compatProvider(cfg: { name: string; baseUrl: string; key: string; model
     async *stream({ system, messages, tier, maxTokens = 3000, deadlineAt }) {
       const deadline = deadlineAt ?? Date.now() + 55_000;
       const errors: string[] = [];
-      for (const model of cfg.models[tier]) {
+      for (const model of alive(cfg.name, cfg.models[tier])) {
         let res: Response;
         try {
           res = await call(model, { messages: [{ role: "system", content: system }, ...messages], stream: true, max_tokens: maxTokens }, tier, deadline);
@@ -108,10 +117,13 @@ function compatProvider(cfg: { name: string; baseUrl: string; key: string; model
         let buf = "";
         let got = false;
         let streamErr = "";
+        let head = "";
         read: for (;;) {
           const { done, value } = await reader.read();
           if (done) break;
-          buf += dec.decode(value, { stream: true });
+          const chunk = dec.decode(value, { stream: true });
+          if (head.length < 300) head += chunk;
+          buf += chunk;
           const lines = buf.split("\n");
           buf = lines.pop() ?? "";
           for (const line of lines) {
@@ -135,8 +147,21 @@ function compatProvider(cfg: { name: string; baseUrl: string; key: string; model
         }
         reader.cancel().catch(() => {});
         if (got) return;
+        // Не поток, а обычный JSON (провайдер проигнорировал stream) — берём текст из него.
+        if (!head.includes("data:")) {
+          try {
+            const j = JSON.parse(head + buf);
+            const text = j.choices?.[0]?.message?.content;
+            if (typeof text === "string" && text.trim()) {
+              yield text;
+              return;
+            }
+          } catch {
+            /* не JSON */
+          }
+        }
         // Поток закрылся без текста (лимит, фильтр, ошибка внутри потока) — это сбой, пробуем следующую модель.
-        errors.push(`${model}: пустой ответ${streamErr ? ` (${streamErr})` : ""}`);
+        errors.push(`${model}: пустой ответ (${streamErr || head.replace(/\s+/g, " ").slice(0, 220) || "нет данных"})`);
       }
       throw new Error(`[${cfg.name}] все модели недоступны: ${errors.join("; ")}`);
     },
@@ -185,6 +210,8 @@ function anthropicProvider(): LLM {
 /** Провайдер только что не ответил (перегрузка, лимит) — минуту ставим его в конец очереди, чтобы не ждать снова. */
 const cooldown = new Map<string, number>();
 const COOLDOWN_MS = 60_000;
+/** Ключ не принят или нужна оплата (401/402/403) — это не пройдёт за минуту: 6 часов в конце очереди. */
+const pause = (e: unknown) => (/HTTP 40[123]\b/.test((e as Error).message) ? 6 * 3_600_000 : COOLDOWN_MS);
 const ordered = (list: LLM[]) => {
   const now = Date.now();
   return [...list].sort((a, b) => Number((cooldown.get(a.name) ?? 0) > now) - Number((cooldown.get(b.name) ?? 0) > now));
@@ -209,7 +236,7 @@ export function chain(input: LLM[], primaryBudgetMs = 30_000): LLM {
           cooldown.delete(l.name);
           return r;
         } catch (e) {
-          cooldown.set(l.name, Date.now() + COOLDOWN_MS);
+          cooldown.set(l.name, Date.now() + pause(e));
           errors.push(`${l.name}: ${(e as Error).message.slice(0, 160)}`);
         }
       }
@@ -234,7 +261,7 @@ export function chain(input: LLM[], primaryBudgetMs = 30_000): LLM {
           return;
         } catch (e) {
           if (started) throw e; // часть ответа уже у ученика — не начинаем заново у другого провайдера
-          cooldown.set(l.name, Date.now() + COOLDOWN_MS);
+          cooldown.set(l.name, Date.now() + pause(e));
           errors.push(`${l.name}: ${(e as Error).message.slice(0, 160)}`);
         }
       }
@@ -249,7 +276,7 @@ let cached: LLM | null | undefined;
 
 /** Бесплатные OpenAI-совместимые тарифы. Модели можно заменить переменными <ИМЯ>_MODELS / <ИМЯ>_MODELS_VISION. */
 const PRESETS: Record<string, { env: string; baseUrl: string; fast: string[]; smart: string[]; vision: string[] }> = {
-  groq: { env: "GROQ_API_KEY", baseUrl: "https://api.groq.com/openai/v1", fast: ["openai/gpt-oss-120b", "llama-3.3-70b-versatile"], smart: ["openai/gpt-oss-120b"], vision: ["meta-llama/llama-4-scout-17b-16e-instruct"] },
+  groq: { env: "GROQ_API_KEY", baseUrl: "https://api.groq.com/openai/v1", fast: ["openai/gpt-oss-120b", "meta-llama/llama-4-scout-17b-16e-instruct", "openai/gpt-oss-20b", "llama-3.3-70b-versatile"], smart: ["openai/gpt-oss-120b", "openai/gpt-oss-20b", "meta-llama/llama-4-scout-17b-16e-instruct"], vision: ["meta-llama/llama-4-scout-17b-16e-instruct"] },
   mistral: { env: "MISTRAL_API_KEY", baseUrl: "https://api.mistral.ai/v1", fast: ["mistral-small-latest"], smart: ["mistral-medium-latest", "mistral-small-latest"], vision: ["mistral-small-latest"] },
   cerebras: { env: "CEREBRAS_API_KEY", baseUrl: "https://api.cerebras.ai/v1", fast: ["gpt-oss-120b"], smart: ["gpt-oss-120b"], vision: [] },
   openrouter: { env: "OPENROUTER_API_KEY", baseUrl: "https://openrouter.ai/api/v1", fast: ["openai/gpt-oss-120b:free", "meta-llama/llama-3.3-70b-instruct:free"], smart: ["openai/gpt-oss-120b:free"], vision: [] },

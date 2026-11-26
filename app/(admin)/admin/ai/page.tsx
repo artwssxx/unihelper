@@ -10,13 +10,14 @@ const ALL = [
   { name: "github", env: "GITHUB_MODELS_TOKEN", where: "github.com/settings/tokens (scope models:read)", note: "GPT-4.1 бесплатно с лимитом на день, читает картинки" },
   { name: "openrouter", env: "OPENROUTER_API_KEY", where: "openrouter.ai/keys", note: "бесплатные модели «:free», ≈ 50 запросов в день" },
   { name: "cerebras", env: "CEREBRAS_API_KEY", where: "cloud.cerebras.ai", note: "очень быстрый; условия бесплатного тарифа меняются" },
-  { name: "sambanova", env: "SAMBANOVA_API_KEY", where: "cloud.sambanova.ai/apis", note: "Llama 3.3 70B, бесплатные лимиты" },
+  { name: "sambanova", env: "SAMBANOVA_API_KEY", where: "cloud.sambanova.ai/apis", note: "Llama 3.3 70B; теперь просит привязать карту (без неё — ошибка 402, провайдер сам уходит в конец очереди)" },
   { name: "anthropic", env: "ANTHROPIC_API_KEY", where: "console.anthropic.com", note: "Claude — платный, самый качественный" },
 ];
 
 export default function AdminAi() {
   const [st, setSt] = useState<{ providers: string[]; chain: string | null } | null>(null);
-  const [res, setRes] = useState<Record<string, { ok: boolean; ms?: number; sample?: string | null; error?: string } | "busy">>({});
+  type Check = { ok: boolean; ms?: number; sample?: string | null; error?: string };
+  const [res, setRes] = useState<Record<string, (Check & { stream?: Check }) | "busy">>({});
   useEffect(() => {
     fetch("/api/admin/ai", { cache: "no-store" }).then((r) => r.json()).then(setSt).catch(() => setSt({ providers: [], chain: null }));
   }, []);
@@ -49,9 +50,17 @@ export default function AdminAi() {
               <p className="text-xs text-muted">Переменная <code>{p.env}</code> · ключ: {p.where}</p>
               {on && <button className="btn-secondary py-2 text-sm" disabled={r === "busy"} onClick={() => check(p.name)}>{r === "busy" ? "Проверяем…" : "Проверить"}</button>}
               {r && r !== "busy" && (
-                <p className={`text-sm font-semibold ${r.ok ? "text-green" : "text-red"}`}>
-                  {r.ok ? `Работает · ${r.ms} мс${r.sample ? ` · «${r.sample}»` : ""}` : `Ошибка${r.ms ? ` за ${r.ms} мс` : ""}: ${r.error}`}
-                </p>
+                <div className="space-y-1 text-sm font-semibold">
+                  {[["JSON (советы, разборы)", r], ["Поток (чат)", r.stream]].map(([label, c]) => {
+                    const x = c as Check | undefined;
+                    if (!x) return null;
+                    return (
+                      <p key={label as string} className={x.ok ? "text-green" : "text-red"}>
+                        {label as string}: {x.ok ? `работает · ${x.ms} мс${x.sample ? ` · «${x.sample}»` : ""}` : `ошибка${x.ms ? ` за ${x.ms} мс` : ""}: ${x.error}`}
+                      </p>
+                    );
+                  })}
+                </div>
               )}
             </div>
           );
