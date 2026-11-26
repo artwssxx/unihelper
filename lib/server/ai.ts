@@ -40,7 +40,7 @@ export async function buildContext(profile: Profile): Promise<string> {
     .join("\n");
   const fmt = (items: typeof abroad) =>
     items
-      .slice(0, 12)
+      .slice(0, 8) // 8 лучших: бесплатные лимиты ИИ считают токены в минуту
       .map(
         (i) =>
           `- ${i.program.university} — ${i.program.name} (${i.program.city}). Admission Fit: ${FIT_LABEL_NAMES[i.fit.admission.label]}; Funding Fit: ${FUNDING_LABEL_NAMES[i.fit.funding.label]}${i.fit.isBackup ? "; запасной вариант" : ""}. Причины: ${[...i.fit.admission.reasons, ...i.fit.funding.reasons].join("; ")}. Не оценено: ${i.fit.admission.unknown.join(", ") || "—"}. Сроки: ${i.program.deadlineNote}. Сайт: ${i.program.url ?? "нет ссылки"}`,
